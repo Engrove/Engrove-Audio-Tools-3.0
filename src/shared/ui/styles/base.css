@@ -1,8 +1,6 @@
-/*
-  Engrove Audio Tools 3.0 — shared stylesheet entrypoint.
-  Import this once from src/main.ts.
-*/
+
 @import "./tokens.css";
 @import "./reset.css";
 @import "./layout.css";
 @import "./components.css";
+@import "./home.css";

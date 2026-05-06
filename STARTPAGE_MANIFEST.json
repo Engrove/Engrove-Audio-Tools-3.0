@@ -1,0 +1,97 @@
+[
+  {
+    "path": ".gitignore",
+    "size": 328,
+    "sha256": "23701d0aaabf0605acea2c0b699bb970a5674035c7132167f7e2a6115dc2bf5d"
+  },
+  {
+    "path": ".node-version",
+    "size": 3,
+    "sha256": "5378796307535df3ec8d8b15a2e2dc5641419c3d3060cfe32238c0fa973f7aa3"
+  },
+  {
+    "path": "README.md",
+    "size": 1444,
+    "sha256": "67011096080bfb716cedd9407fc2f8cfd72393762a66234b46b4e1dc5994ca73"
+  },
+  {
+    "path": "docs/release/CLOUDFLARE_PAGES.md",
+    "size": 949,
+    "sha256": "b854f237924e9642fec49f19b0c88637f1f9ac19a9f5d1c0e7ccf5cc9d5a9919"
+  },
+  {
+    "path": "index.html",
+    "size": 468,
+    "sha256": "80d2779ea2db7dbebe3887e44c3dfbf165dc0734bde57e8b47089ec550c5d705"
+  },
+  {
+    "path": "package.json",
+    "size": 375,
+    "sha256": "eb75736f7de8dcf00d7fd2228819ec739a828e18338da5fe6c4a79c521f5dd20"
+  },
+  {
+    "path": "public/_headers",
+    "size": 152,
+    "sha256": "36ff0758f9cf48f33efe81bc0de6b04bc57f3deadc02b554a6de29fd6d3557ad"
+  },
+  {
+    "path": "public/_redirects",
+    "size": 19,
+    "sha256": "6036983e5fc00f0169c9e939b1816ed771eee00e27f2fcc517b819041460b9ef"
+  },
+  {
+    "path": "src/app/home/renderHomePage.ts",
+    "size": 5364,
+    "sha256": "03630dc5e9fac263aa3f027606777d573966f5b9e20dead3e9bf84bf6eac182b"
+  },
+  {
+    "path": "src/main.ts",
+    "size": 263,
+    "sha256": "8fb4f96dea9fa907b5b78c1d1e3ad480da30d5a73fa3e7547a4b5a831d6a60df"
+  },
+  {
+    "path": "src/shared/ui/styles/base.css",
+    "size": 122,
+    "sha256": "5a2df7fcd599769589c2b771de779cf60c5e622d9128a65b504681d028a070d8"
+  },
+  {
+    "path": "src/shared/ui/styles/components.css",
+    "size": 2125,
+    "sha256": "dbf177ed8e4cbe3d9218cb8d1107563a164d47c8eae9bfcd5897119c5926db95"
+  },
+  {
+    "path": "src/shared/ui/styles/home.css",
+    "size": 2428,
+    "sha256": "51218e6be6d3c4ed3262cbb193b103d3b6419d20d39219541f772a03e91f737b"
+  },
+  {
+    "path": "src/shared/ui/styles/layout.css",
+    "size": 2682,
+    "sha256": "6e4bbc7217d3ce52ad2478f0ecaaa8cb20d00ed7c76edb17a70f9258169b0ba8"
+  },
+  {
+    "path": "src/shared/ui/styles/reset.css",
+    "size": 925,
+    "sha256": "ca55094852520da67ab9a3dd79c2c8121e132fe719d5cabbad650e05b2ca88bb"
+  },
+  {
+    "path": "src/shared/ui/styles/tokens.css",
+    "size": 2377,
+    "sha256": "f64300f3cfa52ed7b8ab11397126370ead1a21e9468ce1d3a9066b24ccd8aa72"
+  },
+  {
+    "path": "tsconfig.json",
+    "size": 389,
+    "sha256": "9ec051281fc18eb4a00e3544684034407eaa512ca790f7c991e3d5b352ac2872"
+  },
+  {
+    "path": "vite.config.ts",
+    "size": 148,
+    "sha256": "c41c6bfc56f1852fd0e0aa22a158cefc364fcca72497ada57da1945f7491391c"
+  },
+  {
+    "path": "wrangler.toml",
+    "size": 100,
+    "sha256": "7b6997940ce096504dd9a52db775674f2fea10cb55ec7935242faa65d7a61e57"
+  }
+]

@@ -1,43 +1,26 @@
-/*
-  Engrove Audio Tools 3.0 — Design Tokens
-  Source: Engrove Audio Tools 2.0 Global UI Standard, adapted for public product UI.
-*/
+
 :root,
 [data-theme="dark"] {
   color-scheme: dark;
   --ea-font-ui: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --ea-font-data: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  --ea-font-size-h1: 2rem; --ea-line-height-h1: 2.5rem;
-  --ea-font-size-h2: 1.5rem; --ea-line-height-h2: 2rem;
-  --ea-font-size-h3: 1.25rem; --ea-line-height-h3: 1.75rem;
-  --ea-font-size-body: 1rem; --ea-line-height-body: 1.5rem;
-  --ea-font-size-label: 0.875rem; --ea-line-height-label: 1.25rem;
-  --ea-font-size-small: 0.75rem; --ea-line-height-small: 1rem;
-  --ea-font-size-data: 0.9375rem; --ea-line-height-data: 1.375rem;
-  --ea-font-size-code: 0.875rem; --ea-line-height-code: 1.25rem;
 
   --ea-surface-primary: #121212;
   --ea-surface-secondary: #1e1e1e;
   --ea-surface-tertiary: #2a2a2a;
   --ea-border-primary: #3c3c3c;
-  --ea-border-strong: #555555;
   --ea-border-soft: rgba(255, 255, 255, 0.08);
-  --ea-text-high: rgba(255, 255, 255, 0.9);
-  --ea-text-medium: rgba(255, 255, 255, 0.7);
-  --ea-text-low: rgba(255, 255, 255, 0.5);
+  --ea-text-high: rgba(255, 255, 255, 0.92);
+  --ea-text-medium: rgba(255, 255, 255, 0.70);
+  --ea-text-low: rgba(255, 255, 255, 0.50);
   --ea-interactive-accent: #3391ff;
   --ea-interactive-accent-hover: #58a6ff;
   --ea-interactive-accent-soft: rgba(51, 145, 255, 0.16);
-  --ea-graph-series-1: #82aaff;
-  --ea-graph-series-2: #c39aff;
-  --ea-graph-series-3: #79f8f8;
-  --ea-graph-series-4: #ffcb6b;
-  --ea-status-error: #f44336;
-  --ea-status-warning: #ffcb6b;
+  --ea-brand-gold: #f5c400;
   --ea-status-success: #35c46a;
-  --ea-status-info: #3391ff;
+  --ea-status-warning: #ffcb6b;
+  --ea-status-error: #f44336;
 
-  --ea-radius-xs: 0.375rem;
   --ea-radius-sm: 0.5rem;
   --ea-radius-md: 0.75rem;
   --ea-radius-lg: 1rem;
@@ -56,54 +39,35 @@
 
   --ea-control-height: 2.75rem;
   --ea-control-height-sm: 2.25rem;
-  --ea-touch-target: 2.75rem;
-  --ea-shadow-button: 0 2px 4px rgba(0, 0, 0, 0.2);
-  --ea-shadow-button-hover: 0 4px 8px rgba(0, 0, 0, 0.3);
+  --ea-page-max: 1180px;
+  --ea-page-padding: clamp(1rem, 3vw, 2rem);
+  --ea-panel-padding: clamp(1rem, 2vw, 1.5rem);
+  --ea-grid-gap: clamp(1rem, 2vw, 1.5rem);
+
   --ea-shadow-card: 0 16px 40px rgba(0, 0, 0, 0.28);
   --ea-shadow-focus: 0 0 0 2px rgba(51, 145, 255, 0.3);
-  --ea-page-max: 1180px;
-  --ea-page-padding: clamp(1rem, 2vw, 2rem);
-  --ea-panel-padding: 1.25rem;
-  --ea-grid-gap: 1rem;
-  --ea-motion-fast: 120ms;
   --ea-motion-base: 180ms;
-  --ea-motion-slow: 260ms;
   --ea-ease-standard: cubic-bezier(0.2, 0, 0, 1);
 }
 
-[data-theme="light"],
-.light-theme {
+[data-theme="light"] {
   color-scheme: light;
   --ea-surface-primary: #ffffff;
   --ea-surface-secondary: #f5f5f5;
   --ea-surface-tertiary: #eeeeee;
   --ea-border-primary: #dcdcdc;
-  --ea-border-strong: #c6c6c6;
   --ea-border-soft: rgba(0, 0, 0, 0.08);
   --ea-text-high: rgba(0, 0, 0, 0.87);
-  --ea-text-medium: rgba(0, 0, 0, 0.6);
-  --ea-text-low: rgba(0, 0, 0, 0.38);
+  --ea-text-medium: rgba(0, 0, 0, 0.64);
+  --ea-text-low: rgba(0, 0, 0, 0.42);
   --ea-interactive-accent: #007bff;
   --ea-interactive-accent-hover: #0056b3;
   --ea-interactive-accent-soft: rgba(0, 123, 255, 0.12);
-  --ea-graph-series-1: #005dff;
-  --ea-graph-series-2: #8a2be2;
-  --ea-graph-series-3: #008b8b;
-  --ea-graph-series-4: #e59400;
-  --ea-status-error: #d32f2f;
-  --ea-shadow-button: 0 2px 4px rgba(0, 0, 0, 0.15);
-  --ea-shadow-button-hover: 0 4px 8px rgba(0, 0, 0, 0.2);
   --ea-shadow-card: 0 16px 40px rgba(0, 0, 0, 0.12);
   --ea-shadow-focus: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
 .compact-theme {
-  --ea-font-size-body: 0.9375rem;
-  --ea-line-height-body: 1.375rem;
-  --ea-font-size-label: 0.8125rem;
-  --ea-line-height-label: 1.125rem;
-  --ea-font-size-small: 0.6875rem;
-  --ea-line-height-small: 0.9375rem;
   --ea-control-height: 2.25rem;
   --ea-control-height-sm: 2rem;
   --ea-panel-padding: 0.875rem;

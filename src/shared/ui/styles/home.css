@@ -1,0 +1,119 @@
+
+.ea-hero {
+  border-bottom: 1px solid var(--ea-border-soft);
+}
+
+.ea-hero__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 0.8fr);
+  gap: var(--ea-grid-gap);
+  align-items: center;
+  min-height: min(78vh, 48rem);
+}
+
+.ea-hero h1 {
+  margin: 0;
+  max-width: 12ch;
+  font-size: clamp(2.8rem, 8vw, 6.25rem);
+  line-height: 0.94;
+  letter-spacing: -0.06em;
+}
+
+.ea-hero h2,
+.ea-section h2 {
+  margin: 0;
+  font-size: clamp(1.75rem, 3vw, 3rem);
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.ea-tool-card h3 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.ea-tool-card p {
+  margin: 0;
+  color: var(--ea-text-medium);
+}
+
+.ea-tool-card__preview {
+  min-height: 10rem;
+  display: grid;
+  place-items: center;
+  background:
+    linear-gradient(135deg, rgba(51, 145, 255, 0.18), transparent),
+    linear-gradient(180deg, var(--ea-surface-tertiary), var(--ea-surface-secondary));
+  border-bottom: 1px solid var(--ea-border-soft);
+  position: relative;
+  overflow: hidden;
+}
+
+.ea-tool-card__preview span {
+  position: absolute;
+  display: block;
+  width: 44%;
+  height: 0.18rem;
+  border-radius: var(--ea-radius-pill);
+  background: color-mix(in srgb, var(--ea-brand-gold) 70%, transparent);
+  transform: rotate(-11deg);
+}
+
+.ea-tool-card__preview span:nth-child(2) {
+  width: 62%;
+  background: color-mix(in srgb, var(--ea-interactive-accent) 55%, transparent);
+  transform: rotate(9deg) translateY(1.2rem);
+}
+
+.ea-tool-card__preview span:nth-child(3) {
+  width: 24%;
+  background: color-mix(in srgb, white 45%, transparent);
+  transform: rotate(-26deg) translateY(-1.3rem);
+}
+
+.ea-launch-panel {
+  position: relative;
+  overflow: hidden;
+}
+
+.ea-launch-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 90% 0%, rgba(245, 196, 0, 0.14), transparent 14rem),
+    radial-gradient(circle at 0% 100%, rgba(51, 145, 255, 0.14), transparent 16rem);
+  pointer-events: none;
+}
+
+.ea-launch-panel > * {
+  position: relative;
+}
+
+.ea-footer {
+  margin-top: auto;
+  border-top: 1px solid var(--ea-border-soft);
+}
+
+.ea-footer__inner {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--ea-space-4);
+  color: var(--ea-text-low);
+  font-size: 0.875rem;
+}
+
+@media (max-width: 860px) {
+  .ea-hero__grid {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .ea-hero h1 {
+    max-width: 11ch;
+  }
+
+  .ea-footer__inner {
+    flex-direction: column;
+  }
+}
