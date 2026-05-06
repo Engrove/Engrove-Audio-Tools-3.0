@@ -98,13 +98,15 @@
   background-image: url("/images/bg_black.webp");
   background-position: center;
   background-size: cover;
-  opacity: 0.74;
-  transform: scale(1.01);
+  opacity: 0.90;
+  filter: contrast(1.08) saturate(1.04);
+  transform: scale(1.005);
 }
 
 [data-theme="light"] .ea-hero__backdrop {
   background-image: url("/images/bg_white.webp");
-  opacity: 0.84;
+  opacity: 0.98;
+  filter: contrast(1.04) saturate(1.02);
 }
 
 .ea-hero::before {
@@ -113,14 +115,30 @@
   inset: 0;
   z-index: -1;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--ea-surface-primary) 22%, transparent), var(--ea-surface-primary) 92%),
-    radial-gradient(circle at 50% 30%, transparent 0 18rem, color-mix(in srgb, var(--ea-surface-primary) 34%, transparent) 42rem);
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--ea-surface-primary) 10%, transparent),
+      color-mix(in srgb, var(--ea-surface-primary) 58%, transparent) 100%
+    ),
+    radial-gradient(
+      circle at 50% 30%,
+      transparent 0 18rem,
+      color-mix(in srgb, var(--ea-surface-primary) 18%, transparent) 42rem
+    );
 }
 
 [data-theme="light"] .ea-hero::before {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.50), rgba(255, 255, 255, 0.92)),
-    radial-gradient(circle at 50% 35%, transparent 0 16rem, rgba(255, 255, 255, 0.42) 42rem);
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.20),
+      rgba(255, 255, 255, 0.64)
+    ),
+    radial-gradient(
+      circle at 50% 35%,
+      transparent 0 16rem,
+      rgba(255, 255, 255, 0.22) 42rem
+    );
 }
 
 .ea-hero__content {
