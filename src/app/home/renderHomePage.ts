@@ -1,3 +1,7 @@
+import packageJson from '../../../package.json';
+
+const repoVersion = typeof packageJson.version === 'string' ? packageJson.version : '0.0.0';
+
 const tools = [
   {
     title: 'Alignment Calculator',
@@ -20,6 +24,30 @@ const tools = [
     status: 'Foundation module',
   },
 ];
+
+function formatLastUpdatedHint(): string {
+  const modified = new Date(document.lastModified);
+
+  if (Number.isNaN(modified.getTime())) {
+    return 'updated recently';
+  }
+
+  return `updated ${modified.toLocaleDateString('en-GB', {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+  })}`;
+}
+
+function footerMeta(): string {
+  return `
+    <span class="ea-footer__meta" title="Package version and browser-provided document timestamp">
+      <span>v${repoVersion}</span>
+      <span aria-hidden="true">·</span>
+      <span>${formatLastUpdatedHint()}</span>
+    </span>
+  `;
+}
 
 function toolCards(): string {
   return tools.map((tool) => `
@@ -112,6 +140,7 @@ export function renderHomePage(): string {
 
       <footer class="ea-footer">
         <span>Engrove Audio Tools 3.0</span>
+        ${footerMeta()}
         <span>Public productization track</span>
       </footer>
     </div>

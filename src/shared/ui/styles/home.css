@@ -311,6 +311,29 @@
   border-top: 1px solid var(--ea-border-soft);
 }
 
+.ea-footer__meta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  color: color-mix(in srgb, var(--ea-text-low) 86%, transparent);
+  font-family: var(--ea-font-data);
+  font-size: 0.72rem;
+  letter-spacing: 0.01em;
+  opacity: 0.78;
+}
+
+.ea-footer__meta:hover {
+  opacity: 1;
+  color: var(--ea-text-medium);
+}
+
+@media (max-width: 640px) {
+  .ea-footer__meta {
+    justify-content: flex-start;
+  }
+}
+
 @media (max-width: 980px) {
   .ea-topbar { grid-template-columns: 1fr auto; }
   .ea-nav { display: none; }
