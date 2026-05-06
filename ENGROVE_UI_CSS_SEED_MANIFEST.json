@@ -1,0 +1,37 @@
+[
+  {
+    "path": "docs/architecture/ADR-0003-engrove-ui-css-standard.md",
+    "size": 1259,
+    "sha256": "176d4f8825b5129eda6f2d2557a7f46ebd138ed00a0eaf9f8a4edc485a831d50"
+  },
+  {
+    "path": "src/shared/ui/README.md",
+    "size": 700,
+    "sha256": "3d234d249ecda507040ba97488c82d5921fc7906daed5a72429ed33e10785790"
+  },
+  {
+    "path": "src/shared/ui/styles/base.css",
+    "size": 202,
+    "sha256": "166e3e5b81e8693f104ffee68f51c861c4f855618774baf9b060a090608adf2f"
+  },
+  {
+    "path": "src/shared/ui/styles/components.css",
+    "size": 7776,
+    "sha256": "e1818ad821f19e1fb4415b9f5183ea3d26adfe57a28b6b4f499ee18556c6cdeb"
+  },
+  {
+    "path": "src/shared/ui/styles/layout.css",
+    "size": 2495,
+    "sha256": "0eb25a33360e54db411c3fdd868d6bf1ac78904f02cd238abe0bf6dd6bbee033"
+  },
+  {
+    "path": "src/shared/ui/styles/reset.css",
+    "size": 1006,
+    "sha256": "bb40759b0251a571102ada0a9a4212da7ce9550bb54f37c8d6c9756d4a97ebfa"
+  },
+  {
+    "path": "src/shared/ui/styles/tokens.css",
+    "size": 3871,
+    "sha256": "635a187956e36025c202a0e7016914e86cd501e588d79090a0a1526f63306154"
+  }
+]
