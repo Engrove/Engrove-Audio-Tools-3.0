@@ -1,0 +1,20 @@
+:root {
+  color-scheme: dark;
+  --ea-bg: #111111;
+  --ea-surface: #1d1d1d;
+  --ea-surface-soft: #252525;
+  --ea-text: #f4f4f4;
+  --ea-muted: #b9c0c7;
+  --ea-accent: #f5c400;
+  --ea-line: rgba(255, 255, 255, 0.12);
+  --ea-radius: 18px;
+  --ea-space: clamp(16px, 2vw, 28px);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: radial-gradient(circle at top, #202020, var(--ea-bg)); color: var(--ea-text); }
+.shell { max-width: 1120px; margin: 0 auto; padding: calc(var(--ea-space) * 2) var(--ea-space); }
+.eyebrow { color: var(--ea-accent); font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.lead { color: var(--ea-muted); font-size: clamp(1rem, 2vw, 1.25rem); max-width: 66ch; }
+.module-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--ea-space); margin-top: calc(var(--ea-space) * 1.5); }
+.module-card { border: 1px solid var(--ea-line); border-radius: var(--ea-radius); background: linear-gradient(180deg, var(--ea-surface-soft), var(--ea-surface)); padding: var(--ea-space); }
