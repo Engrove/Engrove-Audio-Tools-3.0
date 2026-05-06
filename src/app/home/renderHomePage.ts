@@ -63,16 +63,20 @@ function toolCards(): string {
 export function renderHomePage(): string {
   return `
     <div class="ea-site-shell">
+      <div class="ea-scroll-affordance" aria-hidden="true"></div>
+
       <header class="ea-topbar" aria-label="Primary navigation">
         <a class="ea-wordmark" href="/" aria-label="Engrove Audio home">
           <span class="ea-wordmark__mark" aria-hidden="true">EA</span>
           <span class="ea-wordmark__text">Engrove Audio</span>
         </a>
+
         <nav class="ea-nav" aria-label="Main navigation">
           <a href="#tools">Tools</a>
           <a href="#platform">Platform</a>
           <a href="#launch">Launch</a>
         </nav>
+
         <button class="ea-theme-toggle" type="button" data-theme-toggle aria-label="Toggle light and dark theme">
           <span aria-hidden="true">◐</span>
         </button>
@@ -101,7 +105,10 @@ export function renderHomePage(): string {
             <h2 id="tools-title">Focused tools, shared foundation.</h2>
             <p>Each public tool is rebuilt from validated workshop functions, not copied from prototype UI.</p>
           </div>
-          <div class="ea-tool-grid">${toolCards()}</div>
+
+          <div class="ea-tool-grid">
+            ${toolCards()}
+          </div>
         </section>
 
         <section class="ea-page ea-section ea-platform-section" id="platform" aria-labelledby="platform-title">
@@ -113,12 +120,25 @@ export function renderHomePage(): string {
               That keeps the public site approachable while allowing expert-grade engines behind the scenes.
             </p>
           </div>
+
           <div class="ea-platform-panel">
             <dl>
-              <div><dt>Frontend</dt><dd>Vite + TypeScript</dd></div>
-              <div><dt>Host</dt><dd>Cloudflare Pages</dd></div>
-              <div><dt>Public URL</dt><dd>engrove-toolbox.pages.dev</dd></div>
-              <div><dt>Policy</dt><dd>Function transfer, UI rebuild</dd></div>
+              <div>
+                <dt>Frontend</dt>
+                <dd>Vite + TypeScript</dd>
+              </div>
+              <div>
+                <dt>Host</dt>
+                <dd>Cloudflare Pages</dd>
+              </div>
+              <div>
+                <dt>Public URL</dt>
+                <dd>engrove-toolbox.pages.dev</dd>
+              </div>
+              <div>
+                <dt>Policy</dt>
+                <dd>Function transfer, UI rebuild</dd>
+              </div>
             </dl>
           </div>
         </section>
@@ -147,11 +167,52 @@ export function renderHomePage(): string {
   `;
 }
 
+function updateScrollAffordance(): void {
+  const scrollElement = document.scrollingElement ?? document.documentElement;
+  const maxScroll = Math.max(0, scrollElement.scrollHeight - window.innerHeight);
+  const isScrollable = maxScroll > 4;
+
+  document.documentElement.toggleAttribute('data-page-scrollable', isScrollable);
+
+  if (!isScrollable) {
+    document.documentElement.style.setProperty('--ea-scroll-progress', '0%');
+    return;
+  }
+
+  const rawProgress = scrollElement.scrollTop / maxScroll;
+  const progress = Math.min(1, Math.max(0, rawProgress));
+  const visibleProgress = Math.max(0.08, progress);
+
+  document.documentElement.style.setProperty('--ea-scroll-progress', `${visibleProgress * 100}%`);
+}
+
+function bindScrollAffordance(): void {
+  let rafId = 0;
+
+  const scheduleUpdate = (): void => {
+    if (rafId) {
+      return;
+    }
+
+    rafId = window.requestAnimationFrame(() => {
+      rafId = 0;
+      updateScrollAffordance();
+    });
+  };
+
+  updateScrollAffordance();
+
+  window.addEventListener('scroll', scheduleUpdate, { passive: true });
+  window.addEventListener('resize', scheduleUpdate);
+  window.setTimeout(updateScrollAffordance, 250);
+  window.setTimeout(updateScrollAffordance, 1000);
+}
+
 export function enableHomePageInteractions(): void {
   const button = document.querySelector<HTMLButtonElement>('[data-theme-toggle]');
   const root = document.documentElement;
-  const stored = localStorage.getItem('engrove-theme');
 
+  const stored = localStorage.getItem('engrove-theme');
   if (stored === 'light' || stored === 'dark') {
     root.dataset.theme = stored;
   }
@@ -160,5 +221,8 @@ export function enableHomePageInteractions(): void {
     const next = root.dataset.theme === 'light' ? 'dark' : 'light';
     root.dataset.theme = next;
     localStorage.setItem('engrove-theme', next);
+    updateScrollAffordance();
   });
+
+  bindScrollAffordance();
 }
