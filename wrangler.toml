@@ -1,4 +1,6 @@
-
-name = "engrove-audio-tools-3-0"
-pages_build_output_dir = "dist"
+﻿name = "engrove-audio-tools-3"
 compatibility_date = "2026-05-06"
+
+[assets]
+directory = "./dist"
+not_found_handling = "single-page-application"
