@@ -96,3 +96,21 @@ body {
       color-mix(in srgb, var(--ea-text-medium) 82%, transparent);
   }
 }
+
+html {
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  scrollbar-width: auto;
+}
+
+body {
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+#app {
+  min-height: 100vh;
+}
