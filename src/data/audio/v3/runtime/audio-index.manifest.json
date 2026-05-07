@@ -1,35 +1,35 @@
 ﻿{
-    "generated_at":  "2026-05-07T05:59:36.7728099Z",
+    "generated_at":  "2026-05-07T07:00:34.6172863Z",
     "outputs":  [
                     {
                         "path":  "src/data/audio/v3/cartridges.v3.json",
-                        "records":  1,
-                        "size_bytes":  807548,
-                        "sha256":  "d4f5dabbffe36979f70147174b060ef1d7397d59be458fc33dc1433fded878ba"
+                        "records":  2973,
+                        "size_bytes":  4733280,
+                        "sha256":  "3aae5c91cdbeb83baa92dac8cbad47143763c24e6f447d14bf255efc1240984c"
                     },
                     {
                         "path":  "src/data/audio/v3/tonearms.v3.json",
-                        "records":  1,
-                        "size_bytes":  275134,
-                        "sha256":  "e057a4279cc536044f789fdf950d1711f6850e63c3dbe7f487b66edecf5b4199"
+                        "records":  1588,
+                        "size_bytes":  1757093,
+                        "sha256":  "b61b4b0aa403905faca3c14f7b435e78aeb3ed350804e454ace8c8d7fae7401b"
                     },
                     {
                         "path":  "src/data/audio/v3/runtime/cartridges.index.json",
-                        "records":  1,
-                        "size_bytes":  360005,
-                        "sha256":  "ed3076f54bd0a74bb70e74dc7b75ec8f338d707c7cb8cefd9988f13861dab1d8"
+                        "records":  2973,
+                        "size_bytes":  1723325,
+                        "sha256":  "9a827205aa452be3f12918f9386e99796b664bd318e0057a13370e11a2b07c4c"
                     },
                     {
                         "path":  "src/data/audio/v3/runtime/tonearms.index.json",
-                        "records":  1,
-                        "size_bytes":  70347,
-                        "sha256":  "94927ccc195f57513fff358bcfa48f6463f0230264e29b697c162cc4d0b3bc2e"
+                        "records":  1588,
+                        "size_bytes":  513768,
+                        "sha256":  "148438e455f7711f80948337cdf3e0596f67ab167b6a5ef66eca8bc2a8a2d355"
                     },
                     {
                         "path":  "src/data/audio/v3/audio-data-v3-summary.json",
                         "records":  null,
-                        "size_bytes":  43294,
-                        "sha256":  "7d37a9cb870e10c710d6f575b70aec32e7b6a277b99139f940ba584ceff37c56"
+                        "size_bytes":  4199,
+                        "sha256":  "8b970308641f51a034b81b3e81e5c9142fe761479bfaa4878b073f5c419da793"
                     }
                 ]
 }

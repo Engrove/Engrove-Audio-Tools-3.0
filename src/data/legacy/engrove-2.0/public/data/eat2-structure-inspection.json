@@ -1,0 +1,36 @@
+﻿{
+    "generated_at":  "2026-05-07T07:00:10.8627789Z",
+    "datasets":  [
+                     {
+                         "name":  "cartridges-data.json",
+                         "path":  "C:\\Users\\jan-eric_enlund\\Source\\Repos\\Engrove-Audio-Tools-3.0\\src\\data\\legacy\\engrove-2.0\\public\\data\\cartridges-data.json",
+                         "shape":  "row_array",
+                         "first_char":  "[",
+                         "records":  2973,
+                         "first_id":  1,
+                         "first_manufacturer":  "Ortofon",
+                         "first_model":  "Ortofon OM10",
+                         "last_id":  2973,
+                         "last_manufacturer":  "Soundsmith",
+                         "last_model":  "Soundsmith Carmen",
+                         "field_count":  35,
+                         "first_fields":  "id, model, rectype, cu_static, cu_dynamic_10hz, cu_dynamic_100hz, is_estimated_10hz, sources, manufacturer, type, stylus_type, cantilever_material, weight_g, tracking_force_min_g, tracking_force_max_g, output_voltage_mv, frequency_response_min_hz, frequency_response_max_hz, channel_separation_db, load_impedance_ohm, load_capacitance_min_pf, load_capacitance_max_pf, sonic_character_en, review_summary_en, image_url, notes_en, stylus_family, cantilever_class, compliance_level, tags, edit_history, created_by, create_stamp, updated_by, update_stamp"
+                     },
+                     {
+                         "name":  "tonearms-data.json",
+                         "path":  "C:\\Users\\jan-eric_enlund\\Source\\Repos\\Engrove-Audio-Tools-3.0\\src\\data\\legacy\\engrove-2.0\\public\\data\\tonearms-data.json",
+                         "shape":  "row_array",
+                         "first_char":  "[",
+                         "records":  1588,
+                         "first_id":  1,
+                         "first_manufacturer":  "SME",
+                         "first_model":  "3009 Series II (Improved, fixed headshell)",
+                         "last_id":  1588,
+                         "last_manufacturer":  "Jelco",
+                         "last_model":  "TK-370",
+                         "field_count":  31,
+                         "first_fields":  "id, manufacturer, model, rectype, effective_length_mm, pivot_to_spindle_mm, overhang_mm, offset_angle_deg, effective_mass_g, arm_shape, arm_material, bearing_type, headshell_connector, cartridge_weight_range_g, stylus_pressure_range_g, vta_adjustment, azimuth_adjustment, internal_wiring_material, detachable_cable, external_cable_capacitance_pf, alignment_geometry, null_points_mm, tracking_method, notes, sources, edit_history, created_by, create_stamp, updated_by, update_stamp, example_params_for_calculator"
+                     }
+                 ]
+}
+

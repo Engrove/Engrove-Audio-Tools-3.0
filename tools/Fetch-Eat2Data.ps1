@@ -1,66 +1,25 @@
 ﻿<#
 Engrove Audio Tools 3.0
-Fetch all Engrove Audio Tools 2.0 public data and schema files from GitHub.
+Fetch Engrove Audio Tools 2.0 public data + schemas from GitHub.
 
 Run from repo root:
-  powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Fetch-Eat2Data.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Fetch-Eat2Data.ps1
 #>
 
 [CmdletBinding()]
-param(
-  [string]$RepoRoot
-)
+param([string]$RepoRoot)
 
 $ErrorActionPreference = "Stop"
 
-
-function Get-EngroveScriptDirectory {
-  if (-not [string]::IsNullOrWhiteSpace($PSScriptRoot)) {
-    return $PSScriptRoot
-  }
-
-  if (-not [string]::IsNullOrWhiteSpace($PSCommandPath)) {
-    return Split-Path -Parent $PSCommandPath
-  }
-
-  if ($MyInvocation -and $MyInvocation.MyCommand -and -not [string]::IsNullOrWhiteSpace($MyInvocation.MyCommand.Path)) {
-    return Split-Path -Parent $MyInvocation.MyCommand.Path
-  }
-
-  $toolsCandidate = Join-Path (Get-Location).Path "tools"
-  if (Test-Path $toolsCandidate) {
-    return $toolsCandidate
-  }
-
+function Resolve-RepoRoot {
+  param([string]$Explicit)
+  if (-not [string]::IsNullOrWhiteSpace($Explicit)) { return (Resolve-Path $Explicit).Path }
+  if (Test-Path (Join-Path (Get-Location).Path ".git")) { return (Get-Location).Path }
+  if (-not [string]::IsNullOrWhiteSpace($PSScriptRoot)) { return (Resolve-Path (Join-Path $PSScriptRoot "..")).Path }
   return (Get-Location).Path
 }
 
-function Resolve-EngroveRepoRoot {
-  param([string]$ExplicitRepoRoot)
-
-  if (-not [string]::IsNullOrWhiteSpace($ExplicitRepoRoot)) {
-    return (Resolve-Path $ExplicitRepoRoot).Path
-  }
-
-  $scriptDir = Get-EngroveScriptDirectory
-
-  if ((Split-Path -Leaf $scriptDir) -ieq "tools") {
-    return (Resolve-Path (Join-Path $scriptDir "..")).Path
-  }
-
-  if (Test-Path (Join-Path $scriptDir ".git")) {
-    return (Resolve-Path $scriptDir).Path
-  }
-
-  if (Test-Path (Join-Path (Get-Location).Path ".git")) {
-    return (Get-Location).Path
-  }
-
-  return (Resolve-Path (Join-Path $scriptDir "..")).Path
-}
-
-
-$RepoRoot = Resolve-EngroveRepoRoot -ExplicitRepoRoot $RepoRoot
+$RepoRoot = Resolve-RepoRoot $RepoRoot
 $TargetRoot = Join-Path $RepoRoot "src\data\legacy\engrove-2.0\public\data"
 $SchemaRoot = Join-Path $TargetRoot "schemas"
 $BaseUrl = "https://raw.githubusercontent.com/Engrove/Engrove-Audio-Tools-2.0/main/public/data"
@@ -100,10 +59,7 @@ $SchemaFiles = @(
 )
 
 function Save-RemoteFile {
-  param(
-    [Parameter(Mandatory=$true)][string]$Url,
-    [Parameter(Mandatory=$true)][string]$OutFile
-  )
+  param([string]$Url, [string]$OutFile)
 
   $parent = Split-Path -Parent $OutFile
   if (-not (Test-Path $parent)) {
@@ -115,7 +71,7 @@ function Save-RemoteFile {
 }
 
 Write-Host ""
-Write-Host "=== Fetch Engrove Audio Tools 2.0 data ==="
+Write-Host "=== Fetch EAT2 data ==="
 Write-Host "Repo root: $RepoRoot"
 Write-Host "Target:    $TargetRoot"
 Write-Host ""
