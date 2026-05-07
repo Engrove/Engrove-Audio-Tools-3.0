@@ -11,7 +11,7 @@
     "check:tonearm": "node tools/check-tonearm-match-lab.mjs",
     "validate:data": "node tools/validate-audio-data.mjs",
     "check:data": "node tools/validate-audio-data.mjs",
-    "check:integrity": "node tools/check-repo-integrity.mjs", "check:render-safe": "node tools/check-render-safe.mjs"
+    "check:integrity": "node tools/check-repo-integrity.mjs", "check:render-safe": "node tools/check-render-safe.mjs", "check:tonearm-selectors": "node tools/check-tonearm-runtime-selectors.mjs"
   },
   "dependencies": {},
   "devDependencies": {

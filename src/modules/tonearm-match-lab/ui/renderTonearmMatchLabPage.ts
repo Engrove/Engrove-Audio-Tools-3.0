@@ -3,7 +3,7 @@ import {
   type ResonanceInput,
   type ResonanceResult,
 } from '../engine/resonance';
-import { diagnoseResonance, type ResonanceDiagnosis } from '../engine/diagnosis'; import { escapeAttribute, renderText } from '../../../shared/ui/renderSafe';
+import { diagnoseResonance, type ResonanceDiagnosis } from '../engine/diagnosis'; import { filterRuntimeRecords, loadTonearmRuntimeData, type CartridgeRuntimeRecord, type TonearmRuntimeRecord } from '../data/loadTonearmRuntimeData'; import { selectorEmptyMarkup, selectorListMarkup } from './tonearmSelectorMarkup'; import { escapeAttribute, renderText } from '../../../shared/ui/renderSafe';
 
 type QuickMatchFieldName = keyof ResonanceInput;
 
@@ -123,6 +123,49 @@ export function errorMarkup(message: unknown): string {
   `;
 }
 
+function runtimeSelectorFoundationMarkup(): string {
+  return `
+    <section class="tm-runtime-selectors" data-tonearm-runtime-selectors aria-labelledby="tm-runtime-selectors-title">
+      <div class="tm-runtime-selectors__intro">
+        <h3 id="tm-runtime-selectors-title">Match-ready dataset selectors</h3>
+        <p>Search the public runtime dataset and copy known values into Quick Match.</p>
+      </div>
+
+      <div class="tm-runtime-selector" data-runtime-selector="cartridge">
+        <label class="tm-runtime-selector__label" for="tm-runtime-cartridge-search">Cartridge dataset search</label>
+        <input
+          id="tm-runtime-cartridge-search"
+          class="tm-runtime-selector__search"
+          type="search"
+          autocomplete="off"
+          placeholder="Search match-ready cartridges"
+          data-runtime-selector-search="cartridge"
+        />
+        <div class="tm-runtime-selector__results" data-runtime-selector-results="cartridge" aria-live="polite">
+          <p class="tm-runtime-selector__empty">Loading match-ready cartridges…</p>
+        </div>
+      </div>
+
+      <div class="tm-runtime-selector" data-runtime-selector="tonearm">
+        <label class="tm-runtime-selector__label" for="tm-runtime-tonearm-search">Tonearm dataset search</label>
+        <input
+          id="tm-runtime-tonearm-search"
+          class="tm-runtime-selector__search"
+          type="search"
+          autocomplete="off"
+          placeholder="Search match-ready tonearms"
+          data-runtime-selector-search="tonearm"
+        />
+        <div class="tm-runtime-selector__results" data-runtime-selector-results="tonearm" aria-live="polite">
+          <p class="tm-runtime-selector__empty">Loading match-ready tonearms…</p>
+        </div>
+      </div>
+
+      <p class="tm-runtime-selectors__status" data-runtime-selector-status>Loading public runtime data…</p>
+    </section>
+  `;
+}
+
 function readNumber(form: HTMLFormElement, name: QuickMatchFieldName): number {
   const element = form.elements.namedItem(name);
 
@@ -155,6 +198,112 @@ function renderResult(form: HTMLFormElement, resultElement: HTMLElement): void {
       error instanceof Error ? error.message : 'Check the input values.',
     );
   }
+}
+
+function setNumericInput(form: HTMLFormElement, name: QuickMatchFieldName, value: number | undefined): boolean {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return false;
+  }
+  const element = form.elements.namedItem(name);
+  if (!(element instanceof HTMLInputElement)) {
+    return false;
+  }
+  element.value = String(value);
+  return true;
+}
+
+function renderSelectorResults(
+  root: HTMLElement,
+  cartridges: readonly CartridgeRuntimeRecord[],
+  tonearms: readonly TonearmRuntimeRecord[],
+): void {
+  const cartridgeSearch = root.querySelector<HTMLInputElement>('[data-runtime-selector-search="cartridge"]');
+  const tonearmSearch = root.querySelector<HTMLInputElement>('[data-runtime-selector-search="tonearm"]');
+  const cartridgeResults = root.querySelector<HTMLElement>('[data-runtime-selector-results="cartridge"]');
+  const tonearmResults = root.querySelector<HTMLElement>('[data-runtime-selector-results="tonearm"]');
+
+  if (cartridgeResults) {
+    cartridgeResults.innerHTML = selectorListMarkup(
+      filterRuntimeRecords(cartridges, cartridgeSearch?.value ?? ''),
+      'cartridge',
+    );
+  }
+  if (tonearmResults) {
+    tonearmResults.innerHTML = selectorListMarkup(
+      filterRuntimeRecords(tonearms, tonearmSearch?.value ?? ''),
+      'tonearm',
+    );
+  }
+}
+
+function bindSelectorSelection(
+  root: HTMLElement,
+  form: HTMLFormElement,
+  cartridges: readonly CartridgeRuntimeRecord[],
+  tonearms: readonly TonearmRuntimeRecord[],
+): void {
+  root.addEventListener('click', (event) => {
+    const option = (event.target as Element | null)?.closest<HTMLButtonElement>('[data-runtime-selector-option]');
+    if (!option) {
+      return;
+    }
+
+    const id = option.dataset.runtimeId;
+    const kind = option.dataset.runtimeSelectorOption;
+    let changed = false;
+
+    if (kind === 'cartridge') {
+      const record = cartridges.find((item) => item.id === id);
+      if (record) {
+        changed = setNumericInput(form, 'cartridgeMassG', record.mass_g) || changed;
+        changed = setNumericInput(form, 'compliance10HzCu', record.compliance_10hz_cu) || changed;
+      }
+    } else if (kind === 'tonearm') {
+      const record = tonearms.find((item) => item.id === id);
+      if (record) {
+        changed = setNumericInput(form, 'tonearmEffectiveMassG', record.effective_mass_g) || changed;
+      }
+    }
+
+    if (changed) {
+      form.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  });
+}
+
+function bindRuntimeSelectors(form: HTMLFormElement): void {
+  const root = document.querySelector<HTMLElement>('[data-tonearm-runtime-selectors]');
+  if (!root) {
+    return;
+  }
+
+  const status = root.querySelector<HTMLElement>('[data-runtime-selector-status]');
+  const cartridgeResults = root.querySelector<HTMLElement>('[data-runtime-selector-results="cartridge"]');
+  const tonearmResults = root.querySelector<HTMLElement>('[data-runtime-selector-results="tonearm"]');
+
+  loadTonearmRuntimeData()
+    .then((data) => {
+      if (status) {
+        status.textContent = 'Loaded match-ready runtime data.';
+      }
+      renderSelectorResults(root, data.cartridges, data.tonearms);
+      root.querySelectorAll<HTMLInputElement>('[data-runtime-selector-search]').forEach((input) => {
+        input.addEventListener('input', () => renderSelectorResults(root, data.cartridges, data.tonearms));
+      });
+      bindSelectorSelection(root, form, data.cartridges, data.tonearms);
+    })
+    .catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : 'Unable to load runtime selector data.';
+      if (status) {
+        status.textContent = `Runtime selector data could not be loaded. ${message}`;
+      }
+      if (cartridgeResults) {
+        cartridgeResults.innerHTML = selectorEmptyMarkup('Cartridge dataset search is unavailable.');
+      }
+      if (tonearmResults) {
+        tonearmResults.innerHTML = selectorEmptyMarkup('Tonearm dataset search is unavailable.');
+      }
+    });
 }
 
 function bindThemeToggle(): void {
@@ -211,7 +360,9 @@ export function renderTonearmMatchLabPage(): string {
               <p>Enter the basic published values and get an immediate resonance diagnosis.</p>
             </div>
             <div class="tm-lab-form__fields">
-              ${quickMatchFields.map(fieldMarkup).join('')}
+              ${runtimeSelectorFoundationMarkup()}
+
+${quickMatchFields.map(fieldMarkup).join('')}
             </div>
           </form>
 
@@ -251,6 +402,6 @@ export function enableTonearmMatchLabInteractions(): void {
     return;
   }
 
-  form.addEventListener('input', () => renderResult(form, resultElement));
+  bindRuntimeSelectors(form); form.addEventListener('input', () => renderResult(form, resultElement));
   renderResult(form, resultElement);
 }

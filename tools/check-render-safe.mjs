@@ -33,7 +33,19 @@ function patchTempUiImports() {
   let source = readFileSync(absolutePath, 'utf8');
   source = source.replace("from '../engine/resonance';", "from '../engine/resonance.js';");
   source = source.replace("from '../engine/diagnosis';", "from '../engine/diagnosis.js';");
+  source = source.replace("from '../data/loadTonearmRuntimeData';", "from '../data/loadTonearmRuntimeData.js';");
+  source = source.replace("from './tonearmSelectorMarkup';", "from './tonearmSelectorMarkup.js';");
   source = source.replace("from '../../../shared/ui/renderSafe';", "from '../../../shared/ui/renderSafe.js';");
+
+  writeFileSync(absolutePath, source, 'utf8');
+}
+function patchTempSelectorMarkupImports() {
+  const relativePath = 'src/modules/tonearm-match-lab/ui/tonearmSelectorMarkup.ts';
+  const absolutePath = join(tempRoot, relativePath);
+
+  let source = readFileSync(absolutePath, 'utf8');
+  source = source.replace("from '../../../shared/ui/renderSafe';", "from '../../../shared/ui/renderSafe.js';");
+  source = source.replace("from '../data/loadTonearmRuntimeData';", "from '../data/loadTonearmRuntimeData.js';");
 
   writeFileSync(absolutePath, source, 'utf8');
 }
@@ -99,7 +111,10 @@ function assertNotIncludes(haystack, needle, label) {
 async function runChecks() {
   copySource('src/shared/ui/renderSafe.ts');
   copySource('src/modules/tonearm-match-lab/ui/renderTonearmMatchLabPage.ts');
+  copySource('src/modules/tonearm-match-lab/data/loadTonearmRuntimeData.ts');
+  copySource('src/modules/tonearm-match-lab/ui/tonearmSelectorMarkup.ts');
   patchTempUiImports();
+  patchTempSelectorMarkupImports();
 
   // The real product compile/build gates verify the real engine dependency tree.
   // This harness uses tiny temp adapters only so the actual UI source can be
