@@ -40,9 +40,21 @@ const totalMass = calculateTotalMovingMass(defaultInput);
 const defaultHz = calculateResonanceHz(defaultInput);
 const defaultDiagnosis = diagnoseResonance(defaultHz);
 
-assertApprox(totalMass, 21.3, 0.001, 'default total moving mass');
-assertApprox(defaultHz, 8.1, 0.05, 'default resonance follows the specified simplified formula');
+assertApprox(totalMass, 19.5, 0.001, 'default total moving mass');
+assertApprox(defaultHz, 8.49, 0.01, 'default resonance excludes tracking force from moving mass');
 assert(defaultDiagnosis.code === 'good', 'default diagnosis should be good');
+
+const changedTrackingForceHz = calculateResonanceHz({
+  ...defaultInput,
+  trackingForceG: 3,
+});
+
+assertApprox(
+  changedTrackingForceHz,
+  defaultHz,
+  0.0001,
+  'tracking force should not change resonance frequency',
+);
 
 const lowHz = calculateResonanceHz({
   tonearmEffectiveMassG: 25,

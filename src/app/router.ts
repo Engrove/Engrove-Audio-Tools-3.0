@@ -28,6 +28,18 @@ function renderRoute(app: HTMLElement, route: AppRoute): void {
   enableHomePageInteractions();
 }
 
+function shouldIgnoreModifiedClick(event: MouseEvent, anchor: HTMLAnchorElement): boolean {
+  return (
+    event.button !== 0 ||
+    event.ctrlKey ||
+    event.metaKey ||
+    event.shiftKey ||
+    event.altKey ||
+    anchor.target === '_blank' ||
+    anchor.hasAttribute('download')
+  );
+}
+
 function shouldLetBrowserHandleAnchor(anchor: HTMLAnchorElement, url: URL): boolean {
   const isSamePage = url.origin === window.location.origin && url.pathname === window.location.pathname;
   const isHashOnlyNavigation = url.hash.length > 0 && url.hash !== tonearmCalculatorHash;
@@ -61,7 +73,7 @@ export function startRouter(selector = '#app'): void {
   document.addEventListener('click', (event) => {
     const anchor = (event.target as Element | null)?.closest<HTMLAnchorElement>('a[href]');
 
-    if (!anchor) {
+    if (!anchor || shouldIgnoreModifiedClick(event, anchor)) {
       return;
     }
 

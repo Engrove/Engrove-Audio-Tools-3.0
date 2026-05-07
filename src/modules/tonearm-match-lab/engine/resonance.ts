@@ -57,8 +57,7 @@ export function calculateTotalMovingMass(input: ResonanceInput): number {
   const totalMovingMassG =
     input.tonearmEffectiveMassG +
     input.cartridgeMassG +
-    input.fastenerMassG +
-    input.trackingForceG;
+    input.fastenerMassG;
 
   if (totalMovingMassG <= 0) {
     throw new RangeError('totalMovingMassG must be greater than zero.');
@@ -73,6 +72,8 @@ export function calculateResonanceHz(input: ResonanceInput): number {
   /*
    * Standard simplified tonearm/cartridge resonance model:
    * resonanceHz = 159 / sqrt(total moving mass in grams * compliance at 10 Hz in cu).
+   * Tracking force is a force setting, not part of the oscillating effective mass
+   * in this simplified resonance model.
    */
   return resonanceConstant / Math.sqrt(totalMovingMassG * input.compliance10HzCu);
 }

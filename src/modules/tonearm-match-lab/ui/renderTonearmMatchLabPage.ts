@@ -32,7 +32,7 @@ const quickMatchFields: readonly QuickMatchField[] = [
   {
     name: 'cartridgeMassG',
     label: 'Cartridge mass, g',
-    helper: 'Pickup body mass without screws.',
+    helper: 'Cartridge body mass without mounting hardware.',
     step: '0.1',
   },
   {
@@ -207,7 +207,7 @@ export function renderTonearmMatchLabPage(): string {
           <form class="tm-lab-card tm-lab-form" id="quick-match" data-tonearm-match-form>
             <div class="tm-lab-card__header">
               <p class="tm-lab-kicker">Manual Quick Match</p>
-              <h2>Passar min pickup med min tonarm?</h2>
+              <h2>Does my cartridge match my tonearm?</h2>
               <p>Enter the basic published values and get an immediate resonance diagnosis.</p>
             </div>
             <div class="tm-lab-form__fields">
@@ -232,7 +232,7 @@ export function renderTonearmMatchLabPage(): string {
           </div>
           <ul class="tm-lab-assumption-list">
             <li>This first version uses manual input and a simplified resonance model.</li>
-            <li>Database-backed cartridge and tonearm selectors come in Fas 17.2.</li>
+            <li>Database-backed cartridge and tonearm selectors are planned for the next module iteration.</li>
             <li>Compliance must be a 10 Hz value or an estimate converted to 10 Hz.</li>
           </ul>
         </section>
