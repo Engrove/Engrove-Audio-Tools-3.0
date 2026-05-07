@@ -1,0 +1,72 @@
+{
+  "package": "engrove-audio-tools-3.0-fas17_1-tonearm-match-lab-v2-web-baseline",
+  "generated_note": "GitHub web-read baseline used because EIC Git operation surface is denied.",
+  "baseline_commit": "ea2501788abe2d13794bdfb2073cd37379cf4685",
+  "files": [
+    {
+      "path": "FAS17_1_APPLY.md",
+      "size_bytes": 935,
+      "sha256": "90648bb4f805b19a3fe2afde64120b49aa5464cb07a8227a754ea17cd35f5267"
+    },
+    {
+      "path": "FAS17_1_TONEARM_MATCH_LAB_IMPLEMENTATION_REPORT.md",
+      "size_bytes": 2130,
+      "sha256": "507b7e6b643f9a22b52e7a4309e9a2c1eba8a7decfe2f7555958dee33e286df3"
+    },
+    {
+      "path": "package.json",
+      "size_bytes": 438,
+      "sha256": "73a84d7e353586b323bfaa8beee06a8ea0c8265689ca32936afe783cc0006e22"
+    },
+    {
+      "path": "src/app/home/renderHomePage.ts",
+      "size_bytes": 8249,
+      "sha256": "2764ab6a2aa7eb2788282bf9f8f2cb0ed007507526c5c7ec245007e9f787e1a9"
+    },
+    {
+      "path": "src/app/router.ts",
+      "size_bytes": 2410,
+      "sha256": "ec65b45da8991512742bcbbea78b505b7f6b5595a4118f2f5895a043a93364c7"
+    },
+    {
+      "path": "src/main.ts",
+      "size_bytes": 166,
+      "sha256": "abaacd1c5639941722eeb5a8103035ca3f7ff30fa5c3cd24c75993c62de25376"
+    },
+    {
+      "path": "src/modules/tonearm-match-lab/engine/diagnosis.ts",
+      "size_bytes": 2598,
+      "sha256": "b137bc482006d7c766bdaffe5c23dd474e38c078afbbb06d07538256a5a56e3f"
+    },
+    {
+      "path": "src/modules/tonearm-match-lab/engine/resonance.ts",
+      "size_bytes": 2623,
+      "sha256": "734940bf89ec2345c297276cf260a876c0776bc1d624d643d3b261b5fc1f1014"
+    },
+    {
+      "path": "src/modules/tonearm-match-lab/index.ts",
+      "size_bytes": 120,
+      "sha256": "431543894f9619101974e0b308fa11b7ba8c299a276499cc8c8a4a01ce9039c9"
+    },
+    {
+      "path": "src/modules/tonearm-match-lab/tests/resonanceEngineCheck.ts",
+      "size_bytes": 2293,
+      "sha256": "5ee300a52b2570b280bf8008fba5c943f6f59fc0763e00c679e49201ea84ed55"
+    },
+    {
+      "path": "src/modules/tonearm-match-lab/ui/renderTonearmMatchLabPage.ts",
+      "size_bytes": 8498,
+      "sha256": "006aee38b663c941b92ccae8cab8d0bda4c9610f6fe604347071bfd61889458e"
+    },
+    {
+      "path": "src/modules/tonearm-match-lab/ui/tonearmMatchLab.css",
+      "size_bytes": 6319,
+      "sha256": "520219e41deb66a2349a19c366de3691f4b8971c398b3b6291c7e6d0c4c9c023"
+    },
+    {
+      "path": "tools/check-tonearm-match-lab.mjs",
+      "size_bytes": 1187,
+      "sha256": "e73ef47b51d88709a683e78194902c1607955c30e1419a0c4c3373cc2930cf05"
+    }
+  ]
+}

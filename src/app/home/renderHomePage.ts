@@ -2,26 +2,42 @@ import packageJson from '../../../package.json';
 
 const repoVersion = typeof packageJson.version === 'string' ? packageJson.version : '0.0.0';
 
-const tools = [
+type ToolCard = {
+  title: string;
+  summary: string;
+  status: string;
+  href: string;
+  actionLabel: string;
+};
+
+const tools: readonly ToolCard[] = [
   {
     title: 'Alignment Calculator',
     summary: 'Visualize tonearm alignment choices and compare geometry families with clear setup guidance.',
     status: 'Planned module',
+    href: '#tools',
+    actionLabel: 'Learn more',
   },
   {
     title: 'Resonance Calculator',
-    summary: 'Estimate cartridge and tonearm resonance with shared component data and public-friendly results.',
-    status: 'Planned module',
+    summary: 'Check whether a cartridge and tonearm combination lands in the safe resonance window.',
+    status: 'Available foundation',
+    href: '/tonearm-calculator',
+    actionLabel: 'Open Tonearm Match Lab',
   },
   {
     title: 'Compliance Estimator',
     summary: 'Convert and estimate compliance values without forcing users into spreadsheet-style workflows.',
     status: 'Planned module',
+    href: '#tools',
+    actionLabel: 'Learn more',
   },
   {
     title: 'Data Explorer',
     summary: 'Search cartridges, tonearms and related component data from a shared curated database.',
     status: 'Foundation module',
+    href: '#tools',
+    actionLabel: 'Learn more',
   },
 ];
 
@@ -50,14 +66,20 @@ function footerMeta(): string {
 }
 
 function toolCards(): string {
-  return tools.map((tool) => `
-    <article class="ea-tool-card">
-      <p class="ea-tool-card__status">${tool.status}</p>
-      <h3>${tool.title}</h3>
-      <p>${tool.summary}</p>
-      <a class="ea-tool-card__link" href="#tools" aria-label="Open ${tool.title}">Learn more</a>
-    </article>
-  `).join('');
+  return tools
+    .map(
+      (tool) => `
+        <article class="ea-tool-card">
+          <p class="ea-tool-card__status">${tool.status}</p>
+          <h3>${tool.title}</h3>
+          <p>${tool.summary}</p>
+          <a class="ea-tool-card__link" href="${tool.href}" aria-label="${tool.actionLabel}">
+            ${tool.actionLabel}
+          </a>
+        </article>
+      `,
+    )
+    .join('');
 }
 
 export function renderHomePage(): string {
@@ -85,6 +107,7 @@ export function renderHomePage(): string {
       <main>
         <section class="ea-hero" aria-labelledby="hero-title">
           <div class="ea-hero__backdrop" aria-hidden="true"></div>
+
           <div class="ea-hero__content">
             <p class="ea-kicker">Engrove Audio Tools 3.0</p>
             <h1 id="hero-title">Precision Tools for the Analog Enthusiast.</h1>
@@ -182,7 +205,6 @@ function updateScrollAffordance(): void {
   const rawProgress = scrollElement.scrollTop / maxScroll;
   const progress = Math.min(1, Math.max(0, rawProgress));
   const visibleProgress = Math.max(0.08, progress);
-
   document.documentElement.style.setProperty('--ea-scroll-progress', `${visibleProgress * 100}%`);
 }
 
@@ -211,8 +233,8 @@ function bindScrollAffordance(): void {
 export function enableHomePageInteractions(): void {
   const button = document.querySelector<HTMLButtonElement>('[data-theme-toggle]');
   const root = document.documentElement;
-
   const stored = localStorage.getItem('engrove-theme');
+
   if (stored === 'light' || stored === 'dark') {
     root.dataset.theme = stored;
   }

@@ -1,9 +1,6 @@
 import './shared/ui/styles/base.css';
-import { enableHomePageInteractions, renderHomePage } from './app/home/renderHomePage';
+import './modules/tonearm-match-lab/ui/tonearmMatchLab.css';
 
-const app = document.querySelector<HTMLDivElement>('#app');
+import { startRouter } from './app/router';
 
-if (app) {
-  app.innerHTML = renderHomePage();
-  enableHomePageInteractions();
-}
+startRouter('#app');
