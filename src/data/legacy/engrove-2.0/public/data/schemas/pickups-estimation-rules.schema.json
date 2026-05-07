@@ -1,0 +1,104 @@
+{
+  "type": "object",
+  "properties": {
+    "timestamp": {
+      "type": "string"
+    },
+    "source_data_count": {
+      "type": "number"
+    },
+    "analysis_data_count": {
+      "type": "number"
+    },
+    "global_fallback": {
+      "type": "object",
+      "properties": {
+        "priority": {
+          "type": "number"
+        },
+        "conditions": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        },
+        "k": {
+          "type": "number"
+        },
+        "m": {
+          "type": "number"
+        },
+        "r_squared": {
+          "type": "number"
+        },
+        "sample_size": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "conditions",
+        "k",
+        "m",
+        "priority",
+        "r_squared",
+        "sample_size"
+      ]
+    },
+    "segmented_rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "priority": {
+            "type": "number"
+          },
+          "conditions": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string"
+              },
+              "cantilever_class": {
+                "type": "string"
+              },
+              "stylus_family": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "cantilever_class",
+              "stylus_family",
+              "type"
+            ]
+          },
+          "k": {
+            "type": "number"
+          },
+          "m": {
+            "type": "number"
+          },
+          "r_squared": {
+            "type": "number"
+          },
+          "sample_size": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "conditions",
+          "k",
+          "m",
+          "priority",
+          "r_squared",
+          "sample_size"
+        ]
+      }
+    }
+  },
+  "required": [
+    "analysis_data_count",
+    "global_fallback",
+    "segmented_rules",
+    "source_data_count",
+    "timestamp"
+  ]
+}

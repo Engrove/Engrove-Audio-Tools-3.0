@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Heuristics Maintenance Manifest",
+  "description": "Defines rules for archiving, adding, or modifying heuristics during the historical reconstruction process.",
+  "type": "object",
+  "properties": {
+    "autoArchivePolicy": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "usageThreshold": { "type": "integer" },
+        "analysisWindowDays": { "type": "integer" },
+        "analysisWindowSessions": { "type": "integer" },
+        "protectedHeuristics": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["enabled"]
+    },
+    "archiveHeuristics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "heuristicId": { "type": "string" },
+          "originSessionId": { "type": "string" },
+          "reason": { "type": "string" }
+        },
+        "required": ["heuristicId", "reason"]
+      }
+    },
+    "addHeuristics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "heuristicId": { "type": "string" },
+          "trigger": { "type": "object" },
+          "identifiedRisk": { "type": "object" },
+          "mitigation": { "type": "object" },
+          "metadata": { "type": "object" }
+        },
+        "required": ["heuristicId", "trigger", "identifiedRisk", "mitigation", "metadata"]
+      }
+    }
+  },
+  "required": ["archiveHeuristics", "addHeuristics"]
+}

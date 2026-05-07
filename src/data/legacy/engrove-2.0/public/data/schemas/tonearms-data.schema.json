@@ -1,0 +1,161 @@
+{
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "number"
+      },
+      "manufacturer": {
+        "type": "string"
+      },
+      "model": {
+        "type": "string"
+      },
+      "rectype": {
+        "type": "string"
+      },
+      "effective_length_mm": {
+        "type": "number"
+      },
+      "pivot_to_spindle_mm": {
+        "type": "number"
+      },
+      "overhang_mm": {
+        "type": "number"
+      },
+      "offset_angle_deg": {
+        "type": "number"
+      },
+      "effective_mass_g": {
+        "type": "number"
+      },
+      "arm_shape": {
+        "type": "string"
+      },
+      "arm_material": {
+        "type": "null"
+      },
+      "bearing_type": {
+        "type": "string"
+      },
+      "headshell_connector": {
+        "type": "string"
+      },
+      "cartridge_weight_range_g": {
+        "type": "string"
+      },
+      "stylus_pressure_range_g": {
+        "type": "string"
+      },
+      "vta_adjustment": {
+        "type": "null"
+      },
+      "azimuth_adjustment": {
+        "type": "string"
+      },
+      "internal_wiring_material": {
+        "type": "string"
+      },
+      "detachable_cable": {
+        "type": "null"
+      },
+      "external_cable_capacitance_pf": {
+        "type": "number"
+      },
+      "alignment_geometry": {
+        "type": "string"
+      },
+      "null_points_mm": {
+        "type": "array",
+        "items": {
+          "type": "number"
+        }
+      },
+      "tracking_method": {
+        "type": "string"
+      },
+      "notes": {
+        "type": "string"
+      },
+      "sources": {
+        "type": "array"
+      },
+      "edit_history": {
+        "type": "array"
+      },
+      "created_by": {
+        "type": "string"
+      },
+      "create_stamp": {
+        "type": "string"
+      },
+      "updated_by": {
+        "type": "string"
+      },
+      "update_stamp": {
+        "type": "string"
+      },
+      "example_params_for_calculator": {
+        "type": "object",
+        "properties": {
+          "m_headshell": {
+            "type": "number"
+          },
+          "m_rear_assembly": {
+            "type": "number"
+          },
+          "m_tube_percentage": {
+            "type": "number"
+          },
+          "L2": {
+            "type": "number"
+          },
+          "L3_fixed_cw": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "L2",
+          "L3_fixed_cw",
+          "m_headshell",
+          "m_rear_assembly",
+          "m_tube_percentage"
+        ]
+      }
+    },
+    "required": [
+      "alignment_geometry",
+      "arm_material",
+      "arm_shape",
+      "azimuth_adjustment",
+      "bearing_type",
+      "cartridge_weight_range_g",
+      "create_stamp",
+      "created_by",
+      "detachable_cable",
+      "edit_history",
+      "effective_length_mm",
+      "effective_mass_g",
+      "example_params_for_calculator",
+      "external_cable_capacitance_pf",
+      "headshell_connector",
+      "id",
+      "internal_wiring_material",
+      "manufacturer",
+      "model",
+      "notes",
+      "null_points_mm",
+      "offset_angle_deg",
+      "overhang_mm",
+      "pivot_to_spindle_mm",
+      "rectype",
+      "sources",
+      "stylus_pressure_range_g",
+      "tracking_method",
+      "update_stamp",
+      "updated_by",
+      "vta_adjustment"
+    ]
+  }
+}

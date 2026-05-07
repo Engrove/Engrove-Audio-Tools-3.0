@@ -1,0 +1,215 @@
+{
+  "stylus_family": {
+    "name": "Stylus Family",
+    "description": "A classification of stylus shapes based on their geometry and performance characteristics, grouping various marketing names under a common technical family.",
+    "categories": [
+      {
+        "id": "Conical",
+        "name": "Conical / Spherical",
+        "description": "The simplest and most common stylus shape. It's robust and forgiving of setup and worn records, but offers the least detail retrieval.",
+        "notes": "Examples: Spherical, Conical."
+      },
+      {
+        "id": "Elliptical",
+        "name": "Elliptical",
+        "description": "A step up from conical, with a smaller front-to-back radius that allows it to trace high frequencies more accurately. A great all-round performer.",
+        "notes": "This category includes standard bonded elliptical styli."
+      },
+      {
+        "id": "Nude Elliptical",
+        "name": "Nude Elliptical",
+        "description": "A solid, 'nude' diamond stylus that is lighter than a bonded one. This lower tip mass results in better transient response and detail compared to a standard elliptical.",
+        "notes": ""
+      },
+      {
+        "id": "Line-Contact",
+        "name": "Line-Contact",
+        "description": "An advanced profile that features a very narrow side radius and a wider front-to-back radius, creating a long vertical contact patch in the groove. This provides excellent high-frequency tracking, lower distortion, and reduced record wear.",
+        "notes": "A broad family of shapes. Examples: Fine Line, Gyger II, Vital, Hyperelliptical."
+      },
+      {
+        "id": "Advanced Line-Contact",
+        "name": "Advanced Line-Contact / Micro-Ridge",
+        "description": "The most complex and high-performance stylus shapes, designed to mimic the cutting head as closely as possible. They offer the best possible detail retrieval, frequency extension, and tracking ability.",
+        "notes": "Examples: Shibata, MicroLine, Micro-Ridge, Gyger S, van den Hul, Micro HD, 2SD."
+      }
+    ]
+  },
+  "cantilever_class": {
+    "name": "Cantilever Class",
+    "description": "A classification of cantilever materials based on their physical properties and typical application.",
+    "categories": [
+      {
+        "id": "Standard",
+        "name": "Standard Materials",
+        "description": "Basic, cost-effective materials used in entry-level cartridges.",
+        "notes": "Examples: Carbon Fibre, Permalloy, Hard alloy."
+      },
+      {
+        "id": "Aluminum",
+        "name": "Aluminum",
+        "description": "The most common cantilever material. It offers an excellent balance of stiffness, low mass, and cost. Can be straight, tapered, or hardened for improved performance.",
+        "notes": "The industry standard for a wide range of cartridges."
+      },
+      {
+        "id": "Exotic/High-Performance",
+        "name": "Exotic / High-Performance",
+        "description": "Extremely light and stiff materials used in high-end cartridges for superior transient response, detail retrieval, and frequency extension.",
+        "notes": "Examples: Boron, Beryllium, Ruby, Sapphire, Diamond."
+      }
+    ]
+  },
+  "compliance_level": {
+    "name": "Compliance Level",
+    "description": "A classification of a cartridge's mechanical compliance, which is crucial for matching with a tonearm's effective mass.",
+    "categories": [
+      {
+        "id": "low",
+        "name": "Low Compliance",
+        "description": "A stiff suspension (typically < 12 cu @ 10Hz). Best suited for medium-to-high mass tonearms.",
+        "notes": "Common for most traditional Moving Coil cartridges like the Denon DL-103."
+      },
+      {
+        "id": "medium",
+        "name": "Medium Compliance",
+        "description": "A versatile suspension (typically 12-19 cu @ 10Hz). Works well with the majority of modern medium-mass tonearms.",
+        "notes": "A very common category for modern MM, MI, and some MC cartridges."
+      },
+      {
+        "id": "high",
+        "name": "High Compliance",
+        "description": "A very compliant, or 'soft', suspension (typically 20-29 cu @ 10Hz). Best suited for low-mass tonearms.",
+        "notes": "Common for many classic vintage cartridges from the 70s and 80s, and modern ones like the Ortofon 2M series."
+      },
+      {
+        "id": "very-high",
+        "name": "Very High Compliance",
+        "description": "An extremely compliant suspension (typically > 30 cu @ 10Hz). Requires a very low-mass tonearm to perform correctly.",
+        "notes": "Examples: ADC XLM, Elac ESG 796."
+      }
+    ]
+  },
+  "tags": {
+    "name": "Sonic Character Tags",
+    "description": "A standardized vocabulary of subjective terms used to describe the sonic character of a cartridge.",
+    "categories": [
+      {
+        "id": "Warm",
+        "description": "Emphasizes lower midrange and mid-bass, often described as rich, full-bodied, and pleasant."
+      },
+      {
+        "id": "Neutral",
+        "description": "Aims for accuracy and balance across the frequency spectrum, without obvious colorations."
+      },
+      {
+        "id": "Bright",
+        "description": "Emphasizes the upper midrange and treble, can sound very clear and open, but may become harsh in some systems."
+      },
+      {
+        "id": "Detailed",
+        "description": "Excels at resolving fine, low-level information in the recording."
+      },
+      {
+        "id": "Analytical",
+        "description": "A highly detailed sound that prioritizes accuracy over musicality; can sometimes sound clinical or sterile."
+      },
+      {
+        "id": "Musical",
+        "description": "A quality where the overall presentation is cohesive and emotionally engaging, even if not perfectly accurate."
+      },
+      {
+        "id": "Forgiving",
+        "description": "Tends to smooth over flaws in recordings or surface noise, often associated with warmer cartridges."
+      },
+      {
+        "id": "Dynamic",
+        "description": "Excellent at reproducing the difference between loud and soft passages, sounds lively and energetic."
+      },
+      {
+        "id": "Good Bass",
+        "description": "Delivers a powerful, weighty, or well-defined bass response."
+      },
+      {
+        "id": "Good Midrange",
+        "description": "Excels at reproducing vocals and instruments in the middle frequencies with texture and realism."
+      },
+      {
+        "id": "Airy Highs",
+        "description": "The high frequencies are extended, clear, and have a sense of space and openness."
+      },
+      {
+        "id": "Punchy",
+        "description": "A strong and impactful presentation, particularly in the bass and mid-bass."
+      },
+      {
+        "id": "Engaging",
+        "description": "A lively, rhythmic, and fun presentation that draws the listener into the music."
+      },
+      {
+        "id": "Smooth",
+        "description": "A relaxed and non-fatiguing sound, without harshness or sharp edges."
+      },
+      {
+        "id": "Refined",
+        "description": "A sophisticated and nuanced presentation, often associated with high-end cartridges."
+      },
+      {
+        "id": "Clean",
+        "description": "A sound free from audible distortion or muddiness."
+      },
+      {
+        "id": "Clear",
+        "description": "Similar to clean, but emphasizes transparency and the ability to hear 'through' to the recording."
+      },
+      {
+        "id": "Precise",
+        "description": "Excellent imaging and focus; instruments are clearly defined in the soundstage."
+      },
+      {
+        "id": "Transparent",
+        "description": "A feeling of nothing being between the listener and the original recording."
+      },
+      {
+        "id": "Rich",
+        "description": "Full of tonal color and texture, often associated with a strong midrange."
+      },
+      {
+        "id": "Agile",
+        "description": "A fast, nimble sound that handles complex rhythms with ease."
+      },
+      {
+        "id": "DJ",
+        "description": "Designed for durability and high output for DJ use, not primarily for audiophile listening."
+      },
+      {
+        "id": "Durable",
+        "description": "Built to withstand heavy use, often a feature of DJ or broadcast cartridges."
+      },
+      {
+        "id": "balanced",
+        "name": "Balanced",
+        "description": "Automatically added by script."
+      },
+      {
+        "id": "fast",
+        "name": "Fast",
+        "description": "Automatically added by script."
+      },
+      {
+        "id": "bold",
+        "name": "Bold",
+        "description": "Automatically added by script."
+      },
+      {
+        "id": "powerful",
+        "name": "Powerful",
+        "description": "Automatically added by script."
+      },
+      {
+        "id": "rhythmic",
+        "name": "Rhythmic",
+        "description": "Automatically added by script."
+      }
+    ]
+  }
+}

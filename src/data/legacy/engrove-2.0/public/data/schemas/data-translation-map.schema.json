@@ -1,0 +1,365 @@
+{
+  "type": "object",
+  "properties": {
+    "cartridges": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        },
+        "compliance_level": {
+          "type": "object",
+          "properties": {
+            "high": {
+              "type": "string"
+            },
+            "low": {
+              "type": "string"
+            },
+            "medium": {
+              "type": "string"
+            },
+            "very-high": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "high",
+            "low",
+            "medium",
+            "very-high"
+          ]
+        },
+        "stylus_family": {
+          "type": "object",
+          "properties": {
+            "Elliptical": {
+              "type": "string"
+            },
+            "Conical": {
+              "type": "string"
+            },
+            "Line-Contact": {
+              "type": "string"
+            },
+            "Nude Elliptical": {
+              "type": "string"
+            },
+            "Advanced Line-Contact": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "Advanced Line-Contact",
+            "Conical",
+            "Elliptical",
+            "Line-Contact",
+            "Nude Elliptical"
+          ]
+        },
+        "cantilever_class": {
+          "type": "object",
+          "properties": {
+            "Standard": {
+              "type": "string"
+            },
+            "Aluminum": {
+              "type": "string"
+            },
+            "Exotic/High-Performance": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "Aluminum",
+            "Exotic/High-Performance",
+            "Standard"
+          ]
+        },
+        "tags": {
+          "type": "object",
+          "properties": {
+            "Neutral": {
+              "type": "string"
+            },
+            "Detailed": {
+              "type": "string"
+            },
+            "Analytical": {
+              "type": "string"
+            },
+            "Punchy": {
+              "type": "string"
+            },
+            "Warm": {
+              "type": "string"
+            },
+            "Engaging": {
+              "type": "string"
+            },
+            "Good Bass": {
+              "type": "string"
+            },
+            "Dynamic": {
+              "type": "string"
+            },
+            "Good Midrange": {
+              "type": "string"
+            },
+            "Musical": {
+              "type": "string"
+            },
+            "Airy Highs": {
+              "type": "string"
+            },
+            "Forgiving": {
+              "type": "string"
+            },
+            "Agile": {
+              "type": "string"
+            },
+            "Smooth": {
+              "type": "string"
+            },
+            "Refined": {
+              "type": "string"
+            },
+            "Precise": {
+              "type": "string"
+            },
+            "Fast": {
+              "type": "string"
+            },
+            "Bright": {
+              "type": "string"
+            },
+            "Balanced": {
+              "type": "string"
+            },
+            "Transparent": {
+              "type": "string"
+            },
+            "Clear": {
+              "type": "string"
+            },
+            "Clean": {
+              "type": "string"
+            },
+            "Rich": {
+              "type": "string"
+            },
+            "DJ": {
+              "type": "string"
+            },
+            "Durable": {
+              "type": "string"
+            },
+            "Powerful": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "Agile",
+            "Airy Highs",
+            "Analytical",
+            "Balanced",
+            "Bright",
+            "Clean",
+            "Clear",
+            "DJ",
+            "Detailed",
+            "Durable",
+            "Dynamic",
+            "Engaging",
+            "Fast",
+            "Forgiving",
+            "Good Bass",
+            "Good Midrange",
+            "Musical",
+            "Neutral",
+            "Powerful",
+            "Precise",
+            "Punchy",
+            "Refined",
+            "Rich",
+            "Smooth",
+            "Transparent",
+            "Warm"
+          ]
+        }
+      },
+      "required": [
+        "cantilever_class",
+        "compliance_level",
+        "stylus_family",
+        "tags",
+        "type"
+      ]
+    },
+    "tonearms": {
+      "type": "object",
+      "properties": {
+        "bearing_type": {
+          "type": "object",
+          "properties": {
+            "knife_edge": {
+              "type": "string"
+            },
+            "gimbal": {
+              "type": "string"
+            },
+            "damped_unipivot": {
+              "type": "string"
+            },
+            "unipivot": {
+              "type": "string"
+            },
+            "v_block": {
+              "type": "string"
+            },
+            "magnetic": {
+              "type": "string"
+            },
+            "dual_pivot": {
+              "type": "string"
+            },
+            "tangential_mechanical": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "damped_unipivot",
+            "dual_pivot",
+            "gimbal",
+            "knife_edge",
+            "magnetic",
+            "tangential_mechanical",
+            "unipivot",
+            "v_block"
+          ]
+        },
+        "arm_material": {
+          "type": "object",
+          "properties": {
+            "titanium": {
+              "type": "string"
+            },
+            "stainless_steel": {
+              "type": "string"
+            },
+            "carbon_fibre": {
+              "type": "string"
+            },
+            "magnesium": {
+              "type": "string"
+            },
+            "wood": {
+              "type": "string"
+            },
+            "aluminum": {
+              "type": "string"
+            },
+            "resin": {
+              "type": "string"
+            },
+            "acrylic": {
+              "type": "string"
+            },
+            "composite": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "acrylic",
+            "aluminum",
+            "carbon_fibre",
+            "composite",
+            "magnesium",
+            "resin",
+            "stainless_steel",
+            "titanium",
+            "wood"
+          ]
+        },
+        "arm_shape": {
+          "type": "object",
+          "properties": {
+            "j_shape": {
+              "type": "string"
+            },
+            "straight": {
+              "type": "string"
+            },
+            "s_shape": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "j_shape",
+            "s_shape",
+            "straight"
+          ]
+        },
+        "headshell_connector": {
+          "type": "object",
+          "properties": {
+            "integrated": {
+              "type": "string"
+            },
+            "sme_universal": {
+              "type": "string"
+            },
+            "proprietary": {
+              "type": "string"
+            },
+            "p_mount_t4p": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "integrated",
+            "p_mount_t4p",
+            "proprietary",
+            "sme_universal"
+          ]
+        },
+        "tracking_method": {
+          "type": "object",
+          "properties": {
+            "pivoting": {
+              "type": "string"
+            },
+            "tangential_mechanical": {
+              "type": "string"
+            },
+            "tangential_pivot": {
+              "type": "string"
+            },
+            "tangential_air_bearing": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "pivoting",
+            "tangential_air_bearing",
+            "tangential_mechanical",
+            "tangential_pivot"
+          ]
+        }
+      },
+      "required": [
+        "arm_material",
+        "arm_shape",
+        "bearing_type",
+        "headshell_connector",
+        "tracking_method"
+      ]
+    }
+  },
+  "required": [
+    "cartridges",
+    "tonearms"
+  ]
+}

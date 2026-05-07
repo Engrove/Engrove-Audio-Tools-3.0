@@ -1,0 +1,377 @@
+{
+  "type": "object",
+  "properties": {
+    "bearing_type": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "description",
+              "id",
+              "name"
+            ]
+          }
+        }
+      },
+      "required": [
+        "categories",
+        "description",
+        "name"
+      ]
+    },
+    "arm_material": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          }
+        }
+      },
+      "required": [
+        "categories",
+        "description",
+        "name"
+      ]
+    },
+    "arm_shape": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          }
+        }
+      },
+      "required": [
+        "categories",
+        "description",
+        "name"
+      ]
+    },
+    "headshell_connector": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "description",
+              "id",
+              "name"
+            ]
+          }
+        }
+      },
+      "required": [
+        "categories",
+        "description",
+        "name"
+      ]
+    },
+    "tracking_method": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          }
+        }
+      },
+      "required": [
+        "categories",
+        "description",
+        "name"
+      ]
+    },
+    "alignment_geometry": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          }
+        }
+      },
+      "required": [
+        "categories",
+        "description",
+        "name"
+      ]
+    },
+    "vta_adjustment": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "description",
+              "id",
+              "name"
+            ]
+          }
+        }
+      },
+      "required": [
+        "categories",
+        "description",
+        "name"
+      ]
+    },
+    "azimuth_adjustment": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "description",
+              "id",
+              "name"
+            ]
+          }
+        }
+      },
+      "required": [
+        "categories",
+        "description",
+        "name"
+      ]
+    },
+    "internal_wiring_material": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          }
+        }
+      },
+      "required": [
+        "categories",
+        "description",
+        "name"
+      ]
+    },
+    "detachable_cable": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "description",
+              "id",
+              "name"
+            ]
+          }
+        }
+      },
+      "required": [
+        "categories",
+        "description",
+        "name"
+      ]
+    }
+  },
+  "required": [
+    "alignment_geometry",
+    "arm_material",
+    "arm_shape",
+    "azimuth_adjustment",
+    "bearing_type",
+    "detachable_cable",
+    "headshell_connector",
+    "internal_wiring_material",
+    "tracking_method",
+    "vta_adjustment"
+  ]
+}

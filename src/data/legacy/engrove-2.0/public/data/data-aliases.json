@@ -1,0 +1,28 @@
+{
+  "pickups": {
+    "type": {
+      "MM": "Moving Magnet",
+      "Moving Magnet": "Moving Magnet",
+      "MC": "Moving Coil",
+      "Moving Coil": "Moving Coil",
+      "High Output Moving Coil": "Moving Coil (High Output)",
+      "MI": "Moving Iron",
+      "Moving Iron": "Moving Iron",
+      "Induced Magnet": "Moving Iron",
+      "Variable Reluctance": "Moving Iron",
+      "Strain Gauge": "Strain Gauge",
+      "Ceramic": "Ceramic",
+      "Crystal": "Crystal",
+      "Dynamic Coil": "Dynamic Coil",
+      "Electret Condenser": "Electret Condenser",
+      "Condensor": "Electret Condenser",
+      "Ribbon": "Ribbon",
+      "Photoelectric": "Photoelectric"
+    }
+  },
+  "tonearms": {
+    "bearing_type": {
+      "tangential_mechanical": "Tangential (Mechanical)"
+    }
+  }
+}

@@ -1,0 +1,171 @@
+{
+  "type": "object",
+  "properties": {
+    "stylus_family": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "notes": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "description",
+              "id",
+              "name",
+              "notes"
+            ]
+          }
+        }
+      },
+      "required": [
+        "categories",
+        "description",
+        "name"
+      ]
+    },
+    "cantilever_class": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "notes": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "description",
+              "id",
+              "name",
+              "notes"
+            ]
+          }
+        }
+      },
+      "required": [
+        "categories",
+        "description",
+        "name"
+      ]
+    },
+    "compliance_level": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "notes": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "description",
+              "id",
+              "name",
+              "notes"
+            ]
+          }
+        }
+      },
+      "required": [
+        "categories",
+        "description",
+        "name"
+      ]
+    },
+    "tags": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "description",
+              "id"
+            ]
+          }
+        }
+      },
+      "required": [
+        "categories",
+        "description",
+        "name"
+      ]
+    }
+  },
+  "required": [
+    "cantilever_class",
+    "compliance_level",
+    "stylus_family",
+    "tags"
+  ]
+}

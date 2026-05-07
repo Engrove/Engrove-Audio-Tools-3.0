@@ -1,0 +1,36 @@
+﻿{
+    "generated_at":  "2026-05-07T05:59:36.7728099Z",
+    "outputs":  [
+                    {
+                        "path":  "src/data/audio/v3/cartridges.v3.json",
+                        "records":  1,
+                        "size_bytes":  807548,
+                        "sha256":  "d4f5dabbffe36979f70147174b060ef1d7397d59be458fc33dc1433fded878ba"
+                    },
+                    {
+                        "path":  "src/data/audio/v3/tonearms.v3.json",
+                        "records":  1,
+                        "size_bytes":  275134,
+                        "sha256":  "e057a4279cc536044f789fdf950d1711f6850e63c3dbe7f487b66edecf5b4199"
+                    },
+                    {
+                        "path":  "src/data/audio/v3/runtime/cartridges.index.json",
+                        "records":  1,
+                        "size_bytes":  360005,
+                        "sha256":  "ed3076f54bd0a74bb70e74dc7b75ec8f338d707c7cb8cefd9988f13861dab1d8"
+                    },
+                    {
+                        "path":  "src/data/audio/v3/runtime/tonearms.index.json",
+                        "records":  1,
+                        "size_bytes":  70347,
+                        "sha256":  "94927ccc195f57513fff358bcfa48f6463f0230264e29b697c162cc4d0b3bc2e"
+                    },
+                    {
+                        "path":  "src/data/audio/v3/audio-data-v3-summary.json",
+                        "records":  null,
+                        "size_bytes":  43294,
+                        "sha256":  "7d37a9cb870e10c710d6f575b70aec32e7b6a277b99139f940ba584ceff37c56"
+                    }
+                ]
+}
+

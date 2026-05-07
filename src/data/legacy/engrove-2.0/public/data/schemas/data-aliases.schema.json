@@ -1,0 +1,111 @@
+{
+  "type": "object",
+  "properties": {
+    "pickups": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "object",
+          "properties": {
+            "MM": {
+              "type": "string"
+            },
+            "Moving Magnet": {
+              "type": "string"
+            },
+            "MC": {
+              "type": "string"
+            },
+            "Moving Coil": {
+              "type": "string"
+            },
+            "High Output Moving Coil": {
+              "type": "string"
+            },
+            "MI": {
+              "type": "string"
+            },
+            "Moving Iron": {
+              "type": "string"
+            },
+            "Induced Magnet": {
+              "type": "string"
+            },
+            "Variable Reluctance": {
+              "type": "string"
+            },
+            "Strain Gauge": {
+              "type": "string"
+            },
+            "Ceramic": {
+              "type": "string"
+            },
+            "Crystal": {
+              "type": "string"
+            },
+            "Dynamic Coil": {
+              "type": "string"
+            },
+            "Electret Condenser": {
+              "type": "string"
+            },
+            "Condensor": {
+              "type": "string"
+            },
+            "Ribbon": {
+              "type": "string"
+            },
+            "Photoelectric": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "Ceramic",
+            "Condensor",
+            "Crystal",
+            "Dynamic Coil",
+            "Electret Condenser",
+            "High Output Moving Coil",
+            "Induced Magnet",
+            "MC",
+            "MI",
+            "MM",
+            "Moving Coil",
+            "Moving Iron",
+            "Moving Magnet",
+            "Photoelectric",
+            "Ribbon",
+            "Strain Gauge",
+            "Variable Reluctance"
+          ]
+        }
+      },
+      "required": [
+        "type"
+      ]
+    },
+    "tonearms": {
+      "type": "object",
+      "properties": {
+        "bearing_type": {
+          "type": "object",
+          "properties": {
+            "tangential_mechanical": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "tangential_mechanical"
+          ]
+        }
+      },
+      "required": [
+        "bearing_type"
+      ]
+    }
+  },
+  "required": [
+    "pickups",
+    "tonearms"
+  ]
+}

@@ -1,0 +1,486 @@
+{
+  "cartridges": {
+    "categorical": [
+      {
+        "key": "compliance_level",
+        "label": "Compliance Level",
+        "options": [
+          {
+            "value": "",
+            "label": "All Compliance Level"
+          },
+          {
+            "value": "high",
+            "label": "High Compliance"
+          },
+          {
+            "value": "low",
+            "label": "Low Compliance"
+          },
+          {
+            "value": "medium",
+            "label": "Medium Compliance"
+          },
+          {
+            "value": "very-high",
+            "label": "Very High Compliance"
+          }
+        ]
+      },
+      {
+        "key": "stylus_family",
+        "label": "Stylus Family",
+        "options": [
+          {
+            "value": "",
+            "label": "All Stylus Family"
+          },
+          {
+            "value": "Advanced Line-Contact",
+            "label": "Advanced Line-Contact / Micro-Ridge"
+          },
+          {
+            "value": "Conical",
+            "label": "Conical / Spherical"
+          },
+          {
+            "value": "Elliptical",
+            "label": "Elliptical"
+          },
+          {
+            "value": "Line-Contact",
+            "label": "Line-Contact"
+          },
+          {
+            "value": "Nude Elliptical",
+            "label": "Nude Elliptical"
+          }
+        ]
+      },
+      {
+        "key": "cantilever_class",
+        "label": "Cantilever Class",
+        "options": [
+          {
+            "value": "",
+            "label": "All Cantilever Class"
+          },
+          {
+            "value": "Aluminum",
+            "label": "Aluminum"
+          },
+          {
+            "value": "Exotic/High-Performance",
+            "label": "Exotic / High-Performance"
+          },
+          {
+            "value": "Standard",
+            "label": "Standard Materials"
+          }
+        ]
+      },
+      {
+        "key": "tags",
+        "label": "Sonic Character Tags",
+        "options": [
+          {
+            "value": "",
+            "label": "All Sonic Character Tags"
+          },
+          {
+            "value": "Agile",
+            "label": "Agile"
+          },
+          {
+            "value": "Airy Highs",
+            "label": "Airy Highs"
+          },
+          {
+            "value": "Analytical",
+            "label": "Analytical"
+          },
+          {
+            "value": "Balanced",
+            "label": "Balanced"
+          },
+          {
+            "value": "Bright",
+            "label": "Bright"
+          },
+          {
+            "value": "Clean",
+            "label": "Clean"
+          },
+          {
+            "value": "Clear",
+            "label": "Clear"
+          },
+          {
+            "value": "DJ",
+            "label": "DJ"
+          },
+          {
+            "value": "Detailed",
+            "label": "Detailed"
+          },
+          {
+            "value": "Durable",
+            "label": "Durable"
+          },
+          {
+            "value": "Dynamic",
+            "label": "Dynamic"
+          },
+          {
+            "value": "Engaging",
+            "label": "Engaging"
+          },
+          {
+            "value": "Fast",
+            "label": "Fast"
+          },
+          {
+            "value": "Forgiving",
+            "label": "Forgiving"
+          },
+          {
+            "value": "Good Bass",
+            "label": "Good Bass"
+          },
+          {
+            "value": "Good Midrange",
+            "label": "Good Midrange"
+          },
+          {
+            "value": "Musical",
+            "label": "Musical"
+          },
+          {
+            "value": "Neutral",
+            "label": "Neutral"
+          },
+          {
+            "value": "Powerful",
+            "label": "Powerful"
+          },
+          {
+            "value": "Precise",
+            "label": "Precise"
+          },
+          {
+            "value": "Punchy",
+            "label": "Punchy"
+          },
+          {
+            "value": "Refined",
+            "label": "Refined"
+          },
+          {
+            "value": "Rhythmic",
+            "label": "Rhythmic"
+          },
+          {
+            "value": "Rich",
+            "label": "Rich"
+          },
+          {
+            "value": "Smooth",
+            "label": "Smooth"
+          },
+          {
+            "value": "Transparent",
+            "label": "Transparent"
+          },
+          {
+            "value": "Warm",
+            "label": "Warm"
+          }
+        ]
+      }
+    ],
+    "numerical": [
+      {
+        "key": "weight_g",
+        "label": "Weight",
+        "unit": "g"
+      },
+      {
+        "key": "compliance_dynamic_10hz",
+        "label": "Compliance (10Hz)",
+        "unit": "cu"
+      },
+      {
+        "key": "tracking_force_g",
+        "label": "Tracking Force",
+        "unit": "g"
+      },
+      {
+        "key": "output_voltage_mv",
+        "label": "Output Voltage",
+        "unit": "mV"
+      }
+    ],
+    "tableHeaders": [
+      {
+        "key": "manufacturer",
+        "label": "Manufacturer",
+        "sortable": true
+      },
+      {
+        "key": "model",
+        "label": "Model",
+        "sortable": true
+      },
+      {
+        "key": "type_name",
+        "label": "Type",
+        "sortable": true
+      },
+      {
+        "key": "compliance_dynamic_10hz",
+        "label": "Compliance",
+        "sortable": true
+      },
+      {
+        "key": "weight_g",
+        "label": "Weight (g)",
+        "sortable": true
+      },
+      {
+        "key": "tracking_force_g",
+        "label": "VTF (g)",
+        "sortable": true
+      },
+      {
+        "key": "stylus_family_name",
+        "label": "Stylus",
+        "sortable": true
+      },
+      {
+        "key": "tags_name",
+        "label": "Tags",
+        "sortable": false
+      }
+    ]
+  },
+  "tonearms": {
+    "categorical": [
+      {
+        "key": "bearing_type",
+        "label": "Bearing Type",
+        "options": [
+          {
+            "value": "",
+            "label": "All Bearing Type"
+          },
+          {
+            "value": "damped_unipivot",
+            "label": "Damped Unipivot"
+          },
+          {
+            "value": "dual_pivot",
+            "label": "Dual-Pivot"
+          },
+          {
+            "value": "gimbal",
+            "label": "Gimbal"
+          },
+          {
+            "value": "knife_edge",
+            "label": "Knife-Edge"
+          },
+          {
+            "value": "magnetic",
+            "label": "Magnetic"
+          },
+          {
+            "value": "tangential_mechanical",
+            "label": "Tangential (Mechanical)"
+          },
+          {
+            "value": "unipivot",
+            "label": "Unipivot"
+          },
+          {
+            "value": "v_block",
+            "label": "V-Block"
+          }
+        ]
+      },
+      {
+        "key": "arm_material",
+        "label": "Armtube Material",
+        "options": [
+          {
+            "value": "",
+            "label": "All Armtube Material"
+          },
+          {
+            "value": "acrylic",
+            "label": "Acrylic"
+          },
+          {
+            "value": "aluminum",
+            "label": "Aluminum"
+          },
+          {
+            "value": "carbon_fibre",
+            "label": "Carbon Fibre"
+          },
+          {
+            "value": "composite",
+            "label": "Composite"
+          },
+          {
+            "value": "magnesium",
+            "label": "Magnesium"
+          },
+          {
+            "value": "resin",
+            "label": "Resin / 3D-Printed"
+          },
+          {
+            "value": "stainless_steel",
+            "label": "Stainless Steel"
+          },
+          {
+            "value": "titanium",
+            "label": "Titanium"
+          },
+          {
+            "value": "wood",
+            "label": "Wood"
+          }
+        ]
+      },
+      {
+        "key": "arm_shape",
+        "label": "Armtube Shape",
+        "options": [
+          {
+            "value": "",
+            "label": "All Armtube Shape"
+          },
+          {
+            "value": "j_shape",
+            "label": "J-Shape"
+          },
+          {
+            "value": "s_shape",
+            "label": "S-Shape"
+          },
+          {
+            "value": "straight",
+            "label": "Straight"
+          }
+        ]
+      },
+      {
+        "key": "headshell_connector",
+        "label": "Headshell Type",
+        "options": [
+          {
+            "value": "",
+            "label": "All Headshell Type"
+          },
+          {
+            "value": "integrated",
+            "label": "Integrated"
+          },
+          {
+            "value": "p_mount_t4p",
+            "label": "P-Mount / T4P"
+          },
+          {
+            "value": "proprietary",
+            "label": "Proprietary"
+          },
+          {
+            "value": "sme_universal",
+            "label": "SME / Universal"
+          }
+        ]
+      },
+      {
+        "key": "tracking_method",
+        "label": "Tracking Method",
+        "options": [
+          {
+            "value": "",
+            "label": "All Tracking Method"
+          },
+          {
+            "value": "pivoting",
+            "label": "Pivoting"
+          },
+          {
+            "value": "tangential_air_bearing",
+            "label": "Tangential (Air Bearing)"
+          },
+          {
+            "value": "tangential_mechanical",
+            "label": "Tangential (Mechanical)"
+          },
+          {
+            "value": "tangential_pivot",
+            "label": "Tangential (Pivoting/Thales)"
+          }
+        ]
+      }
+    ],
+    "numerical": [
+      {
+        "key": "effective_mass_g",
+        "label": "Effective Mass",
+        "unit": "g"
+      },
+      {
+        "key": "pivot_to_spindle_mm",
+        "label": "Pivot to Spindle",
+        "unit": "mm"
+      },
+      {
+        "key": "effective_length_mm",
+        "label": "Effective Length",
+        "unit": "mm"
+      }
+    ],
+    "tableHeaders": [
+      {
+        "key": "manufacturer",
+        "label": "Manufacturer",
+        "sortable": true
+      },
+      {
+        "key": "model",
+        "label": "Model",
+        "sortable": true
+      },
+      {
+        "key": "effective_mass_g",
+        "label": "Eff. Mass",
+        "sortable": true
+      },
+      {
+        "key": "pivot_to_spindle_mm",
+        "label": "P2S (mm)",
+        "sortable": true
+      },
+      {
+        "key": "effective_length_mm",
+        "label": "Eff. Length",
+        "sortable": true
+      },
+      {
+        "key": "bearing_type_name",
+        "label": "Bearing",
+        "sortable": true
+      },
+      {
+        "key": "arm_material_name",
+        "label": "Material",
+        "sortable": true
+      }
+    ]
+  }
+}

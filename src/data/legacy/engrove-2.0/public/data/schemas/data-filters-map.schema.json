@@ -1,0 +1,191 @@
+{
+  "type": "object",
+  "properties": {
+    "cartridges": {
+      "type": "object",
+      "properties": {
+        "categorical": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "options": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "value"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "key",
+              "label",
+              "options"
+            ]
+          }
+        },
+        "numerical": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "unit": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "key",
+              "label",
+              "unit"
+            ]
+          }
+        },
+        "tableHeaders": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "sortable": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "key",
+              "label",
+              "sortable"
+            ]
+          }
+        }
+      },
+      "required": [
+        "categorical",
+        "numerical",
+        "tableHeaders"
+      ]
+    },
+    "tonearms": {
+      "type": "object",
+      "properties": {
+        "categorical": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "options": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "value"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "key",
+              "label",
+              "options"
+            ]
+          }
+        },
+        "numerical": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "unit": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "key",
+              "label",
+              "unit"
+            ]
+          }
+        },
+        "tableHeaders": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "sortable": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "key",
+              "label",
+              "sortable"
+            ]
+          }
+        }
+      },
+      "required": [
+        "categorical",
+        "numerical",
+        "tableHeaders"
+      ]
+    }
+  },
+  "required": [
+    "cartridges",
+    "tonearms"
+  ]
+}

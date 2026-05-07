@@ -1,0 +1,92 @@
+{
+  "cartridges": {
+    "type": {},
+    "compliance_level": {
+      "high": "High Compliance",
+      "low": "Low Compliance",
+      "medium": "Medium Compliance",
+      "very-high": "Very High Compliance"
+    },
+    "stylus_family": {
+      "Elliptical": "Elliptical",
+      "Conical": "Conical / Spherical",
+      "Line-Contact": "Line-Contact",
+      "Nude Elliptical": "Nude Elliptical",
+      "Advanced Line-Contact": "Advanced Line-Contact / Micro-Ridge"
+    },
+    "cantilever_class": {
+      "Standard": "Standard Materials",
+      "Aluminum": "Aluminum",
+      "Exotic/High-Performance": "Exotic / High-Performance"
+    },
+    "tags": {
+      "Neutral": "Neutral",
+      "Detailed": "Detailed",
+      "Analytical": "Analytical",
+      "Punchy": "Punchy",
+      "Warm": "Warm",
+      "Engaging": "Engaging",
+      "Good Bass": "Good Bass",
+      "Dynamic": "Dynamic",
+      "Good Midrange": "Good Midrange",
+      "Musical": "Musical",
+      "Airy Highs": "Airy Highs",
+      "Forgiving": "Forgiving",
+      "Agile": "Agile",
+      "Smooth": "Smooth",
+      "Refined": "Refined",
+      "Precise": "Precise",
+      "Fast": "Fast",
+      "Bright": "Bright",
+      "Balanced": "Balanced",
+      "Transparent": "Transparent",
+      "Clear": "Clear",
+      "Clean": "Clean",
+      "Rhythmic": "Rhythmic",
+      "Rich": "Rich",
+      "DJ": "DJ",
+      "Durable": "Durable",
+      "Powerful": "Powerful"
+    }
+  },
+  "tonearms": {
+    "bearing_type": {
+      "knife_edge": "Knife-Edge",
+      "gimbal": "Gimbal",
+      "damped_unipivot": "Damped Unipivot",
+      "unipivot": "Unipivot",
+      "v_block": "V-Block",
+      "magnetic": "Magnetic",
+      "dual_pivot": "Dual-Pivot",
+      "tangential_mechanical": "Tangential (Mechanical)"
+    },
+    "arm_material": {
+      "titanium": "Titanium",
+      "stainless_steel": "Stainless Steel",
+      "carbon_fibre": "Carbon Fibre",
+      "magnesium": "Magnesium",
+      "wood": "Wood",
+      "aluminum": "Aluminum",
+      "resin": "Resin / 3D-Printed",
+      "acrylic": "Acrylic",
+      "composite": "Composite"
+    },
+    "arm_shape": {
+      "j_shape": "J-Shape",
+      "straight": "Straight",
+      "s_shape": "S-Shape"
+    },
+    "headshell_connector": {
+      "integrated": "Integrated",
+      "sme_universal": "SME / Universal",
+      "proprietary": "Proprietary",
+      "p_mount_t4p": "P-Mount / T4P"
+    },
+    "tracking_method": {
+      "pivoting": "Pivoting",
+      "tangential_mechanical": "Tangential (Mechanical)",
+      "tangential_pivot": "Tangential (Pivoting/Thales)",
+      "tangential_air_bearing": "Tangential (Air Bearing)"
+    }
+  }
+}

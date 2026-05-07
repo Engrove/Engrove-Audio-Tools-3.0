@@ -1,0 +1,67 @@
+{
+  "type": "object",
+  "properties": {
+    "B1": {
+      "type": "object",
+      "properties": {
+        "confidence": {
+          "type": "number"
+        },
+        "sampleSize": {
+          "type": "number"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "confidence",
+        "description",
+        "sampleSize"
+      ]
+    },
+    "B2": {
+      "type": "object",
+      "properties": {
+        "confidence": {
+          "type": "number"
+        },
+        "sampleSize": {
+          "type": "number"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "confidence",
+        "description",
+        "sampleSize"
+      ]
+    },
+    "B3": {
+      "type": "object",
+      "properties": {
+        "confidence": {
+          "type": "number"
+        },
+        "sampleSize": {
+          "type": "number"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "confidence",
+        "description",
+        "sampleSize"
+      ]
+    }
+  },
+  "required": [
+    "B1",
+    "B2",
+    "B3"
+  ]
+}

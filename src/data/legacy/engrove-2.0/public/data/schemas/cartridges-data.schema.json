@@ -1,0 +1,168 @@
+{
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "number"
+      },
+      "model": {
+        "type": "string"
+      },
+      "rectype": {
+        "type": "string"
+      },
+      "cu_static": {
+        "type": "number"
+      },
+      "cu_dynamic_10hz": {
+        "type": "number"
+      },
+      "cu_dynamic_100hz": {
+        "type": "null"
+      },
+      "is_estimated_10hz": {
+        "type": "boolean"
+      },
+      "sources": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "url": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "url"
+          ]
+        }
+      },
+      "manufacturer": {
+        "type": "string"
+      },
+      "type": {
+        "type": "string"
+      },
+      "stylus_type": {
+        "type": "string"
+      },
+      "cantilever_material": {
+        "type": "string"
+      },
+      "weight_g": {
+        "type": "number"
+      },
+      "tracking_force_min_g": {
+        "type": "number"
+      },
+      "tracking_force_max_g": {
+        "type": "number"
+      },
+      "output_voltage_mv": {
+        "type": "number"
+      },
+      "frequency_response_min_hz": {
+        "type": "number"
+      },
+      "frequency_response_max_hz": {
+        "type": "number"
+      },
+      "channel_separation_db": {
+        "type": "number"
+      },
+      "load_impedance_ohm": {
+        "type": "number"
+      },
+      "load_capacitance_min_pf": {
+        "type": "number"
+      },
+      "load_capacitance_max_pf": {
+        "type": "number"
+      },
+      "sonic_character_en": {
+        "type": "string"
+      },
+      "review_summary_en": {
+        "type": "string"
+      },
+      "image_url": {
+        "type": "null"
+      },
+      "notes_en": {
+        "type": "string"
+      },
+      "stylus_family": {
+        "type": "string"
+      },
+      "cantilever_class": {
+        "type": "string"
+      },
+      "compliance_level": {
+        "type": "string"
+      },
+      "tags": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "edit_history": {
+        "type": "array"
+      },
+      "created_by": {
+        "type": "string"
+      },
+      "create_stamp": {
+        "type": "string"
+      },
+      "updated_by": {
+        "type": "string"
+      },
+      "update_stamp": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "cantilever_class",
+      "cantilever_material",
+      "channel_separation_db",
+      "compliance_level",
+      "create_stamp",
+      "created_by",
+      "cu_dynamic_100hz",
+      "cu_dynamic_10hz",
+      "cu_static",
+      "edit_history",
+      "frequency_response_max_hz",
+      "frequency_response_min_hz",
+      "id",
+      "image_url",
+      "is_estimated_10hz",
+      "load_capacitance_max_pf",
+      "load_capacitance_min_pf",
+      "load_impedance_ohm",
+      "manufacturer",
+      "model",
+      "notes_en",
+      "output_voltage_mv",
+      "rectype",
+      "review_summary_en",
+      "sonic_character_en",
+      "sources",
+      "stylus_family",
+      "stylus_type",
+      "tags",
+      "tracking_force_max_g",
+      "tracking_force_min_g",
+      "type",
+      "update_stamp",
+      "updated_by",
+      "weight_g"
+    ]
+  }
+}

@@ -1,0 +1,122 @@
+{
+  "source_repo": "https://github.com/Engrove/Engrove-Audio-Tools-2.0",
+  "source_ref": "main",
+  "raw_base_url": "https://raw.githubusercontent.com/Engrove/Engrove-Audio-Tools-2.0/main/public/data",
+  "target_base_dir": "src/data/legacy/engrove-2.0/public/data",
+  "data_files": [
+    {
+      "name": "ai_audit_instruction.txt",
+      "raw_url": "https://raw.githubusercontent.com/Engrove/Engrove-Audio-Tools-2.0/main/public/data/ai_audit_instruction.txt"
+    },
+    {
+      "name": "cartridges-classifications.json",
+      "raw_url": "https://raw.githubusercontent.com/Engrove/Engrove-Audio-Tools-2.0/main/public/data/cartridges-classifications.json"
+    },
+    {
+      "name": "cartridges-confidence-levels.json",
+      "raw_url": "https://raw.githubusercontent.com/Engrove/Engrove-Audio-Tools-2.0/main/public/data/cartridges-confidence-levels.json"
+    },
+    {
+      "name": "cartridges-data.json",
+      "raw_url": "https://raw.githubusercontent.com/Engrove/Engrove-Audio-Tools-2.0/main/public/data/cartridges-data.json"
+    },
+    {
+      "name": "cartridges-estimation-rules.json",
+      "raw_url": "https://raw.githubusercontent.com/Engrove/Engrove-Audio-Tools-2.0/main/public/data/cartridges-estimation-rules.json"
+    },
+    {
+      "name": "cartridges-static-estimation-rules.json",
+      "raw_url": "https://raw.githubusercontent.com/Engrove/Engrove-Audio-Tools-2.0/main/public/data/cartridges-static-estimation-rules.json"
+    },
+    {
+      "name": "data-aliases.json",
+      "raw_url": "https://raw.githubusercontent.com/Engrove/Engrove-Audio-Tools-2.0/main/public/data/data-aliases.json"
+    },
+    {
+      "name": "data-filters-map.json",
+      "raw_url": "https://raw.githubusercontent.com/Engrove/Engrove-Audio-Tools-2.0/main/public/data/data-filters-map.json"
+    },
+    {
+      "name": "data-translation-map.json",
+      "raw_url": "https://raw.githubusercontent.com/Engrove/Engrove-Audio-Tools-2.0/main/public/data/data-translation-map.json"
+    },
+    {
+      "name": "pickups-confidence-levels.json",
+      "raw_url": "https://raw.githubusercontent.com/Engrove/Engrove-Audio-Tools-2.0/main/public/data/pickups-confidence-levels.json"
+    },
+    {
+      "name": "pickups-estimation-rules.json",
+      "raw_url": "https://raw.githubusercontent.com/Engrove/Engrove-Audio-Tools-2.0/main/public/data/pickups-estimation-rules.json"
+    },
+    {
+      "name": "pickups-static-estimation-rules.json",
+      "raw_url": "https://raw.githubusercontent.com/Engrove/Engrove-Audio-Tools-2.0/main/public/data/pickups-static-estimation-rules.json"
+    },
+    {
+      "name": "tonearms-classifications.json",
+      "raw_url": "https://raw.githubusercontent.com/Engrove/Engrove-Audio-Tools-2.0/main/public/data/tonearms-classifications.json"
+    },
+    {
+      "name": "tonearms-data.json",
+      "raw_url": "https://raw.githubusercontent.com/Engrove/Engrove-Audio-Tools-2.0/main/public/data/tonearms-data.json"
+    }
+  ],
+  "schema_files": [
+    {
+      "name": "cartridges-classifications.schema.json",
+      "raw_url": "https://raw.githubusercontent.com/Engrove/Engrove-Audio-Tools-2.0/main/public/data/schemas/cartridges-classifications.schema.json"
+    },
+    {
+      "name": "cartridges-confidence-levels.schema.json",
+      "raw_url": "https://raw.githubusercontent.com/Engrove/Engrove-Audio-Tools-2.0/main/public/data/schemas/cartridges-confidence-levels.schema.json"
+    },
+    {
+      "name": "cartridges-data.schema.json",
+      "raw_url": "https://raw.githubusercontent.com/Engrove/Engrove-Audio-Tools-2.0/main/public/data/schemas/cartridges-data.schema.json"
+    },
+    {
+      "name": "cartridges-estimation-rules.schema.json",
+      "raw_url": "https://raw.githubusercontent.com/Engrove/Engrove-Audio-Tools-2.0/main/public/data/schemas/cartridges-estimation-rules.schema.json"
+    },
+    {
+      "name": "cartridges-static-estimation-rules.schema.json",
+      "raw_url": "https://raw.githubusercontent.com/Engrove/Engrove-Audio-Tools-2.0/main/public/data/schemas/cartridges-static-estimation-rules.schema.json"
+    },
+    {
+      "name": "data-aliases.schema.json",
+      "raw_url": "https://raw.githubusercontent.com/Engrove/Engrove-Audio-Tools-2.0/main/public/data/schemas/data-aliases.schema.json"
+    },
+    {
+      "name": "data-filters-map.schema.json",
+      "raw_url": "https://raw.githubusercontent.com/Engrove/Engrove-Audio-Tools-2.0/main/public/data/schemas/data-filters-map.schema.json"
+    },
+    {
+      "name": "data-translation-map.schema.json",
+      "raw_url": "https://raw.githubusercontent.com/Engrove/Engrove-Audio-Tools-2.0/main/public/data/schemas/data-translation-map.schema.json"
+    },
+    {
+      "name": "heuristics_maintenance.schema.json",
+      "raw_url": "https://raw.githubusercontent.com/Engrove/Engrove-Audio-Tools-2.0/main/public/data/schemas/heuristics_maintenance.schema.json"
+    },
+    {
+      "name": "pickups-confidence-levels.schema.json",
+      "raw_url": "https://raw.githubusercontent.com/Engrove/Engrove-Audio-Tools-2.0/main/public/data/schemas/pickups-confidence-levels.schema.json"
+    },
+    {
+      "name": "pickups-estimation-rules.schema.json",
+      "raw_url": "https://raw.githubusercontent.com/Engrove/Engrove-Audio-Tools-2.0/main/public/data/schemas/pickups-estimation-rules.schema.json"
+    },
+    {
+      "name": "pickups-static-estimation-rules.schema.json",
+      "raw_url": "https://raw.githubusercontent.com/Engrove/Engrove-Audio-Tools-2.0/main/public/data/schemas/pickups-static-estimation-rules.schema.json"
+    },
+    {
+      "name": "tonearms-classifications.schema.json",
+      "raw_url": "https://raw.githubusercontent.com/Engrove/Engrove-Audio-Tools-2.0/main/public/data/schemas/tonearms-classifications.schema.json"
+    },
+    {
+      "name": "tonearms-data.schema.json",
+      "raw_url": "https://raw.githubusercontent.com/Engrove/Engrove-Audio-Tools-2.0/main/public/data/schemas/tonearms-data.schema.json"
+    }
+  ]
+}

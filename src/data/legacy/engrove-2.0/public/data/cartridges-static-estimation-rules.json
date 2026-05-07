@@ -1,0 +1,138 @@
+{
+  "timestamp": "2025-08-03T09:38:34.8669Z",
+  "source_data_count": 2973,
+  "analysis_data_count": 191,
+  "global_fallback": {
+    "priority": 99,
+    "conditions": {},
+    "k": 0.6966,
+    "m": 2.2182,
+    "r_squared": 0.6723,
+    "sample_size": 130
+  },
+  "segmented_rules": [
+    {
+      "priority": 1,
+      "conditions": {
+        "type": "MC",
+        "cantilever_class": "Standard",
+        "stylus_family": "Elliptical"
+      },
+      "k": 0.9999,
+      "m": -4.9999,
+      "r_squared": 0.9897,
+      "sample_size": 5
+    },
+    {
+      "priority": 1,
+      "conditions": {
+        "type": "MI",
+        "cantilever_class": "Standard",
+        "stylus_family": "Elliptical"
+      },
+      "k": 0.4767,
+      "m": -1.1393,
+      "r_squared": 0.9389,
+      "sample_size": 15
+    },
+    {
+      "priority": 1,
+      "conditions": {
+        "type": "MC",
+        "cantilever_class": "Standard",
+        "stylus_family": "Line-Contact"
+      },
+      "k": 0.9701,
+      "m": -8.4179,
+      "r_squared": 0.8557,
+      "sample_size": 9
+    },
+    {
+      "priority": 1,
+      "conditions": {
+        "type": "MM",
+        "cantilever_class": "Standard",
+        "stylus_family": "Line-Contact"
+      },
+      "k": 0.5211,
+      "m": 10.0995,
+      "r_squared": 0.8140,
+      "sample_size": 14
+    },
+    {
+      "priority": 1,
+      "conditions": {
+        "type": "MM",
+        "cantilever_class": "Standard",
+        "stylus_family": "Elliptical"
+      },
+      "k": 0.2999,
+      "m": 12.4433,
+      "r_squared": 0.2028,
+      "sample_size": 36
+    },
+    {
+      "priority": 2,
+      "conditions": {
+        "type": "MI",
+        "cantilever_class": "Standard"
+      },
+      "k": 0.4976,
+      "m": -1.6307,
+      "r_squared": 0.9657,
+      "sample_size": 23
+    },
+    {
+      "priority": 2,
+      "conditions": {
+        "type": "MM",
+        "cantilever_class": "Standard"
+      },
+      "k": 0.6652,
+      "m": 1.9618,
+      "r_squared": 0.9137,
+      "sample_size": 77
+    },
+    {
+      "priority": 2,
+      "conditions": {
+        "type": "MC",
+        "cantilever_class": "Standard"
+      },
+      "k": 0.5698,
+      "m": 0.4384,
+      "r_squared": 0.8960,
+      "sample_size": 13
+    },
+    {
+      "priority": 3,
+      "conditions": {
+        "type": "MI"
+      },
+      "k": 1.6395,
+      "m": -24.1016,
+      "r_squared": 0.8770,
+      "sample_size": 25
+    },
+    {
+      "priority": 3,
+      "conditions": {
+        "type": "MM"
+      },
+      "k": 0.6354,
+      "m": 3.6296,
+      "r_squared": 0.8666,
+      "sample_size": 84
+    },
+    {
+      "priority": 3,
+      "conditions": {
+        "type": "MC"
+      },
+      "k": 0.4489,
+      "m": 2.6188,
+      "r_squared": 0.8268,
+      "sample_size": 15
+    }
+  ]
+}

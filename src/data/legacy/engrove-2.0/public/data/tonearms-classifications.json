@@ -1,0 +1,254 @@
+{
+  "bearing_type": {
+    "name": "Bearing Type",
+    "description": "The mechanical system allowing the tonearm to move freely.",
+    "categories": [
+      {
+        "id": "gimbal",
+        "name": "Gimbal",
+        "description": "A robust design using two pairs of bearings on perpendicular axes. Known for stability."
+      },
+      {
+        "id": "unipivot",
+        "name": "Unipivot",
+        "description": "The arm balances on a single point. Known for a lively sound but can be harder to set up."
+      },
+      {
+        "id": "damped_unipivot",
+        "name": "Damped Unipivot",
+        "description": "A unipivot bearing that uses silicone fluid or magnets for added stability."
+      },
+      {
+        "id": "knife_edge",
+        "name": "Knife-Edge",
+        "description": "The arm rests on a sharp, hardened 'knife' edge. A classic low-friction design."
+      },
+      {
+        "id": "v_block",
+        "name": "V-Block",
+        "description": "A specific type of knife-edge bearing, common on vintage tonearms like Lenco."
+      },
+      {
+        "id": "dual_pivot",
+        "name": "Dual-Pivot",
+        "description": "A hybrid design aiming for unipivot freedom with gimbal-like stability."
+      },
+      {
+        "id": "magnetic",
+        "name": "Magnetic",
+        "description": "Uses magnetic levitation or stabilization for a non-contact pivot."
+      }
+    ]
+  },
+  "arm_material": {
+    "name": "Armtube Material",
+    "description": "The material of the main tonearm tube, balancing stiffness, mass, and damping.",
+    "categories": [
+      {
+        "id": "aluminum",
+        "name": "Aluminum"
+      },
+      {
+        "id": "carbon_fibre",
+        "name": "Carbon Fibre"
+      },
+      {
+        "id": "magnesium",
+        "name": "Magnesium"
+      },
+      {
+        "id": "titanium",
+        "name": "Titanium"
+      },
+      {
+        "id": "stainless_steel",
+        "name": "Stainless Steel"
+      },
+      {
+        "id": "wood",
+        "name": "Wood"
+      },
+      {
+        "id": "composite",
+        "name": "Composite",
+        "description": "Hybrid materials like carbon-wrapped aluminum or other layered constructions."
+      },
+      {
+        "id": "resin",
+        "name": "Resin / 3D-Printed"
+      },
+      {
+        "id": "acrylic",
+        "name": "Acrylic"
+      }
+    ]
+  },
+  "arm_shape": {
+    "name": "Armtube Shape",
+    "description": "The general shape of the tonearm tube.",
+    "categories": [
+      {
+        "id": "straight",
+        "name": "Straight"
+      },
+      {
+        "id": "s_shape",
+        "name": "S-Shape"
+      },
+      {
+        "id": "j_shape",
+        "name": "J-Shape"
+      }
+    ]
+  },
+  "headshell_connector": {
+    "name": "Headshell Type",
+    "description": "The method for attaching the cartridge.",
+    "categories": [
+      {
+        "id": "integrated",
+        "name": "Integrated",
+        "description": "A fixed, non-removable headshell for maximum rigidity."
+      },
+      {
+        "id": "sme_universal",
+        "name": "SME / Universal",
+        "description": "Standard bayonet connector (H-4) for easy swapping."
+      },
+      {
+        "id": "p_mount_t4p",
+        "name": "P-Mount / T4P",
+        "description": "The standardized plug-in connector system for specific turntables."
+      },
+      {
+        "id": "proprietary",
+        "name": "Proprietary",
+        "description": "A unique, manufacturer-specific connector."
+      }
+    ]
+  },
+  "tracking_method": {
+    "name": "Tracking Method",
+    "description": "The fundamental way the tonearm tracks the record groove.",
+    "categories": [
+      {
+        "id": "pivoting",
+        "name": "Pivoting"
+      },
+      {
+        "id": "tangential_air_bearing",
+        "name": "Tangential (Air Bearing)"
+      },
+      {
+        "id": "tangential_mechanical",
+        "name": "Tangential (Mechanical)"
+      },
+      {
+        "id": "tangential_pivot",
+        "name": "Tangential (Pivoting/Thales)"
+      }
+    ]
+  },
+  "alignment_geometry": {
+    "name": "Alignment Geometry",
+    "description": "The mathematical principle the tonearm is designed to follow.",
+    "categories": [
+      {
+        "id": "baerwald",
+        "name": "Baerwald (Löfgren A)"
+      },
+      {
+        "id": "lofgren_b",
+        "name": "Löfgren B"
+      },
+      {
+        "id": "stevenson",
+        "name": "Stevenson"
+      },
+      {
+        "id": "uni_din",
+        "name": "UNI-DIN"
+      },
+      {
+        "id": "manufacturer_specific",
+        "name": "Manufacturer Specific"
+      }
+    ]
+  },
+  "vta_adjustment": {
+    "name": "VTA Adjustment",
+    "description": "The method for adjusting the tonearm's height (Vertical Tracking Angle).",
+    "categories": [
+      {
+        "id": "on_the_fly",
+        "name": "On-the-fly",
+        "description": "Can be adjusted during playback via a tower or dial."
+      },
+      {
+        "id": "threaded_collar",
+        "name": "Threaded Collar",
+        "description": "Height is adjusted by loosening a set screw and moving the arm pillar."
+      },
+      {
+        "id": "shims",
+        "name": "Shims/Spacers",
+        "description": "Requires adding spacers at the tonearm base or under the cartridge."
+      }
+    ]
+  },
+  "azimuth_adjustment": {
+    "name": "Azimuth Adjustment",
+    "description": "The method for rotating the cartridge to be perpendicular to the record.",
+    "categories": [
+      {
+        "id": true,
+        "name": "Adjustable",
+        "description": "The tonearm has a built-in mechanism for azimuth adjustment."
+      },
+      {
+        "id": false,
+        "name": "Fixed",
+        "description": "The tonearm's azimuth is fixed and cannot be adjusted."
+      }
+    ]
+  },
+  "internal_wiring_material": {
+    "name": "Internal Wiring",
+    "description": "The conductor material used for the wiring inside the tonearm.",
+    "categories": [
+      {
+        "id": "copper",
+        "name": "Copper / OFC"
+      },
+      {
+        "id": "silver",
+        "name": "Silver"
+      },
+      {
+        "id": "silver_plated_copper",
+        "name": "Silver-Plated Copper"
+      }
+    ]
+  },
+  "detachable_cable": {
+    "name": "Cable Connection",
+    "description": "Indicates if the external phono cable can be detached and replaced.",
+    "categories": [
+      {
+        "id": "captive",
+        "name": "Captive (Fixed)",
+        "description": "The external phono cable is permanently attached to the tonearm."
+      },
+      {
+        "id": "din_5_pin",
+        "name": "5-pin DIN",
+        "description": "Uses the standard 5-pin DIN connector at the arm base."
+      },
+      {
+        "id": "rca",
+        "name": "RCA Jacks",
+        "description": "Features RCA output jacks directly on the tonearm or turntable."
+      }
+    ]
+  }
+}
