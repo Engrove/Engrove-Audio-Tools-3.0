@@ -89,7 +89,7 @@ export function renderHomePage(): string {
 
       <header class="ea-topbar" aria-label="Primary navigation">
         <a class="ea-wordmark" href="/" aria-label="Engrove Audio home">
-          <span class="ea-wordmark__mark" aria-hidden="true">EA</span>
+          <img class="ea-wordmark__mark" src="/images/engrove.webp" alt="" aria-hidden="true" />
           <span class="ea-wordmark__text">Engrove Audio</span>
         </a>
 
