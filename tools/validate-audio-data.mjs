@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import crypto from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
@@ -6,10 +7,17 @@ import process from 'node:process';
 const repoRoot = process.cwd();
 
 const files = {
-  cartridges: 'src/data/audio/v3/runtime/cartridges.index.json',
-  tonearms: 'src/data/audio/v3/runtime/tonearms.index.json',
+  sourceCartridges: 'src/data/audio/v3/runtime/cartridges.index.json',
+  sourceTonearms: 'src/data/audio/v3/runtime/tonearms.index.json',
   summary: 'src/data/audio/v3/audio-data-v3-summary.json',
-  manifest: 'src/data/audio/v3/runtime/audio-index.manifest.json',
+  publicCartridges: 'public/data/audio/v3/runtime/cartridges.index.json',
+  publicTonearms: 'public/data/audio/v3/runtime/tonearms.index.json',
+  publicManifest: 'public/data/audio/v3/runtime/audio-index.manifest.json',
+};
+
+const publicFetchPaths = {
+  cartridges: '/data/audio/v3/runtime/cartridges.index.json',
+  tonearms: '/data/audio/v3/runtime/tonearms.index.json',
 };
 
 const limits = {
@@ -40,10 +48,37 @@ function add(severity, code, location, message) {
   issues.push({ severity, code, location, message });
 }
 
-async function readJson(relativePath) {
-  const filePath = path.join(repoRoot, relativePath);
-  const text = await readFile(filePath, 'utf8');
-  return JSON.parse(text.replace(/^\uFEFF/, ''));
+function repoPath(relativePath) {
+  return path.join(repoRoot, relativePath);
+}
+
+function sha256(buffer) {
+  return crypto.createHash('sha256').update(buffer).digest('hex');
+}
+
+function hasUtf8Bom(buffer) {
+  return buffer.length >= 3 && buffer[0] === 0xef && buffer[1] === 0xbb && buffer[2] === 0xbf;
+}
+
+async function readJsonFile(relativePath, options = {}) {
+  const buffer = await readFile(repoPath(relativePath));
+  const text = buffer.toString('utf8');
+
+  if (options.requireNoBom && hasUtf8Bom(buffer)) {
+    add('error', 'json.bom', relativePath, 'JSON file must be UTF-8 without BOM.');
+  }
+
+  if (options.requireLf && text.includes('\r\n')) {
+    add('error', 'json.crlf', relativePath, 'JSON file must use LF line endings.');
+  }
+
+  return {
+    data: JSON.parse(text.replace(/^\uFEFF/, '')),
+    buffer,
+    text,
+    size_bytes: buffer.length,
+    sha256: sha256(buffer),
+  };
 }
 
 function isObject(value) {
@@ -52,6 +87,12 @@ function isObject(value) {
 
 function isNumber(value) {
   return typeof value === 'number' && Number.isFinite(value);
+}
+
+function displayName(record) {
+  return typeof record?.display_name === 'string' && record.display_name.trim()
+    ? record.display_name
+    : 'unnamed record';
 }
 
 function findForbiddenKeys(value, location) {
@@ -66,11 +107,9 @@ function findForbiddenKeys(value, location) {
 
   for (const [key, child] of Object.entries(value)) {
     const childPath = `${location}.${key}`;
-
     if (forbiddenKeys.has(key)) {
       add('error', 'runtime.forbidden_key', childPath, 'Runtime data must not include legacy/source metadata.');
     }
-
     findForbiddenKeys(child, childPath);
   }
 }
@@ -110,7 +149,7 @@ function validateCartridge(record, index) {
     (record.mass_g < limits.minReasonableCartridgeMassG ||
       record.mass_g > limits.maxReasonableCartridgeMassG)
   ) {
-    add('warning', 'cartridge.mass_range', `${location}.mass_g`, `Suspicious cartridge mass: ${record.mass_g} g.`);
+    add('warning', 'cartridge.mass_range', `${location}.mass_g`, `${displayName(record)} mass_g = ${record.mass_g}`);
   }
 
   if (
@@ -118,7 +157,7 @@ function validateCartridge(record, index) {
     (record.compliance_10hz_cu < limits.minReasonableCompliance10HzCu ||
       record.compliance_10hz_cu > limits.maxReasonableCompliance10HzCu)
   ) {
-    add('warning', 'cartridge.compliance_range', `${location}.compliance_10hz_cu`, `Suspicious compliance: ${record.compliance_10hz_cu} cu.`);
+    add('warning', 'cartridge.compliance_range', `${location}.compliance_10hz_cu`, `${displayName(record)} compliance_10hz_cu = ${record.compliance_10hz_cu}`);
   }
 }
 
@@ -151,7 +190,7 @@ function validateTonearm(record, index) {
     (record.effective_mass_g < limits.minReasonableEffectiveMassG ||
       record.effective_mass_g > limits.maxReasonableEffectiveMassG)
   ) {
-    add('warning', 'tonearm.effective_mass_range', `${location}.effective_mass_g`, `Suspicious tonearm effective mass: ${record.effective_mass_g} g.`);
+    add('warning', 'tonearm.effective_mass_range', `${location}.effective_mass_g`, `${displayName(record)} effective_mass_g = ${record.effective_mass_g}`);
   }
 }
 
@@ -173,61 +212,136 @@ function assertSummary(summary, cartridges, tonearms) {
   }
 }
 
-const [cartridges, tonearms, summary, manifest] = await Promise.all([
-  readJson(files.cartridges),
-  readJson(files.tonearms),
-  readJson(files.summary),
-  readJson(files.manifest),
+function assertArray(value, relativePath, code) {
+  if (!Array.isArray(value)) {
+    add('error', code, relativePath, 'Runtime index must be an array.');
+    return false;
+  }
+
+  return true;
+}
+
+function assertJsonEqual(source, delivered, location) {
+  if (JSON.stringify(source) !== JSON.stringify(delivered)) {
+    add('error', 'runtime.public_mismatch', location, 'Public runtime delivery JSON does not match canonical source runtime data.');
+  }
+}
+
+function manifestOutputs(manifest) {
+  if (!isObject(manifest)) {
+    add('error', 'manifest.invalid', files.publicManifest, 'Public manifest must be an object.');
+    return [];
+  }
+
+  if (!Array.isArray(manifest.outputs)) {
+    add('error', 'manifest.outputs_missing', files.publicManifest, 'Public manifest must contain an outputs array.');
+    return [];
+  }
+
+  return manifest.outputs;
+}
+
+function findManifestEntry(outputs, publicPath) {
+  return outputs.find((entry) => entry?.path === publicPath);
+}
+
+function assertManifestEntry(outputs, publicPath, actual, recordCount) {
+  const entry = findManifestEntry(outputs, publicPath);
+
+  if (!entry) {
+    add('error', 'manifest.entry_missing', files.publicManifest, `Manifest missing entry for ${publicPath}.`);
+    return;
+  }
+
+  if (entry.path.includes('src/data/')) {
+    add('error', 'manifest.src_path', `${files.publicManifest}:${publicPath}`, 'Public manifest must not reference src/data paths.');
+  }
+
+  if (entry.records !== recordCount) {
+    add('error', 'manifest.records_mismatch', `${files.publicManifest}:${publicPath}.records`, `Manifest says ${entry.records}; actual record count is ${recordCount}.`);
+  }
+
+  if (entry.size_bytes !== actual.size_bytes) {
+    add('error', 'manifest.size_mismatch', `${files.publicManifest}:${publicPath}.size_bytes`, `Manifest says ${entry.size_bytes}; actual byte size is ${actual.size_bytes}.`);
+  }
+
+  if (entry.sha256 !== actual.sha256) {
+    add('error', 'manifest.sha256_mismatch', `${files.publicManifest}:${publicPath}.sha256`, `Manifest says ${entry.sha256}; actual SHA-256 is ${actual.sha256}.`);
+  }
+}
+
+const [
+  sourceCartridges,
+  sourceTonearms,
+  summary,
+  publicCartridges,
+  publicTonearms,
+  publicManifest,
+] = await Promise.all([
+  readJsonFile(files.sourceCartridges),
+  readJsonFile(files.sourceTonearms),
+  readJsonFile(files.summary),
+  readJsonFile(files.publicCartridges, { requireNoBom: true, requireLf: true }),
+  readJsonFile(files.publicTonearms, { requireNoBom: true, requireLf: true }),
+  readJsonFile(files.publicManifest, { requireNoBom: true, requireLf: true }),
 ]);
 
-if (!Array.isArray(cartridges)) {
-  add('error', 'cartridges.not_array', files.cartridges, 'Cartridge runtime index must be an array.');
-}
+const cartridgesAreArray = assertArray(publicCartridges.data, files.publicCartridges, 'cartridges.not_array');
+const tonearmsAreArray = assertArray(publicTonearms.data, files.publicTonearms, 'tonearms.not_array');
 
-if (!Array.isArray(tonearms)) {
-  add('error', 'tonearms.not_array', files.tonearms, 'Tonearm runtime index must be an array.');
-}
+if (cartridgesAreArray && assertArray(sourceCartridges.data, files.sourceCartridges, 'source_cartridges.not_array')) {
+  assertJsonEqual(sourceCartridges.data, publicCartridges.data, files.publicCartridges);
 
-if (Array.isArray(cartridges)) {
-  if (cartridges.length < limits.minCartridgeRecords) {
-    add('error', 'cartridges.too_few_records', files.cartridges, `Expected at least ${limits.minCartridgeRecords} cartridges; got ${cartridges.length}.`);
+  if (publicCartridges.data.length < limits.minCartridgeRecords) {
+    add('error', 'cartridges.too_few_records', files.publicCartridges, `Expected at least ${limits.minCartridgeRecords} cartridges; got ${publicCartridges.data.length}.`);
   }
 
-  const matchReady = cartridges.filter((item) => item?.match_ready === true).length;
+  const matchReady = publicCartridges.data.filter((item) => item?.match_ready === true).length;
   if (matchReady < limits.minMatchReadyCartridges) {
-    add('error', 'cartridges.too_few_match_ready', files.cartridges, `Expected at least ${limits.minMatchReadyCartridges} match-ready cartridges; got ${matchReady}.`);
+    add('error', 'cartridges.too_few_match_ready', files.publicCartridges, `Expected at least ${limits.minMatchReadyCartridges} match-ready cartridges; got ${matchReady}.`);
   }
 
-  cartridges.forEach(validateCartridge);
-  findForbiddenKeys(cartridges, 'cartridges.index');
+  publicCartridges.data.forEach(validateCartridge);
+  findForbiddenKeys(publicCartridges.data, 'cartridges.index');
 }
 
-if (Array.isArray(tonearms)) {
-  if (tonearms.length < limits.minTonearmRecords) {
-    add('error', 'tonearms.too_few_records', files.tonearms, `Expected at least ${limits.minTonearmRecords} tonearms; got ${tonearms.length}.`);
+if (tonearmsAreArray && assertArray(sourceTonearms.data, files.sourceTonearms, 'source_tonearms.not_array')) {
+  assertJsonEqual(sourceTonearms.data, publicTonearms.data, files.publicTonearms);
+
+  if (publicTonearms.data.length < limits.minTonearmRecords) {
+    add('error', 'tonearms.too_few_records', files.publicTonearms, `Expected at least ${limits.minTonearmRecords} tonearms; got ${publicTonearms.data.length}.`);
   }
 
-  const matchReady = tonearms.filter((item) => item?.match_ready === true).length;
+  const matchReady = publicTonearms.data.filter((item) => item?.match_ready === true).length;
   if (matchReady < limits.minMatchReadyTonearms) {
-    add('error', 'tonearms.too_few_match_ready', files.tonearms, `Expected at least ${limits.minMatchReadyTonearms} match-ready tonearms; got ${matchReady}.`);
+    add('error', 'tonearms.too_few_match_ready', files.publicTonearms, `Expected at least ${limits.minMatchReadyTonearms} match-ready tonearms; got ${matchReady}.`);
   }
 
-  tonearms.forEach(validateTonearm);
-  findForbiddenKeys(tonearms, 'tonearms.index');
+  publicTonearms.data.forEach(validateTonearm);
+  findForbiddenKeys(publicTonearms.data, 'tonearms.index');
 }
 
-assertSummary(summary, cartridges, tonearms);
+if (cartridgesAreArray && tonearmsAreArray) {
+  assertSummary(summary.data, publicCartridges.data, publicTonearms.data);
+}
 
-if (!manifest || typeof manifest !== 'object') {
-  add('error', 'manifest.invalid', files.manifest, 'Manifest must be an object.');
+const outputs = manifestOutputs(publicManifest.data);
+assertManifestEntry(outputs, publicFetchPaths.cartridges, publicCartridges, cartridgesAreArray ? publicCartridges.data.length : null);
+assertManifestEntry(outputs, publicFetchPaths.tonearms, publicTonearms, tonearmsAreArray ? publicTonearms.data.length : null);
+
+for (const output of outputs) {
+  if (typeof output?.path === 'string' && output.path.includes('src/data/')) {
+    add('error', 'manifest.src_path', `${files.publicManifest}:${output.path}`, 'Public manifest must not reference src/data paths.');
+  }
 }
 
 const errorCount = issues.filter((item) => item.severity === 'error').length;
 const warningCount = issues.filter((item) => item.severity === 'warning').length;
 
 console.log('Engrove Audio Tools 3.0 audio data validation');
-console.log(`- cartridges: ${Array.isArray(cartridges) ? cartridges.length : 'invalid'}`);
-console.log(`- tonearms: ${Array.isArray(tonearms) ? tonearms.length : 'invalid'}`);
+console.log(`- cartridges: ${cartridgesAreArray ? publicCartridges.data.length : 'invalid'}`);
+console.log(`- tonearms: ${tonearmsAreArray ? publicTonearms.data.length : 'invalid'}`);
+console.log(`- public manifest: ${files.publicManifest}`);
 console.log(`- errors: ${errorCount}`);
 console.log(`- warnings: ${warningCount}`);
 
