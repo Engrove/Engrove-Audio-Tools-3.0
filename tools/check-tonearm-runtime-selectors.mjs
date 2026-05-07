@@ -22,8 +22,8 @@ function patchTempImports(relativePath) {
   const absolutePath = join(tempRoot, relativePath);
   let source = readFileSync(absolutePath, 'utf8');
   source = source
-    .replace(/from '..\/data\/loadTonearmRuntimeData';/g, "from '../data/loadTonearmRuntimeData.js';")
-    .replace(/from '..\/..\/..\/shared\/ui\/renderSafe';/g, "from '../../../shared/ui/renderSafe.js';");
+    .replace(/from '\.\/renderSafe';/g, "from './renderSafe.js';")
+    .replace(/from '\.\.\/\.\.\/\.\.\/shared\/ui\/runtimePickerModal';/g, "from '../../../shared/ui/runtimePickerModal.js';");
   writeFileSync(absolutePath, source, 'utf8');
 }
 
@@ -76,45 +76,66 @@ function assertNotIncludes(haystack, needle, label) {
 
 async function runChecks() {
   copySource('src/shared/ui/renderSafe.ts');
+  copySource('src/shared/ui/runtimePickerModal.ts');
   copySource('src/modules/tonearm-match-lab/data/loadTonearmRuntimeData.ts');
   copySource('src/modules/tonearm-match-lab/ui/tonearmSelectorMarkup.ts');
+
+  patchTempImports('src/shared/ui/runtimePickerModal.ts');
   patchTempImports('src/modules/tonearm-match-lab/ui/tonearmSelectorMarkup.ts');
+
   compileTempSources();
 
   const dataModule = await import(pathToFileURL(join(tempRoot, 'dist/modules/tonearm-match-lab/data/loadTonearmRuntimeData.js')).href);
-  const markupModule = await import(pathToFileURL(join(tempRoot, 'dist/modules/tonearm-match-lab/ui/tonearmSelectorMarkup.js')).href);
+  const modalModule = await import(pathToFileURL(join(tempRoot, 'dist/shared/ui/runtimePickerModal.js')).href);
 
   assertEqual(dataModule.AUDIO_RUNTIME_MANIFEST_PATH, '/data/audio/v3/runtime/audio-index.manifest.json', 'manifest path');
   assertEqual(dataModule.CARTRIDGES_RUNTIME_INDEX_PATH, '/data/audio/v3/runtime/cartridges.index.json', 'cartridges path');
   assertEqual(dataModule.TONEARMS_RUNTIME_INDEX_PATH, '/data/audio/v3/runtime/tonearms.index.json', 'tonearms path');
 
   const records = [
-    { id: 'a', display_name: 'Audio Technica VM95ML', match_ready: true },
-    { id: 'b', display_name: 'Denon DL-103', match_ready: true },
-    { id: 'c', display_name: 'Ortofon 2M Blue', match_ready: true },
+    { id: 'a', kind: 'cartridge', displayName: 'Audio Technica VM95ML', type: 'MM', massG: 6.1, compliance10HzCu: 18 },
+    { id: 'b', kind: 'cartridge', displayName: 'Denon DL-103', type: 'MC', massG: 8.5, compliance10HzCu: 9 },
+    { id: 'c', kind: 'tonearm', displayName: 'Example Light Arm', effectiveMassG: 8 },
   ];
-  assertEqual(dataModule.filterRuntimeRecords(records, 'audio')[0]?.id, 'a', 'case-insensitive filter lower-case');
-  assertEqual(dataModule.filterRuntimeRecords(records, 'DENON')[0]?.id, 'b', 'case-insensitive filter upper-case');
-  assertEqual(dataModule.filterRuntimeRecords(records, '', 2).length, 2, 'filter limit');
+
+  assertEqual(modalModule.filterRuntimePickerItems(records, 'cartridge', { search: 'audio', type: '' })[0]?.id, 'a', 'case-insensitive cartridge search');
+  assertEqual(modalModule.filterRuntimePickerItems(records, 'cartridge', { search: '', type: 'mc' })[0]?.id, 'b', 'cartridge type filter');
+  assertEqual(modalModule.filterRuntimePickerItems(records, 'cartridge', { search: '', type: '', massMin: 8 }).length, 1, 'cartridge mass filter');
+  assertEqual(modalModule.filterRuntimePickerItems(records, 'tonearm', { search: 'LIGHT', type: '', effectiveMassMax: 9 })[0]?.id, 'c', 'tonearm effective mass filter');
+
+  const many = Array.from({ length: 140 }, (_, index) => ({
+    id: `item-${index}`,
+    kind: 'cartridge',
+    displayName: `Item ${index}`,
+    massG: 5,
+    compliance10HzCu: 15,
+  }));
+  assertEqual(modalModule.filterRuntimePickerItems(many, 'cartridge', { search: '', type: '' }).length, 100, 'default cap is 100');
 
   const malicious = [{
     id: '" onclick="alert(1)',
-    display_name: '<script>alert("x")</script>',
-    match_ready: true,
-    mass_g: 6.5,
-    compliance_10hz_cu: 18,
+    kind: 'cartridge',
+    displayName: '<script>alert("x")</script>',
+    massG: 6.5,
+    compliance10HzCu: 18,
   }];
-  const html = markupModule.selectorListMarkup(malicious, 'cartridge');
-  assertNotIncludes(html, '<script>', 'malicious display name opening script');
-  assertNotIncludes(html, '</script>', 'malicious display name closing script');
-  assertIncludes(html, '&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;', 'malicious display name escaped');
-  assertIncludes(html, '&quot; onclick=&quot;alert(1)', 'malicious id escaped for attribute');
+  const htmlResult = modalModule.runtimePickerResultListMarkup(malicious, 'cartridge', { search: '', type: '' }, null);
+  assertNotIncludes(htmlResult.markup, '<script>', 'malicious display name opening script');
+  assertNotIncludes(htmlResult.markup, '</script>', 'malicious display name closing script');
+  assertIncludes(htmlResult.markup, '&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;', 'malicious display name escaped');
+  assertIncludes(htmlResult.markup, '&quot; onclick=&quot;alert(1)', 'malicious id escaped for attribute');
+
+  const updates = modalModule.runtimePickerFieldUpdates('cartridge', malicious[0]);
+  assertEqual(updates.cartridgeMassG, 6.5, 'cartridge apply mass update');
+  assertEqual(updates.compliance10HzCu, 18, 'cartridge apply compliance update');
+  assertEqual(Object.prototype.hasOwnProperty.call(updates, 'tonearmEffectiveMassG'), false, 'cartridge apply does not include tonearm update');
 
   console.log('Tonearm runtime selector checks');
   console.log('- runtime paths: PASS');
-  console.log('- case-insensitive filtering: PASS');
+  console.log('- modal filtering: PASS');
   console.log('- capped result filtering: PASS');
-  console.log('- selector result render safety: PASS');
+  console.log('- modal result render safety: PASS');
+  console.log('- apply field update mapping: PASS');
   console.log('- result: PASS');
 }
 

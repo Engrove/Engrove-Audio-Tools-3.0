@@ -11,11 +11,9 @@ const tempRoot = mkdtempSync(join(tmpdir(), 'engrove-render-safe-'));
 function copySource(relativePath) {
   const from = join(repoRoot, relativePath);
   const to = join(tempRoot, relativePath);
-
   if (!existsSync(from)) {
     throw new Error('Missing source file: ' + relativePath);
   }
-
   mkdirSync(dirname(to), { recursive: true });
   copyFileSync(from, to);
 }
@@ -29,33 +27,38 @@ function writeTempSource(relativePath, content) {
 function patchTempUiImports() {
   const relativePath = 'src/modules/tonearm-match-lab/ui/renderTonearmMatchLabPage.ts';
   const absolutePath = join(tempRoot, relativePath);
-
   let source = readFileSync(absolutePath, 'utf8');
   source = source.replace("from '../engine/resonance';", "from '../engine/resonance.js';");
   source = source.replace("from '../engine/diagnosis';", "from '../engine/diagnosis.js';");
   source = source.replace("from '../data/loadTonearmRuntimeData';", "from '../data/loadTonearmRuntimeData.js';");
-  source = source.replace("from './tonearmSelectorMarkup';", "from './tonearmSelectorMarkup.js';");
+  source = source.replace("from '../../../shared/ui/runtimePickerModal';", "from '../../../shared/ui/runtimePickerModal.js';");
   source = source.replace("from '../../../shared/ui/renderSafe';", "from '../../../shared/ui/renderSafe.js';");
-
   writeFileSync(absolutePath, source, 'utf8');
 }
+
 function patchTempSelectorMarkupImports() {
   const relativePath = 'src/modules/tonearm-match-lab/ui/tonearmSelectorMarkup.ts';
   const absolutePath = join(tempRoot, relativePath);
-
   let source = readFileSync(absolutePath, 'utf8');
   source = source.replace("from '../../../shared/ui/renderSafe';", "from '../../../shared/ui/renderSafe.js';");
+  source = source.replace("from '../../../shared/ui/runtimePickerModal';", "from '../../../shared/ui/runtimePickerModal.js';");
   source = source.replace("from '../data/loadTonearmRuntimeData';", "from '../data/loadTonearmRuntimeData.js';");
-
   writeFileSync(absolutePath, source, 'utf8');
 }
+
+function patchTempRuntimePickerModalImports() {
+  const relativePath = 'src/shared/ui/runtimePickerModal.ts';
+  const absolutePath = join(tempRoot, relativePath);
+  let source = readFileSync(absolutePath, 'utf8');
+  source = source.replace("from './renderSafe';", "from './renderSafe.js';");
+  writeFileSync(absolutePath, source, 'utf8');
+}
+
 function localTscCommand() {
   const localTsc = join(repoRoot, 'node_modules', 'typescript', 'bin', 'tsc');
-
   if (existsSync(localTsc)) {
     return { command: process.execPath, args: [localTsc] };
   }
-
   return { command: process.platform === 'win32' ? 'npx.cmd' : 'npx', args: ['--no-install', 'tsc'] };
 }
 
@@ -76,7 +79,6 @@ function compileTempSources() {
     JSON.stringify({ type: 'module' }, null, 2),
     'utf8',
   );
-
   writeFileSync(
     join(tempRoot, 'tsconfig.json'),
     JSON.stringify({ compilerOptions, include: ['src/**/*.ts'] }, null, 2),
@@ -110,15 +112,15 @@ function assertNotIncludes(haystack, needle, label) {
 
 async function runChecks() {
   copySource('src/shared/ui/renderSafe.ts');
+  copySource('src/shared/ui/runtimePickerModal.ts');
   copySource('src/modules/tonearm-match-lab/ui/renderTonearmMatchLabPage.ts');
   copySource('src/modules/tonearm-match-lab/data/loadTonearmRuntimeData.ts');
   copySource('src/modules/tonearm-match-lab/ui/tonearmSelectorMarkup.ts');
+
   patchTempUiImports();
   patchTempSelectorMarkupImports();
+  patchTempRuntimePickerModalImports();
 
-  // The real product compile/build gates verify the real engine dependency tree.
-  // This harness uses tiny temp adapters only so the actual UI source can be
-  // imported and its exported markup helpers can be tested with hostile strings.
   writeTempSource(
     'src/modules/tonearm-match-lab/engine/resonance.ts',
     [
@@ -150,7 +152,7 @@ async function runChecks() {
   writeTempSource(
     'src/modules/tonearm-match-lab/engine/diagnosis.ts',
     [
-      "export type ResonanceDiagnosis = {",
+      'export type ResonanceDiagnosis = {',
       "  level: 'low' | 'ideal' | 'high';",
       '  title: string;',
       '  explanation: string;',
@@ -174,7 +176,6 @@ async function runChecks() {
   const renderSafeModule = await import(
     pathToFileURL(join(tempRoot, 'dist/shared/ui/renderSafe.js')).href
   );
-
   const tonearmModule = await import(
     pathToFileURL(join(tempRoot, 'dist/modules/tonearm-match-lab/ui/renderTonearmMatchLabPage.js')).href
   );
@@ -185,7 +186,6 @@ async function runChecks() {
   if (typeof resultMarkup !== 'function') {
     throw new Error('Tonearm resultMarkup export is missing.');
   }
-
   if (typeof errorMarkup !== 'function') {
     throw new Error('Tonearm errorMarkup export is missing.');
   }
@@ -223,6 +223,7 @@ async function runChecks() {
   const result = {
     resonanceHz: 9.5,
     totalMovingMassG: 21.3,
+    compliance10HzCu: 18,
   };
 
   const renderedResult = resultMarkup(result, maliciousDiagnosis);

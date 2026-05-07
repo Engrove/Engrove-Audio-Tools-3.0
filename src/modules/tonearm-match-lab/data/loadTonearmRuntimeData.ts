@@ -6,6 +6,7 @@ export type CartridgeRuntimeRecord = {
   id: string;
   display_name: string;
   match_ready: boolean;
+  type?: string;
   mass_g?: number;
   compliance_10hz_cu?: number;
 };
@@ -44,6 +45,17 @@ function readRequiredBoolean(record: RuntimeObject, fieldName: string, label: st
   return value;
 }
 
+function readOptionalString(record: RuntimeObject, fieldName: string, label: string): string | undefined {
+  const value = record[fieldName];
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+  if (typeof value !== 'string') {
+    throw new Error(`${label} has invalid ${fieldName}; expected a string when present.`);
+  }
+  return value;
+}
+
 function readOptionalNumber(record: RuntimeObject, fieldName: string, label: string): number | undefined {
   const value = record[fieldName];
   if (value === undefined || value === null) {
@@ -60,10 +72,12 @@ function parseCartridgeRecord(value: unknown, index: number): CartridgeRuntimeRe
   if (!isRuntimeObject(value)) {
     throw new Error(`${label} is invalid; expected an object.`);
   }
+
   return {
     id: readRequiredString(value, 'id', label),
     display_name: readRequiredString(value, 'display_name', label),
     match_ready: readRequiredBoolean(value, 'match_ready', label),
+    type: readOptionalString(value, 'type', label),
     mass_g: readOptionalNumber(value, 'mass_g', label),
     compliance_10hz_cu: readOptionalNumber(value, 'compliance_10hz_cu', label),
   };
@@ -74,6 +88,7 @@ function parseTonearmRecord(value: unknown, index: number): TonearmRuntimeRecord
   if (!isRuntimeObject(value)) {
     throw new Error(`${label} is invalid; expected an object.`);
   }
+
   return {
     id: readRequiredString(value, 'id', label),
     display_name: readRequiredString(value, 'display_name', label),
@@ -108,6 +123,7 @@ export function filterRuntimeRecords<T extends { display_name: string }>(
     : records.filter((record) =>
         record.display_name.toLocaleLowerCase('en-US').includes(normalizedQuery),
       );
+
   return source.slice(0, limit);
 }
 

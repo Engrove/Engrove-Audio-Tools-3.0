@@ -3,7 +3,14 @@ import {
   type ResonanceInput,
   type ResonanceResult,
 } from '../engine/resonance';
-import { diagnoseResonance, type ResonanceDiagnosis } from '../engine/diagnosis'; import { filterRuntimeRecords, loadTonearmRuntimeData, type CartridgeRuntimeRecord, type TonearmRuntimeRecord } from '../data/loadTonearmRuntimeData'; import { selectorEmptyMarkup, selectorListMarkup } from './tonearmSelectorMarkup'; import { escapeAttribute, renderText } from '../../../shared/ui/renderSafe';
+import { diagnoseResonance, type ResonanceDiagnosis } from '../engine/diagnosis';
+import {
+  loadTonearmRuntimeData,
+  type CartridgeRuntimeRecord,
+  type TonearmRuntimeRecord,
+} from '../data/loadTonearmRuntimeData';
+import { openRuntimePickerModal, runtimePickerFieldUpdates, type RuntimePickerItem } from '../../../shared/ui/runtimePickerModal';
+import { escapeAttribute, renderText } from '../../../shared/ui/renderSafe';
 
 type QuickMatchFieldName = keyof ResonanceInput;
 
@@ -63,19 +70,20 @@ function formatNumber(value: number, fractionDigits = 1): string {
 }
 
 function fieldMarkup(field: QuickMatchField): string {
+  const fieldName = escapeAttribute(field.name);
+
   return `
-    <label class="tm-lab-field" for="tm-${escapeAttribute(field.name)}">
+    <label class="tm-lab-field" for="tm-${fieldName}">
       <span class="tm-lab-field__label">${renderText(field.label)}</span>
       <input
-        id="tm-${escapeAttribute(field.name)}"
+        id="tm-${fieldName}"
         class="tm-lab-field__input"
-        name="${escapeAttribute(field.name)}"
+        name="${fieldName}"
         type="number"
         min="0"
         step="${escapeAttribute(field.step)}"
         value="${escapeAttribute(defaultInput[field.name])}"
         inputmode="decimal"
-        required
       />
       <span class="tm-lab-field__helper">${renderText(field.helper)}</span>
     </label>
@@ -84,95 +92,70 @@ function fieldMarkup(field: QuickMatchField): string {
 
 export function resultMarkup(result: ResonanceResult, diagnosis: ResonanceDiagnosis): string {
   const label = diagnosis.level[0].toUpperCase() + diagnosis.level.slice(1);
+  const suggestionItems = diagnosis.suggestions
+    .map((suggestion) => `<li>${renderText(suggestion)}</li>`)
+    .join('');
 
   return `
-    <div class="tm-lab-result__header">
-      <p class="tm-lab-kicker">Quick Match result</p>
-      <span class="tm-lab-pill tm-lab-pill--${escapeAttribute(diagnosis.level)}">${renderText(label)}</span>
-    </div>
-    <p class="tm-lab-result__hz">
-      <strong>${renderText(formatNumber(result.resonanceHz))}</strong>
-      <span>Hz</span>
-    </p>
-    <p class="tm-lab-result__target">Target zone: 8–12 Hz</p>
-    <dl class="tm-lab-result__facts">
-      <div>
-        <dt>Total moving mass</dt>
-        <dd>${renderText(formatNumber(result.totalMovingMassG))} g</dd>
+    <section class="tm-lab-result tm-lab-result--${escapeAttribute(diagnosis.level)}" aria-live="polite">
+      <div class="tm-lab-result__summary">
+        <p class="tm-lab-result__label">Quick Match result</p>
+        <p class="tm-lab-result__frequency">${renderText(formatNumber(result.resonanceHz))} Hz</p>
+        <span class="tm-lab-result__badge">${renderText(label)}</span>
       </div>
-      <div>
-        <dt>Diagnosis</dt>
-        <dd>${renderText(diagnosis.title)}</dd>
+      <div class="tm-lab-result__details">
+        <p class="tm-lab-result__label">Target zone: 8–12 Hz</p>
+        <dl>
+        </dl>
+        <h3>${renderText(diagnosis.title)}</h3>
+        <p>${renderText(diagnosis.explanation)}</p>
+        <ul class="tm-lab-result__suggestions">${suggestionItems}</ul>
       </div>
-    </dl>
-    <p class="tm-lab-result__explanation">${renderText(diagnosis.explanation)}</p>
-    <ul class="tm-lab-suggestions">
-      ${diagnosis.suggestions.map((suggestion) => `<li>${renderText(suggestion)}</li>`).join('')}
-    </ul>
+    </section>
   `;
 }
 
 export function errorMarkup(message: unknown): string {
   return `
-    <div class="tm-lab-result__header">
-      <p class="tm-lab-kicker">Quick Match result</p>
-      <span class="tm-lab-pill tm-lab-pill--poor">Input needed</span>
-    </div>
-    <p class="tm-lab-result__error">${renderText(message)}</p>
-    <p class="tm-lab-result__target">Use finite, non-negative masses and compliance greater than zero.</p>
+    <section class="tm-lab-error" role="alert">
+      <strong>Input needed</strong>
+      <span>${renderText(message)}</span>
+      <small>Use finite, non-negative masses and compliance greater than zero.</small>
+    </section>
   `;
 }
 
-function runtimeSelectorFoundationMarkup(): string {
+function runtimePickerControlsMarkup(): string {
   return `
-    <section class="tm-runtime-selectors" data-tonearm-runtime-selectors aria-labelledby="tm-runtime-selectors-title">
-      <div class="tm-runtime-selectors__intro">
-        <h3 id="tm-runtime-selectors-title">Match-ready dataset selectors</h3>
-        <p>Search the public runtime dataset and copy known values into Quick Match.</p>
+    <section class="tm-runtime-picker-controls" data-tonearm-runtime-pickers aria-labelledby="tm-runtime-pickers-title">
+      <div class="tm-runtime-picker-controls__intro">
+        <h3 id="tm-runtime-pickers-title">Dataset pickers</h3>
+        <p>Use match-ready public runtime data when known values should populate Quick Match.</p>
       </div>
-
-      <div class="tm-runtime-selector" data-runtime-selector="cartridge">
-        <label class="tm-runtime-selector__label" for="tm-runtime-cartridge-search">Cartridge dataset search</label>
-        <input
-          id="tm-runtime-cartridge-search"
-          class="tm-runtime-selector__search"
-          type="search"
-          autocomplete="off"
-          placeholder="Search match-ready cartridges"
-          data-runtime-selector-search="cartridge"
-        />
-        <div class="tm-runtime-selector__results" data-runtime-selector-results="cartridge" aria-live="polite">
-          <p class="tm-runtime-selector__empty">Loading match-ready cartridges…</p>
+      <div class="tm-runtime-picker-controls__grid">
+        <div class="tm-runtime-picker-control" data-runtime-picker-control="cartridge">
+          <button class="tm-runtime-picker-control__button" type="button" data-runtime-picker-open="cartridge" disabled>
+            Select cartridge from dataset
+          </button>
+          <p class="tm-runtime-picker-control__summary" data-runtime-picker-summary="cartridge">No cartridge selected from dataset.</p>
+        </div>
+        <div class="tm-runtime-picker-control" data-runtime-picker-control="tonearm">
+          <button class="tm-runtime-picker-control__button" type="button" data-runtime-picker-open="tonearm" disabled>
+            Select tonearm from dataset
+          </button>
+          <p class="tm-runtime-picker-control__summary" data-runtime-picker-summary="tonearm">No tonearm selected from dataset.</p>
         </div>
       </div>
-
-      <div class="tm-runtime-selector" data-runtime-selector="tonearm">
-        <label class="tm-runtime-selector__label" for="tm-runtime-tonearm-search">Tonearm dataset search</label>
-        <input
-          id="tm-runtime-tonearm-search"
-          class="tm-runtime-selector__search"
-          type="search"
-          autocomplete="off"
-          placeholder="Search match-ready tonearms"
-          data-runtime-selector-search="tonearm"
-        />
-        <div class="tm-runtime-selector__results" data-runtime-selector-results="tonearm" aria-live="polite">
-          <p class="tm-runtime-selector__empty">Loading match-ready tonearms…</p>
-        </div>
-      </div>
-
-      <p class="tm-runtime-selectors__status" data-runtime-selector-status>Loading public runtime data…</p>
+      <p class="tm-runtime-picker-controls__status" data-runtime-picker-status>Loading public runtime data…</p>
     </section>
   `;
 }
 
 function readNumber(form: HTMLFormElement, name: QuickMatchFieldName): number {
   const element = form.elements.namedItem(name);
-
   if (!(element instanceof HTMLInputElement)) {
     throw new Error(`Missing input: ${name}`);
   }
-
   return Number(element.value);
 }
 
@@ -200,108 +183,142 @@ function renderResult(form: HTMLFormElement, resultElement: HTMLElement): void {
   }
 }
 
+function toCartridgePickerItem(record: CartridgeRuntimeRecord): RuntimePickerItem {
+  return {
+    id: record.id,
+    kind: 'cartridge',
+    displayName: record.display_name,
+    type: record.type,
+    massG: record.mass_g,
+    compliance10HzCu: record.compliance_10hz_cu,
+  };
+}
+
+function toTonearmPickerItem(record: TonearmRuntimeRecord): RuntimePickerItem {
+  return {
+    id: record.id,
+    kind: 'tonearm',
+    displayName: record.display_name,
+    effectiveMassG: record.effective_mass_g,
+  };
+}
+
 function setNumericInput(form: HTMLFormElement, name: QuickMatchFieldName, value: number | undefined): boolean {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
     return false;
   }
+
   const element = form.elements.namedItem(name);
   if (!(element instanceof HTMLInputElement)) {
     return false;
   }
+
   element.value = String(value);
   return true;
 }
 
-function renderSelectorResults(
-  root: HTMLElement,
-  cartridges: readonly CartridgeRuntimeRecord[],
-  tonearms: readonly TonearmRuntimeRecord[],
-): void {
-  const cartridgeSearch = root.querySelector<HTMLInputElement>('[data-runtime-selector-search="cartridge"]');
-  const tonearmSearch = root.querySelector<HTMLInputElement>('[data-runtime-selector-search="tonearm"]');
-  const cartridgeResults = root.querySelector<HTMLElement>('[data-runtime-selector-results="cartridge"]');
-  const tonearmResults = root.querySelector<HTMLElement>('[data-runtime-selector-results="tonearm"]');
+function applyRuntimePickerItem(form: HTMLFormElement, item: RuntimePickerItem): boolean {
+  const updates = runtimePickerFieldUpdates(item.kind, item);
+  let changed = false;
 
-  if (cartridgeResults) {
-    cartridgeResults.innerHTML = selectorListMarkup(
-      filterRuntimeRecords(cartridges, cartridgeSearch?.value ?? ''),
-      'cartridge',
-    );
-  }
-  if (tonearmResults) {
-    tonearmResults.innerHTML = selectorListMarkup(
-      filterRuntimeRecords(tonearms, tonearmSearch?.value ?? ''),
-      'tonearm',
-    );
-  }
+  changed = setNumericInput(form, 'cartridgeMassG', updates.cartridgeMassG) || changed;
+  changed = setNumericInput(form, 'compliance10HzCu', updates.compliance10HzCu) || changed;
+  changed = setNumericInput(form, 'tonearmEffectiveMassG', updates.tonearmEffectiveMassG) || changed;
+
+  return changed;
 }
 
-function bindSelectorSelection(
-  root: HTMLElement,
-  form: HTMLFormElement,
-  cartridges: readonly CartridgeRuntimeRecord[],
-  tonearms: readonly TonearmRuntimeRecord[],
-): void {
-  root.addEventListener('click', (event) => {
-    const option = (event.target as Element | null)?.closest<HTMLButtonElement>('[data-runtime-selector-option]');
-    if (!option) {
-      return;
-    }
+function writePickerSummary(item: RuntimePickerItem): void {
+  const summary = document.querySelector<HTMLElement>(`[data-runtime-picker-summary="${item.kind}"]`);
+  if (!summary) {
+    return;
+  }
 
-    const id = option.dataset.runtimeId;
-    const kind = option.dataset.runtimeSelectorOption;
-    let changed = false;
+  const details = item.kind === 'cartridge'
+    ? [
+        typeof item.massG === 'number' ? `${item.massG} g` : undefined,
+        typeof item.compliance10HzCu === 'number' ? `${item.compliance10HzCu} cu @10 Hz` : undefined,
+      ].filter(Boolean)
+    : [
+        typeof item.effectiveMassG === 'number' ? `${item.effectiveMassG} g effective mass` : undefined,
+      ].filter(Boolean);
 
-    if (kind === 'cartridge') {
-      const record = cartridges.find((item) => item.id === id);
-      if (record) {
-        changed = setNumericInput(form, 'cartridgeMassG', record.mass_g) || changed;
-        changed = setNumericInput(form, 'compliance10HzCu', record.compliance_10hz_cu) || changed;
-      }
-    } else if (kind === 'tonearm') {
-      const record = tonearms.find((item) => item.id === id);
-      if (record) {
-        changed = setNumericInput(form, 'tonearmEffectiveMassG', record.effective_mass_g) || changed;
-      }
-    }
-
-    if (changed) {
-      form.dispatchEvent(new Event('input', { bubbles: true }));
-    }
-  });
+  summary.innerHTML = `
+    <strong>${renderText(item.kind === 'cartridge' ? 'Selected cartridge:' : 'Selected tonearm:')}</strong>
+    <span>${renderText(item.displayName)}</span>
+    <small>${renderText(details.length > 0 ? details.join(' · ') : 'No match values copied')}</small>
+  `;
 }
 
-function bindRuntimeSelectors(form: HTMLFormElement): void {
-  const root = document.querySelector<HTMLElement>('[data-tonearm-runtime-selectors]');
+function bindRuntimePickers(form: HTMLFormElement): void {
+  const root = document.querySelector<HTMLElement>('[data-tonearm-runtime-pickers]');
   if (!root) {
     return;
   }
 
-  const status = root.querySelector<HTMLElement>('[data-runtime-selector-status]');
-  const cartridgeResults = root.querySelector<HTMLElement>('[data-runtime-selector-results="cartridge"]');
-  const tonearmResults = root.querySelector<HTMLElement>('[data-runtime-selector-results="tonearm"]');
+  const status = root.querySelector<HTMLElement>('[data-runtime-picker-status]');
+  const cartridgeButton = root.querySelector<HTMLButtonElement>('[data-runtime-picker-open="cartridge"]');
+  const tonearmButton = root.querySelector<HTMLButtonElement>('[data-runtime-picker-open="tonearm"]');
+  let appliedCartridgeId: string | null = null;
+  let appliedTonearmId: string | null = null;
 
   loadTonearmRuntimeData()
     .then((data) => {
+      const cartridgeItems = data.cartridges.map(toCartridgePickerItem);
+      const tonearmItems = data.tonearms.map(toTonearmPickerItem);
+
       if (status) {
-        status.textContent = 'Loaded match-ready runtime data.';
+        status.textContent = 'Public runtime data is ready.';
       }
-      renderSelectorResults(root, data.cartridges, data.tonearms);
-      root.querySelectorAll<HTMLInputElement>('[data-runtime-selector-search]').forEach((input) => {
-        input.addEventListener('input', () => renderSelectorResults(root, data.cartridges, data.tonearms));
-      });
-      bindSelectorSelection(root, form, data.cartridges, data.tonearms);
+
+      if (cartridgeButton) {
+        cartridgeButton.disabled = cartridgeItems.length === 0;
+        cartridgeButton.addEventListener('click', () => {
+          openRuntimePickerModal({
+            kind: 'cartridge',
+            title: 'Select cartridge from dataset',
+            items: cartridgeItems,
+            appliedItemId: appliedCartridgeId,
+            onApply: (item) => {
+              appliedCartridgeId = item.id;
+              writePickerSummary(item);
+              if (applyRuntimePickerItem(form, item)) {
+                form.dispatchEvent(new Event('input', { bubbles: true }));
+              }
+            },
+          });
+        });
+      }
+
+      if (tonearmButton) {
+        tonearmButton.disabled = tonearmItems.length === 0;
+        tonearmButton.addEventListener('click', () => {
+          openRuntimePickerModal({
+            kind: 'tonearm',
+            title: 'Select tonearm from dataset',
+            items: tonearmItems,
+            appliedItemId: appliedTonearmId,
+            onApply: (item) => {
+              appliedTonearmId = item.id;
+              writePickerSummary(item);
+              if (applyRuntimePickerItem(form, item)) {
+                form.dispatchEvent(new Event('input', { bubbles: true }));
+              }
+            },
+          });
+        });
+      }
     })
     .catch((error: unknown) => {
-      const message = error instanceof Error ? error.message : 'Unable to load runtime selector data.';
+      const message = error instanceof Error ? error.message : 'Unable to load runtime picker data.';
       if (status) {
-        status.textContent = `Runtime selector data could not be loaded. ${message}`;
+        status.textContent = `Runtime picker data could not be loaded. ${message}`;
       }
-      if (cartridgeResults) {
-        cartridgeResults.innerHTML = selectorEmptyMarkup('Cartridge dataset search is unavailable.');
+      if (cartridgeButton) {
+        cartridgeButton.disabled = true;
       }
-      if (tonearmResults) {
-        tonearmResults.innerHTML = selectorEmptyMarkup('Tonearm dataset search is unavailable.');
+      if (tonearmButton) {
+        tonearmButton.disabled = true;
       }
     });
 }
@@ -327,68 +344,54 @@ export function renderTonearmMatchLabPage(): string {
   const initialDiagnosis = diagnoseResonance(initialResult.resonanceHz);
 
   return `
-    <div class="ea-site-shell tm-lab">
-      <header class="ea-topbar tm-lab-topbar" aria-label="Primary navigation">
-        <a class="ea-wordmark" href="/" aria-label="Engrove Audio home">
-          <img class="ea-wordmark__mark" src="/images/engrove.webp" alt="" aria-hidden="true" />
-          <span class="ea-wordmark__text">Engrove Audio</span>
+    <main class="tm-lab-shell">
+      <header class="tm-lab-header">
+        <a class="tm-lab-wordmark" href="/" aria-label="Engrove Audio home">
+          <img src="/engrove-audio-wordmark.svg" alt="Engrove Audio" />
         </a>
-        <nav class="ea-nav" aria-label="Main navigation">
+        <nav class="tm-lab-nav" aria-label="Tonearm Match Lab">
           <a href="/">Home</a>
           <a href="#quick-match">Quick Match</a>
           <a href="#assumptions">Assumptions</a>
         </nav>
-        <button class="ea-theme-toggle" type="button" data-theme-toggle aria-label="Toggle light and dark theme">
-          <span aria-hidden="true">◐</span>
-        </button>
+        <button class="tm-lab-theme-toggle" type="button" data-theme-toggle aria-label="Toggle theme">◐</button>
       </header>
 
-      <main class="tm-lab-main">
-        <section class="tm-lab-hero" aria-labelledby="tonearm-match-title">
-          <p class="ea-kicker">Tonearm calculator</p>
-          <h1 id="tonearm-match-title">Tonearm Match Lab</h1>
-          <p class="tm-lab-hero__lead">
-            Check whether a cartridge and tonearm combination lands in the safe resonance window.
-          </p>
-        </section>
+      <section class="tm-lab-hero" aria-labelledby="tm-lab-title">
+        <p class="tm-lab-kicker">Tonearm calculator</p>
+        <h1 id="tm-lab-title">Tonearm Match Lab</h1>
+        <p class="tm-lab-lede">
+          Check whether a cartridge and tonearm combination lands in the safe resonance window.
+        </p>
+      </section>
 
-        <section class="tm-lab-workbench" aria-label="Tonearm Match Lab workbench">
-          <form class="tm-lab-card tm-lab-form" id="quick-match" data-tonearm-match-form>
-            <div class="tm-lab-card__header">
-              <p class="tm-lab-kicker">Manual Quick Match</p>
-              <h2>Does my cartridge match my tonearm?</h2>
-              <p>Enter the basic published values and get an immediate resonance diagnosis.</p>
-            </div>
-            <div class="tm-lab-form__fields">
-              ${runtimeSelectorFoundationMarkup()}
+      <section class="tm-lab-panel" id="quick-match" aria-labelledby="quick-match-title">
+        <div class="tm-lab-panel__intro">
+          <p class="tm-lab-kicker">Manual Quick Match</p>
+          <h2 id="quick-match-title">Does my cartridge match my tonearm?</h2>
+          <p>Enter the basic published values and get an immediate resonance diagnosis.</p>
+        </div>
 
-${quickMatchFields.map(fieldMarkup).join('')}
-            </div>
-          </form>
+        <form class="tm-lab-form" data-tonearm-match-form>
+          ${runtimePickerControlsMarkup()}
+          ${quickMatchFields.map(fieldMarkup).join('')}
+        </form>
 
-          <aside
-            class="tm-lab-card tm-lab-result"
-            data-tonearm-match-result
-            data-diagnosis-level="${initialDiagnosis.level}"
-            aria-live="polite"
-          >
-            ${resultMarkup(initialResult, initialDiagnosis)}
-          </aside>
-        </section>
+        <div class="tm-lab-output" data-tonearm-match-result>
+          ${resultMarkup(initialResult, initialDiagnosis)}
+        </div>
+      </section>
 
-        <section class="tm-lab-card tm-lab-assumptions" id="assumptions" aria-labelledby="assumptions-title">
-          <div>
-            <p class="tm-lab-kicker">Assumptions and confidence</p>
-            <h2 id="assumptions-title">What this first version assumes</h2>
-          </div>
-          <ul class="tm-lab-assumption-list">
-            <li>This first version uses manual input and a simplified resonance model.</li>
-            <li>Database-backed cartridge and tonearm selectors are planned for the next module iteration.</li>
-            <li>Compliance must be a 10 Hz value or an estimate converted to 10 Hz.</li>
-          </ul>
-        </section>
-      </main>
-    </div>
+      <section class="tm-lab-panel tm-lab-panel--assumptions" id="assumptions" aria-labelledby="assumptions-title">
+        <p class="tm-lab-kicker">Assumptions and confidence</p>
+        <h2 id="assumptions-title">What this first version assumes</h2>
+        <ul>
+          <li>This first version uses manual input and a simplified resonance model.</li>
+          <li>Dataset pickers can copy match-ready public runtime values into the manual inputs.</li>
+          <li>Compliance must be a 10 Hz value or an estimate converted to 10 Hz.</li>
+        </ul>
+      </section>
+    </main>
   `;
 }
 
@@ -402,6 +405,7 @@ export function enableTonearmMatchLabInteractions(): void {
     return;
   }
 
-  bindRuntimeSelectors(form); form.addEventListener('input', () => renderResult(form, resultElement));
+  bindRuntimePickers(form);
+  form.addEventListener('input', () => renderResult(form, resultElement));
   renderResult(form, resultElement);
 }

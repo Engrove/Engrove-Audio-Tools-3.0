@@ -1,126 +1,83 @@
 #!/usr/bin/env node
-import { readdir, readFile, stat } from 'node:fs/promises';
-import path from 'node:path';
-import process from 'node:process';
+import { readdir, readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { join, relative } from 'node:path';
 
 const repoRoot = process.cwd();
 
-const ignoredDirectoryNames = new Set([
+const ignoredDirectories = new Set([
   '.git',
   '.vs',
   'dist',
   'node_modules',
 ]);
 
-const requiredExactFiles = new Set([
+const exactTextFiles = new Set([
   '.gitattributes',
   'package.json',
   'vite.config.ts',
   'public/_headers',
+  'public/data/audio/v3/runtime/audio-index.manifest.json',
   'public/data/audio/v3/runtime/cartridges.index.json',
   'public/data/audio/v3/runtime/tonearms.index.json',
-  'public/data/audio/v3/runtime/audio-index.manifest.json',
   'tools/check-repo-integrity.mjs',
-  'tools/check-render-safe.mjs', 'tools/check-tonearm-runtime-selectors.mjs', 'src/shared/ui/renderSafe.ts', 'tools/validate-audio-data.mjs',
+  'tools/check-render-safe.mjs',
+  'tools/check-tonearm-runtime-selectors.mjs',
+  'tools/validate-audio-data.mjs',
 ]);
 
-const srcReleaseExtensions = new Set([
-  '.ts',
-  '.css',
-  '.html',
-]);
+const requiredFiles = [
+  ...exactTextFiles,
+  'src/shared/ui/renderSafe.ts',
+  'src/shared/ui/runtimePickerModal.ts',
+];
 
 const failures = [];
 const checkedFiles = [];
+const truncationMarker = 'CONTENT ' + 'TRUNCATED';
 
-function toRepoPath(absolutePath) {
-  return path.relative(repoRoot, absolutePath).split(path.sep).join('/');
+function normalize(relativePath) {
+  return relativePath.split('\\').join('/');
 }
 
-function extname(relativePath) {
-  return path.posix.extname(relativePath).toLowerCase();
+function shouldIgnoreDirectory(relativePath) {
+  const parts = normalize(relativePath).split('/');
+  return parts.some((part) => ignoredDirectories.has(part));
 }
 
-function basename(relativePath) {
-  return path.posix.basename(relativePath);
+function isRuntimeJson(relativePath) {
+  const normalized = normalize(relativePath);
+  return (
+    normalized.startsWith('public/data/audio/v3/runtime/') &&
+    normalized.endsWith('.json')
+  );
 }
 
-function isExplicitlyIgnoredForThisPhase(relativePath) {
-  const base = basename(relativePath);
-  const extension = extname(relativePath);
-
-  if (relativePath === 'wrangler.toml') {
-    return true;
-  }
-
-  if (relativePath === 'BOOTSTRAP_MANIFEST.json') {
-    return true;
-  }
-
-  if (extension === '.md') {
-    return true;
-  }
-
-  if (/^FAS17_.*\.md$/i.test(base)) {
-    return true;
-  }
-
-  if (/^tools\/[^/]+\.ps1$/i.test(relativePath)) {
-    return true;
-  }
-
-  if (relativePath.startsWith('src/data/legacy/')) {
-    return true;
-  }
-
-  if (relativePath.startsWith('src/data/audio/v3/') && extension === '.json') {
-    return true;
-  }
-
-  return false;
+function isSourceText(relativePath) {
+  const normalized = normalize(relativePath);
+  return (
+    normalized.startsWith('src/') &&
+    (normalized.endsWith('.ts') ||
+      normalized.endsWith('.css') ||
+      normalized.endsWith('.html'))
+  );
 }
 
-function isReleaseCriticalFile(relativePath) {
-  if (isExplicitlyIgnoredForThisPhase(relativePath)) {
-    return false;
-  }
-
-  if (requiredExactFiles.has(relativePath)) {
-    return true;
-  }
-
-  if (
-    relativePath.startsWith('public/data/audio/v3/runtime/') &&
-    extname(relativePath) === '.json'
-  ) {
-    return true;
-  }
-
-  if (
-    relativePath.startsWith('src/') &&
-    srcReleaseExtensions.has(extname(relativePath))
-  ) {
-    return true;
-  }
-
-  return false;
-}
-
-async function fileExists(relativePath) {
-  try {
-    const stats = await stat(path.join(repoRoot, relativePath));
-    return stats.isFile();
-  } catch {
-    return false;
-  }
+function isInReleaseCriticalScope(relativePath) {
+  const normalized = normalize(relativePath);
+  return (
+    exactTextFiles.has(normalized) ||
+    isRuntimeJson(normalized) ||
+    isSourceText(normalized)
+  );
 }
 
 async function checkRequiredFilesExist() {
-  for (const relativePath of requiredExactFiles) {
-    if (!(await fileExists(relativePath))) {
+  for (const relativePath of requiredFiles) {
+    if (!existsSync(join(repoRoot, relativePath))) {
       failures.push({
         file: relativePath,
-        problem: 'Required release-critical file is missing',
+        problem: 'required release-critical file is missing',
       });
     }
   }
@@ -130,13 +87,14 @@ async function walk(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
 
   for (const entry of entries) {
-    if (entry.isDirectory() && ignoredDirectoryNames.has(entry.name)) {
-      continue;
-    }
-
-    const absolutePath = path.join(directory, entry.name);
+    const absolutePath = join(directory, entry.name);
+    const relativePath = normalize(relative(repoRoot, absolutePath));
 
     if (entry.isDirectory()) {
+      if (shouldIgnoreDirectory(relativePath)) {
+        continue;
+      }
+
       await walk(absolutePath);
       continue;
     }
@@ -145,9 +103,7 @@ async function walk(directory) {
       continue;
     }
 
-    const relativePath = toRepoPath(absolutePath);
-
-    if (!isReleaseCriticalFile(relativePath)) {
+    if (!isInReleaseCriticalScope(relativePath)) {
       continue;
     }
 
@@ -179,6 +135,13 @@ async function checkFile(absolutePath, relativePath) {
       problem: 'CRLF line endings detected',
     });
   }
+
+  if (text.includes(truncationMarker)) {
+    failures.push({
+      file: relativePath,
+      problem: 'truncation marker detected',
+    });
+  }
 }
 
 await checkRequiredFilesExist();
@@ -187,10 +150,10 @@ await walk(repoRoot);
 const uniqueCheckedFiles = [...new Set(checkedFiles)].sort();
 
 console.log('Engrove Audio Tools 3.0 release-critical integrity check');
-console.log('- scope: Fas 17.2a release-critical/static-delivery files only');
-console.log('- checked exact files: .gitattributes, package.json, vite.config.ts, public/_headers, public runtime manifest/index JSON, tools/check-repo-integrity.mjs, tools/check-render-safe.mjs, tools/check-tonearm-runtime-selectors.mjs, tools/validate-audio-data.mjs, src/shared/ui/renderSafe.ts');
+console.log('- scope: Fas 17.2b release-critical/static-delivery files only');
+console.log('- checked exact files: .gitattributes, package.json, vite.config.ts, public/_headers, public runtime manifest/index JSON, tools/check-repo-integrity.mjs, tools/check-render-safe.mjs, tools/check-tonearm-runtime-selectors.mjs, tools/validate-audio-data.mjs');
 console.log('- checked globs: public/data/audio/v3/runtime/**/*.json, src/**/*.ts, src/**/*.css, src/**/*.html');
-console.log('- temporary ignores: .git, .vs, dist, node_modules, src/data/legacy/**, src/data/audio/v3/**/*.json, tools/*.ps1, *.md, wrangler.toml, BOOTSTRAP_MANIFEST.json, FAS17_*.md');
+console.log('- temporary ignores: .git, .vs, dist, node_modules');
 console.log(`- checked files: ${uniqueCheckedFiles.length}`);
 
 if (failures.length === 0) {
