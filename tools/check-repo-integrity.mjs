@@ -21,7 +21,7 @@ const requiredExactFiles = new Set([
   'public/data/audio/v3/runtime/tonearms.index.json',
   'public/data/audio/v3/runtime/audio-index.manifest.json',
   'tools/check-repo-integrity.mjs',
-  'tools/validate-audio-data.mjs',
+  'tools/check-render-safe.mjs', 'src/shared/ui/renderSafe.ts', 'tools/validate-audio-data.mjs',
 ]);
 
 const srcReleaseExtensions = new Set([
@@ -187,8 +187,8 @@ await walk(repoRoot);
 const uniqueCheckedFiles = [...new Set(checkedFiles)].sort();
 
 console.log('Engrove Audio Tools 3.0 release-critical integrity check');
-console.log('- scope: Fas 17.1.1b release-critical/static-delivery files only');
-console.log('- checked exact files: .gitattributes, package.json, vite.config.ts, public/_headers, public runtime manifest/index JSON, tools/check-repo-integrity.mjs, tools/validate-audio-data.mjs');
+console.log('- scope: Fas 17.1.2 release-critical/static-delivery files only');
+console.log('- checked exact files: .gitattributes, package.json, vite.config.ts, public/_headers, public runtime manifest/index JSON, tools/check-repo-integrity.mjs, tools/check-render-safe.mjs, tools/validate-audio-data.mjs, src/shared/ui/renderSafe.ts');
 console.log('- checked globs: public/data/audio/v3/runtime/**/*.json, src/**/*.ts, src/**/*.css, src/**/*.html');
 console.log('- temporary ignores: .git, .vs, dist, node_modules, src/data/legacy/**, src/data/audio/v3/**/*.json, tools/*.ps1, *.md, wrangler.toml, BOOTSTRAP_MANIFEST.json, FAS17_*.md');
 console.log(`- checked files: ${uniqueCheckedFiles.length}`);

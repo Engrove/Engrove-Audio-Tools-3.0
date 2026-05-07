@@ -3,7 +3,7 @@ import {
   type ResonanceInput,
   type ResonanceResult,
 } from '../engine/resonance';
-import { diagnoseResonance, type ResonanceDiagnosis } from '../engine/diagnosis';
+import { diagnoseResonance, type ResonanceDiagnosis } from '../engine/diagnosis'; import { escapeAttribute, renderText } from '../../../shared/ui/renderSafe';
 
 type QuickMatchFieldName = keyof ResonanceInput;
 
@@ -64,61 +64,61 @@ function formatNumber(value: number, fractionDigits = 1): string {
 
 function fieldMarkup(field: QuickMatchField): string {
   return `
-    <label class="tm-lab-field" for="tm-${field.name}">
-      <span class="tm-lab-field__label">${field.label}</span>
+    <label class="tm-lab-field" for="tm-${escapeAttribute(field.name)}">
+      <span class="tm-lab-field__label">${renderText(field.label)}</span>
       <input
-        id="tm-${field.name}"
+        id="tm-${escapeAttribute(field.name)}"
         class="tm-lab-field__input"
-        name="${field.name}"
+        name="${escapeAttribute(field.name)}"
         type="number"
         min="0"
-        step="${field.step}"
-        value="${defaultInput[field.name]}"
+        step="${escapeAttribute(field.step)}"
+        value="${escapeAttribute(defaultInput[field.name])}"
         inputmode="decimal"
         required
       />
-      <span class="tm-lab-field__helper">${field.helper}</span>
+      <span class="tm-lab-field__helper">${renderText(field.helper)}</span>
     </label>
   `;
 }
 
-function resultMarkup(result: ResonanceResult, diagnosis: ResonanceDiagnosis): string {
+export function resultMarkup(result: ResonanceResult, diagnosis: ResonanceDiagnosis): string {
   const label = diagnosis.level[0].toUpperCase() + diagnosis.level.slice(1);
 
   return `
     <div class="tm-lab-result__header">
       <p class="tm-lab-kicker">Quick Match result</p>
-      <span class="tm-lab-pill tm-lab-pill--${diagnosis.level}">${label}</span>
+      <span class="tm-lab-pill tm-lab-pill--${escapeAttribute(diagnosis.level)}">${renderText(label)}</span>
     </div>
     <p class="tm-lab-result__hz">
-      <strong>${formatNumber(result.resonanceHz)}</strong>
+      <strong>${renderText(formatNumber(result.resonanceHz))}</strong>
       <span>Hz</span>
     </p>
     <p class="tm-lab-result__target">Target zone: 8–12 Hz</p>
     <dl class="tm-lab-result__facts">
       <div>
         <dt>Total moving mass</dt>
-        <dd>${formatNumber(result.totalMovingMassG)} g</dd>
+        <dd>${renderText(formatNumber(result.totalMovingMassG))} g</dd>
       </div>
       <div>
         <dt>Diagnosis</dt>
-        <dd>${diagnosis.title}</dd>
+        <dd>${renderText(diagnosis.title)}</dd>
       </div>
     </dl>
-    <p class="tm-lab-result__explanation">${diagnosis.explanation}</p>
+    <p class="tm-lab-result__explanation">${renderText(diagnosis.explanation)}</p>
     <ul class="tm-lab-suggestions">
-      ${diagnosis.suggestions.map((suggestion) => `<li>${suggestion}</li>`).join('')}
+      ${diagnosis.suggestions.map((suggestion) => `<li>${renderText(suggestion)}</li>`).join('')}
     </ul>
   `;
 }
 
-function errorMarkup(message: string): string {
+export function errorMarkup(message: unknown): string {
   return `
     <div class="tm-lab-result__header">
       <p class="tm-lab-kicker">Quick Match result</p>
       <span class="tm-lab-pill tm-lab-pill--poor">Input needed</span>
     </div>
-    <p class="tm-lab-result__error">${message}</p>
+    <p class="tm-lab-result__error">${renderText(message)}</p>
     <p class="tm-lab-result__target">Use finite, non-negative masses and compliance greater than zero.</p>
   `;
 }
