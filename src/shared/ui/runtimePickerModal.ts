@@ -245,6 +245,103 @@ const runtimePickerCss = `
     overflow: visible;
   }
 }
+
+/* Runtime picker stable modal height */
+.runtime-picker-backdrop {
+  align-items: center;
+  overflow: hidden;
+}
+
+.runtime-picker-dialog {
+  block-size: min(42rem, calc(100dvh - 4rem));
+  max-block-size: calc(100dvh - 4rem);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.runtime-picker-body {
+  min-block-size: 0;
+  overflow: hidden;
+}
+
+.runtime-picker-body > .runtime-picker-panel {
+  min-block-size: 0;
+  overflow: hidden;
+}
+
+.runtime-picker-panel[aria-label="Search and filters"],
+.runtime-picker-panel[aria-label="Selected item preview"] {
+  display: flex;
+  flex-direction: column;
+}
+
+.runtime-picker-panel[aria-label="Search and filters"] {
+  overflow: auto;
+}
+
+.runtime-picker-panel[aria-label="Results"] {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.runtime-picker-panel[aria-label="Selected item preview"] {
+  overflow: auto;
+}
+
+.runtime-picker-results {
+  min-block-size: 0;
+  overflow: auto;
+  align-content: start;
+  padding-inline-end: 0.15rem;
+}
+
+.runtime-picker-empty {
+  min-block-size: 100%;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 1rem;
+  border: 1px dashed rgb(148 163 184 / 0.28);
+  border-radius: 0.75rem;
+  text-align: center;
+}
+
+@supports not (height: 100dvh) {
+  .runtime-picker-dialog {
+    block-size: min(42rem, calc(100vh - 4rem));
+    max-block-size: calc(100vh - 4rem);
+  }
+}
+
+@media (max-width: 860px) {
+  .runtime-picker-backdrop {
+    align-items: stretch;
+    padding: 0.75rem;
+  }
+
+  .runtime-picker-dialog {
+    block-size: min(44rem, calc(100dvh - 1.5rem));
+    max-block-size: calc(100dvh - 1.5rem);
+  }
+
+  .runtime-picker-body {
+    min-block-size: 0;
+    overflow: auto;
+  }
+
+  .runtime-picker-body > .runtime-picker-panel {
+    overflow: visible;
+  }
+
+  .runtime-picker-panel[aria-label="Results"] {
+    min-block-size: min(18rem, 46dvh);
+  }
+
+  .runtime-picker-results {
+    min-block-size: 12rem;
+  }
+}
+/* End runtime picker stable modal height */
 `;
 
 function ensureRuntimePickerStyles(): void {
@@ -551,20 +648,54 @@ export function openRuntimePickerModal(options: RuntimePickerModalOptions): void
     overlay.remove();
   };
 
-  const render = () => {
-    overlay.innerHTML = dialogMarkup(options, filters, draftSelectedId);
+  const selectedPreviewPanel = (): HTMLElement | null =>
+    Array.from(overlay.querySelectorAll<HTMLElement>('.runtime-picker-panel'))
+      .find((panel) => panel.getAttribute('aria-label') === 'Selected item preview') ?? null;
 
+  const renderDynamicRegions = () => {
+    const result = runtimePickerResultListMarkup(
+      options.items,
+      options.kind,
+      filters,
+      draftSelectedId,
+    );
+    const selectedItem = options.items.find((item) => item.id === draftSelectedId);
+    const countElement = overlay.querySelector<HTMLElement>('.runtime-picker-count');
+    const resultsElement = overlay.querySelector<HTMLElement>('.runtime-picker-results');
+    const previewPanel = selectedPreviewPanel();
+    const applyButton = overlay.querySelector<HTMLButtonElement>('[data-runtime-picker-apply]');
+
+    if (countElement) {
+      countElement.textContent = `${result.total} result${result.total === 1 ? '' : 's'}, showing first ${result.shown}`;
+    }
+
+    if (resultsElement) {
+      resultsElement.innerHTML = result.markup;
+      resultsElement.querySelectorAll<HTMLButtonElement>('[data-runtime-picker-result]').forEach((button) => {
+        button.addEventListener('click', () => {
+          draftSelectedId = button.dataset.runtimePickerResult ?? null;
+          renderDynamicRegions();
+        });
+      });
+    }
+
+    if (previewPanel) {
+      previewPanel.innerHTML = `
+        <h3>Selected preview</h3>
+        ${previewMarkup(selectedItem)}
+      `;
+    }
+
+    if (applyButton) {
+      applyButton.disabled = !selectedItem;
+    }
+  };
+
+  const bindStableControls = () => {
     overlay.querySelectorAll<HTMLInputElement>('[data-runtime-picker-filter]').forEach((input) => {
       input.addEventListener('input', () => {
         filters = readFilters(overlay);
-        render();
-      });
-    });
-
-    overlay.querySelectorAll<HTMLButtonElement>('[data-runtime-picker-result]').forEach((button) => {
-      button.addEventListener('click', () => {
-        draftSelectedId = button.dataset.runtimePickerResult ?? null;
-        render();
+        renderDynamicRegions();
       });
     });
 
@@ -595,6 +726,8 @@ export function openRuntimePickerModal(options: RuntimePickerModalOptions): void
   });
   document.addEventListener('keydown', onKeyDown);
 
-  render();
+  overlay.innerHTML = dialogMarkup(options, filters, draftSelectedId);
+  bindStableControls();
+  renderDynamicRegions();
   overlay.querySelector<HTMLInputElement>('[data-runtime-picker-filter="search"]')?.focus();
 }
