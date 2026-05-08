@@ -695,29 +695,24 @@ export function renderTonearmMatchLabPage(): string {
         <button class="tm-lab-theme-toggle" type="button" data-theme-toggle aria-label="Toggle theme">◐</button>
       </header>
 
-      <section class="tm-lab-workbench" id="quick-match" aria-labelledby="tm-lab-title">
-        <div class="tm-lab-workbench__main">
-          <header class="tm-lab-tool-header">
-            <p class="tm-lab-kicker">Tonearm calculator</p>
-            <h1 id="tm-lab-title">Tonearm Match Lab</h1>
+      <section class="tm-lab-workbench tm-lab-workbench--density-pass-2b" id="quick-match" aria-labelledby="tm-lab-title">
+        <section class="tm-lab-setup-panel tm-lab-setup-panel--density-pass-2b" aria-labelledby="tm-lab-title">
+          <header class="tm-lab-setup-header">
+            <div class="tm-lab-setup-header__title">
+              <p class="tm-lab-kicker">Tonearm calculator</p>
+              <h1 id="tm-lab-title">Tonearm Match Lab</h1>
+            </div>
             <p>Check low-frequency cartridge and tonearm resonance with dataset-assisted setup values.</p>
           </header>
 
-          <section class="tm-lab-setup-panel" aria-labelledby="quick-match-title">
-            <div class="tm-lab-panel__intro">
-              <p class="tm-lab-kicker">Quick Match workbench</p>
-              <h2 id="quick-match-title">Set up the match</h2>
-              <p>Use dataset values or enter the published setup numbers manually.</p>
+          <form class="tm-lab-form" data-tonearm-match-form>
+            ${runtimePickerControlsMarkup()}
+            <div class="tm-lab-math-fields">
+              ${quickMatchFields.map(fieldMarkup).join('')}
             </div>
-            <form class="tm-lab-form" data-tonearm-match-form>
-              ${runtimePickerControlsMarkup()}
-              <div class="tm-lab-math-fields">
-                ${quickMatchFields.map(fieldMarkup).join('')}
-              </div>
-              ${trackingForceSetupMarkup()}
-            </form>
-          </section>
-        </div>
+            ${trackingForceSetupMarkup()}
+          </form>
+        </section>
 
         <aside class="tm-lab-output" data-tonearm-match-result aria-label="Quick Match result">
           ${resultMarkup(initialResult, initialDiagnosis)}
