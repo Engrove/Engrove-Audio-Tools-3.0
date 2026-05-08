@@ -78,12 +78,6 @@ const quickMatchFields: readonly QuickMatchField[] = [
     step: '0.1',
   },
   {
-    name: 'trackingForceG',
-    label: 'Tracking force, g',
-    helper: 'Setup context only. Tracking force does not enter the resonance mass calculation.',
-    step: '0.1',
-  },
-  {
     name: 'compliance10HzCu',
     label: 'Compliance @10 Hz, µm/mN',
     helper: 'Use a 10 Hz value. Legacy cu is equivalent to µm/mN.',
@@ -269,6 +263,33 @@ function fieldMarkup(field: QuickMatchField): string {
       />
       <span class="tm-lab-field__helper">${renderText(field.helper)}</span>
     </label>
+  `;
+}
+
+function trackingForceSetupMarkup(): string {
+  const fieldName = escapeAttribute('trackingForceG');
+
+  return `
+    <section class="tm-lab-setup-context" aria-labelledby="tm-lab-setup-context-title">
+      <div class="tm-lab-setup-context__header">
+        <h3 id="tm-lab-setup-context-title">Setup context</h3>
+        <p>Kept separate from the resonance mass inputs.</p>
+      </div>
+      <label class="tm-lab-field tm-lab-field--setup" for="tm-${fieldName}">
+        <span class="tm-lab-field__label">Tracking force, g</span>
+        <input
+          id="tm-${fieldName}"
+          class="tm-lab-field__input"
+          name="${fieldName}"
+          type="number"
+          min="0"
+          step="0.1"
+          value="${escapeAttribute(defaultInput.trackingForceG)}"
+          inputmode="decimal"
+        />
+        <span class="tm-lab-field__helper">Tracking force is set during turntable setup. It does not affect the resonance calculation.</span>
+      </label>
+    </section>
   `;
 }
 
@@ -661,6 +682,7 @@ export function renderTonearmMatchLabPage(): string {
 
   return `
     <main class="tm-lab-shell">
+      <a class="tm-lab-skip-link" href="#quick-match">Skip to workbench</a>
       <header class="tm-lab-header">
         <a class="tm-lab-wordmark" href="/" aria-label="Engrove Audio home">
           <img src="/images/engrove.webp" alt="Engrove Audio" />
@@ -673,29 +695,33 @@ export function renderTonearmMatchLabPage(): string {
         <button class="tm-lab-theme-toggle" type="button" data-theme-toggle aria-label="Toggle theme">◐</button>
       </header>
 
-      <section class="tm-lab-hero" aria-labelledby="tm-lab-title">
-        <p class="tm-lab-kicker">Tonearm calculator</p>
-        <h1 id="tm-lab-title">Tonearm Match Lab</h1>
-        <p class="tm-lab-lede">
-          Check low-frequency cartridge and tonearm resonance with dataset-assisted setup values.
-        </p>
-      </section>
+      <section class="tm-lab-workbench" id="quick-match" aria-labelledby="tm-lab-title">
+        <div class="tm-lab-workbench__main">
+          <header class="tm-lab-tool-header">
+            <p class="tm-lab-kicker">Tonearm calculator</p>
+            <h1 id="tm-lab-title">Tonearm Match Lab</h1>
+            <p>Check low-frequency cartridge and tonearm resonance with dataset-assisted setup values.</p>
+          </header>
 
-      <section class="tm-lab-panel" id="quick-match" aria-labelledby="quick-match-title">
-        <div class="tm-lab-panel__intro">
-          <p class="tm-lab-kicker">Quick Match workbench</p>
-          <h2 id="quick-match-title">Set up the match</h2>
-          <p>Use dataset values or enter the published setup numbers manually.</p>
+          <section class="tm-lab-setup-panel" aria-labelledby="quick-match-title">
+            <div class="tm-lab-panel__intro">
+              <p class="tm-lab-kicker">Quick Match workbench</p>
+              <h2 id="quick-match-title">Set up the match</h2>
+              <p>Use dataset values or enter the published setup numbers manually.</p>
+            </div>
+            <form class="tm-lab-form" data-tonearm-match-form>
+              ${runtimePickerControlsMarkup()}
+              <div class="tm-lab-math-fields">
+                ${quickMatchFields.map(fieldMarkup).join('')}
+              </div>
+              ${trackingForceSetupMarkup()}
+            </form>
+          </section>
         </div>
 
-        <form class="tm-lab-form" data-tonearm-match-form>
-          ${runtimePickerControlsMarkup()}
-          ${quickMatchFields.map(fieldMarkup).join('')}
-        </form>
-
-        <div class="tm-lab-output" data-tonearm-match-result>
+        <aside class="tm-lab-output" data-tonearm-match-result aria-label="Quick Match result">
           ${resultMarkup(initialResult, initialDiagnosis)}
-        </div>
+        </aside>
       </section>
 
       <section class="tm-lab-panel tm-lab-panel--assumptions" id="assumptions" aria-labelledby="assumptions-title">
@@ -712,6 +738,7 @@ export function renderTonearmMatchLabPage(): string {
   `;
 }
 
+
 export function enableTonearmMatchLabInteractions(): void {
   bindThemeToggle();
 
@@ -723,6 +750,14 @@ export function enableTonearmMatchLabInteractions(): void {
   }
 
   bindRuntimePickers(form);
-  form.addEventListener('input', () => updateResultView(form, resultElement));
+  form.addEventListener('input', (event) => {
+    const input = event.target;
+
+    if (input instanceof HTMLInputElement && input.name === 'trackingForceG') {
+      return;
+    }
+
+    updateResultView(form, resultElement);
+  });
   updateResultView(form, resultElement);
 }
