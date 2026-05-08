@@ -12,32 +12,11 @@ type ToolCard = {
 
 const tools: readonly ToolCard[] = [
   {
-    title: 'Alignment Calculator',
-    summary: 'Visualize tonearm alignment choices and compare geometry families with clear setup guidance.',
-    status: 'Planned module',
-    href: '#tools',
-    actionLabel: 'Learn more',
-  },
-  {
-    title: 'Resonance Calculator',
-    summary: 'Check whether a cartridge and tonearm combination lands in the safe resonance window.',
-    status: 'Available foundation',
+    title: 'Tonearm Match Lab',
+    summary: 'Estimate cartridge-tonearm resonance from effective mass and compliance.',
+    status: 'Available',
     href: '/tonearm-calculator',
     actionLabel: 'Open Tonearm Match Lab',
-  },
-  {
-    title: 'Compliance Estimator',
-    summary: 'Convert and estimate compliance values without forcing users into spreadsheet-style workflows.',
-    status: 'Planned module',
-    href: '#tools',
-    actionLabel: 'Learn more',
-  },
-  {
-    title: 'Data Explorer',
-    summary: 'Search cartridges, tonearms and related component data from a shared curated database.',
-    status: 'Foundation module',
-    href: '#tools',
-    actionLabel: 'Learn more',
   },
 ];
 
@@ -95,8 +74,6 @@ export function renderHomePage(): string {
 
         <nav class="ea-nav" aria-label="Main navigation">
           <a href="#tools">Tools</a>
-          <a href="#platform">Platform</a>
-          <a href="#launch">Launch</a>
         </nav>
 
         <button class="ea-theme-toggle" type="button" data-theme-toggle aria-label="Toggle light and dark theme">
@@ -104,79 +81,20 @@ export function renderHomePage(): string {
         </button>
       </header>
 
-      <main>
-        <section class="ea-hero" aria-labelledby="hero-title">
-          <div class="ea-hero__backdrop" aria-hidden="true"></div>
-
-          <div class="ea-hero__content">
-            <p class="ea-kicker">Engrove Audio Tools 3.0</p>
-            <h1 id="hero-title">Precision Tools for the Analog Enthusiast.</h1>
-            <p class="ea-hero__lead">
-              A clean public toolkit for cartridge, tonearm and vinyl setup.
-              Prototype functions are rebuilt into focused modules with shared data and a consistent UI.
-            </p>
-            <div class="ea-hero__actions">
-              <a class="ea-button ea-button--primary" href="#tools">Explore the Tools</a>
-              <a class="ea-button ea-button--secondary" href="#platform">View Platform</a>
-            </div>
-          </div>
+      <main class="ea-home-main">
+        <section class="ea-tool-index-header ea-page" aria-labelledby="home-title">
+          <h1 id="home-title">Engrove Audio Tools</h1>
+          <p>Audio setup calculators and reference tools.</p>
         </section>
 
         <section class="ea-page ea-section" id="tools" aria-labelledby="tools-title">
           <div class="ea-section-heading">
-            <p class="ea-kicker">Toolbox</p>
-            <h2 id="tools-title">Focused tools, shared foundation.</h2>
-            <p>Each public tool is rebuilt from validated workshop functions, not copied from prototype UI.</p>
+            <h2 id="tools-title">Tools</h2>
+            <p>Open the available calculator from the index.</p>
           </div>
 
           <div class="ea-tool-grid">
             ${toolCards()}
-          </div>
-        </section>
-
-        <section class="ea-page ea-section ea-platform-section" id="platform" aria-labelledby="platform-title">
-          <div class="ea-platform-copy">
-            <p class="ea-kicker">Platform</p>
-            <h2 id="platform-title">Built as modules from day one.</h2>
-            <p>
-              Engrove Audio Tools 3.0 separates public UI, shared data, domain calculations and deploy logic.
-              That keeps the public site approachable while allowing expert-grade engines behind the scenes.
-            </p>
-          </div>
-
-          <div class="ea-platform-panel">
-            <dl>
-              <div>
-                <dt>Frontend</dt>
-                <dd>Vite + TypeScript</dd>
-              </div>
-              <div>
-                <dt>Host</dt>
-                <dd>Cloudflare Pages</dd>
-              </div>
-              <div>
-                <dt>Public URL</dt>
-                <dd>engrove-toolbox.pages.dev</dd>
-              </div>
-              <div>
-                <dt>Policy</dt>
-                <dd>Function transfer, UI rebuild</dd>
-              </div>
-            </dl>
-          </div>
-        </section>
-
-        <section class="ea-page ea-section" id="launch" aria-labelledby="launch-title">
-          <div class="ea-launch-panel">
-            <p class="ea-kicker">Launch chain</p>
-            <h2 id="launch-title">GitHub to Cloudflare is live.</h2>
-            <p>This landing page proves the public deployment chain before the first real module is added.</p>
-            <ul class="ea-check-list">
-              <li>GitHub repository connected</li>
-              <li>Cloudflare Pages deployment verified</li>
-              <li>Workers static-assets fallback verified</li>
-              <li>Public productization rules established</li>
-            </ul>
           </div>
         </section>
       </main>
@@ -184,7 +102,7 @@ export function renderHomePage(): string {
       <footer class="ea-footer">
         <span>Engrove Audio Tools 3.0</span>
         ${footerMeta()}
-        <span>Public productization track</span>
+        <span>Workbench index</span>
       </footer>
     </div>
   `;
