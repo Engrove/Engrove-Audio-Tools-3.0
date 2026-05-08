@@ -14,7 +14,8 @@
     "check:integrity": "node tools/check-repo-integrity.mjs",
     "check:render-safe": "node tools/check-render-safe.mjs",
     "check:tonearm-selectors": "node tools/check-tonearm-runtime-selectors.mjs",
-    "check:ui-doctrine": "node tools/check-ui-doctrine.mjs"
+    "check:ui-doctrine": "node tools/check-ui-doctrine.mjs",
+    "check:sanitation": "npm run check && npm run check:ui-doctrine && npm run check:integrity && npm run check:render-safe && npm run check:tonearm && npm run check:tonearm-selectors && npm run validate:data"
   },
   "dependencies": {},
   "devDependencies": {
