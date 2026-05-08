@@ -1,10 +1,31 @@
 # UI_STYLESHEET.md
 
-Status: Draft standard, version 0.2
-Scope: Engrove Audio Tools 3.0 public web app
-Primary audience: lead implementer, contributors
-Last updated: 2026-05-08
-Applies to: public UI, route layouts, calculation tools, dataset pickers, modal workflows, CSS architecture, design tokens, accessibility baseline
+**Status:** Draft standard, version 0.3
+**Scope:** Engrove Audio Tools 3.0 public web app
+**Last updated:** 2026-05-08
+**Supersedes:** v0.2 (2026-05-08, partially adopted in repo)
+**Applies to:** every route, every component, every CSS file, every TypeScript renderer that produces public markup.
+
+---
+
+## STOP. READ THIS BEFORE WRITING ANY CODE.
+
+This project builds **tools**, not a website.
+
+There is no hero. Anywhere. Not on the home page, not on tool pages.
+There is no "Explore" button. There is no "Get Started" call to action.
+There is no "Launch chain" section bragging about CI.
+There is no marketing copy. There is no `__lede`, no `__backdrop`.
+
+The home route is **an index of working tools**. The user opens the site, sees the tools available, clicks one, starts working. Total time from URL to first calculation: under five seconds.
+
+If you are about to build something that looks like a SaaS landing page, **stop and re-read this document**. If anything in your patch contains the word "hero," the word "platform" used as a section heading, or a kicker followed by a giant headline, **the patch is wrong**.
+
+The single sentence that defines this project:
+
+> **Engrove Audio Tools 3.0 is a workbench. The home route is a list of tools, not a brochure. Every tool route is a workspace, not a landing page. There is no hero, anywhere. The user opens the site to do work.**
+
+This sentence is binding. It overrides any conflict elsewhere in this document or in the codebase.
 
 ---
 
@@ -12,65 +33,64 @@ Applies to: public UI, route layouts, calculation tools, dataset pickers, modal 
 
 | Version | Date | Notes |
 |---|---|---|
-| 0.1 | 2026-05-07 | Initial draft (English-only rules, layout doctrine, density tokens, route contracts). |
-| 0.2 | 2026-05-08 | Resolved internal contradictions (hero size, breakpoint vs grid). Added complete design-token layer (colors, typography, motion, z-index). Added data-viz, gauge, table, icon specifications. Strengthened accessibility to WCAG 2.2 AA explicit. Removed personal names. Added Match Lab classification UI binding. Added changelog and versioning rule. |
+| 0.1 | 2026-05-07 | Initial draft (English-only rules, layout doctrine, density tokens). |
+| 0.2 | 2026-05-08 | Added complete design-token layer, gauge spec, accessibility WCAG 2.2 AA, Match Lab classification UI binding. Removed personal names. |
+| 0.3 | 2026-05-08 | Hard ban on hero patterns including `.ea-hero` and `.tm-lab-hero`. Industrial-UI source citations as normative references. Tokens layer expanded to mandatory completeness. `--ea-page-max` deprecated; workbench width replaces it. Marketing copy ban with named forbidden phrases. CSS file responsibility clarified. Class-contract reconciliation. PR-template attachment requirements. Domain-correctness binding from reference report. ROADMAP-aligned v0.2 tool-first sequencing. |
 
 Rule: any non-trivial change to this document increments the minor version, with a changelog row stating what changed and why. Conflicts between code and this document are resolved by either patching the code or by a deliberate revision committed here. Silent drift is a defect.
 
----
-
-## 1. Purpose
-
-This document defines the visual, interaction and UX standard for Engrove Audio Tools 3.0.
-
-Engrove Audio Tools 3.0 is not a generic marketing site and not a decorative demo. It is a public, modular, data-backed audio engineering toolset. Its interface combines a premium Engrove visual identity with the density and stability expected from a professional workbench application.
-
-The goals are, in priority order:
-
-1. fast user work,
-2. correct calculation feedback,
-3. low visual noise,
-4. high information density where useful,
-5. safe rendering of dataset strings,
-6. predictable layout on desktop and mobile,
-7. professional audio-domain credibility.
-
-This file is a product design contract. When code and this document conflict, patch the code or revise this document explicitly.
+Rule: every contributor must read the entire current version of this document before opening a PR. PRs that violate explicit rules in this document are rejected without further review.
 
 ---
 
-## 2. Non-negotiable UI rules
+## 1. Purpose and product framing
+
+### 1.1 What this project is
+
+Engrove Audio Tools 3.0 is a **public, modular workbench suite** of audio engineering calculators and reference tools, built for turntable and tonearm enthusiasts who care about facts and reproducibility.
+
+Each tool is a workspace. The home is an index. There is no marketing surface.
+
+### 1.2 What this project is not
+
+It is not a SaaS product. It is not a startup landing page. It is not a portfolio site. It is not a documentation portal. It is not a blog. It is not a brand showcase. It is not an open-source project marketing page.
+
+The implementer is encouraged to look at the references in §3 and **mentally erase every Tailwind UI / Material Design / SaaS landing-page pattern they have seen**. Those references are wrong for this product. The correct references are industrial control-room UIs, machine HMIs, and engineering calculators.
+
+### 1.3 The audience
+
+The audience is audiophile and DIY-audio enthusiasts with technical literacy. They read manufacturer datasheets. They know that compliance is specified at different frequencies. They argue about Löfgren A vs Löfgren B. They are not consumers being introduced to a product. **They are operators using a tool.**
+
+Treat them accordingly. No condescending helper text. No "Welcome to the Engrove Audio Toolkit!" greetings. No emoji in copy. No hype.
+
+---
+
+## 2. Non-negotiable rules
 
 ### 2.1 Public UI language
 
 All public user-facing UI copy must be English.
 
-Do not ship:
+Forbidden in shipped output:
 
-- Swedish headings, labels, buttons, helper text, error text, empty states, result text,
-- internal phase identifiers (`Fas 17.x`, `Phase 4`, etc.),
-- internal contributor names or workflow terms.
+- Swedish headings, labels, buttons, helper text, error text, empty states, result text.
+- Internal phase identifiers (`Fas 17.x`, `Phase 4`, etc.).
+- Internal contributor names, role names, or workflow terms.
+- Internal release wording ("preview build", "internal", "draft", "prototype").
 
-Swedish is allowed in internal planning channels and commit messages, not in shipped public UI.
+Swedish is allowed in commit messages and internal planning. It must not leak into the bundle.
 
-### 2.2 Application type
+### 2.2 Industrial workbench layout
 
-Engrove Audio Tools 3.0 routes that perform calculations or dataset work must use an **industrial workbench layout**, not a landing-page layout.
+All routes that perform calculations or dataset work must use an **industrial workbench layout**, not a landing-page layout.
 
-A landing-page layout is acceptable for the public home page only. It is not acceptable for calculator/tool routes.
+The home route is also a workbench layout. The home route is the **tool index**. It is not a landing page.
 
-Tool routes must prioritize:
-
-- immediate task access,
-- visible cause/effect feedback,
-- compact control groups,
-- useful use of available width,
-- minimal scrolling during primary workflows,
-- stable result visibility.
+There is no exception to this rule. Including for the home page.
 
 ### 2.3 No large inline dataset lists
 
-Large cartridge, tonearm or other audio datasets must never be rendered as long inline lists inside a calculator page. Use a modal, drawer, panel, or virtualized list pattern. The normal calculator flow stays compact.
+Cartridge, tonearm, and other audio datasets must never render as long inline lists. Use a modal, drawer, panel, or virtualized list. The normal calculator flow stays compact.
 
 ### 2.4 Route contracts
 
@@ -85,9 +105,7 @@ enableTonearmMatchLabInteractions(): void
 
 ### 2.5 Render safety
 
-Dataset strings are untrusted for rendering purposes.
-
-Any dataset-sourced string rendered into HTML must pass through the shared render-safe helpers:
+Dataset strings are untrusted. Any dataset-sourced string rendered into HTML must pass through:
 
 ```ts
 renderText(value)
@@ -95,499 +113,679 @@ escapeAttribute(value)
 escapeHtml(value)
 ```
 
-No raw dataset string may be interpolated into `innerHTML`. Static analysis must catch violations (see §22).
+No raw dataset string may be interpolated into `innerHTML`. Static analysis must catch violations (see §24).
 
 ### 2.6 No framework drift
 
-The current app is a Vite + TypeScript SPA with hand-written CSS. It is not React. Component libraries, styling frameworks, and new dependencies require an explicit, version-bumped revision of this document.
+Vite + TypeScript SPA with hand-written CSS. No React. No Vue. No Tailwind. No Material UI. No Radix. No shadcn. No design framework. Adding any of these requires an explicit, version-bumped revision of this document and an architectural-decision document under `/docs/architecture/`.
+
+### 2.7 No hero patterns
+
+This rule is new in v0.3 and is binding.
+
+Forbidden CSS class names anywhere in the codebase:
+
+- `.ea-hero`
+- `.tm-lab-hero`
+- `.*-hero`, `.*__hero`, `.hero-*`
+- `.ea-hero__backdrop`, `.tm-lab-hero__backdrop`, `.*-backdrop`, `.*__backdrop`
+- `.ea-hero__actions`, `.*-hero-actions`
+- `.ea-hero__lead`, `.tm-lab-lede`, `.*-lede`, `.*-lead`
+
+If a CSS file or a TypeScript renderer contains any of the above, that file is a defect and must be patched in the same change that adds this version of the document.
+
+Forbidden HTML structures (semantic equivalents to the above):
+
+- A `<section>` followed by a `<p class="kicker">` followed by an `<h1>` larger than `--font-size-tool-title` (30 px).
+- A backdrop image set as `background-image` on any element above the workbench.
+- A pair of buttons positioned center-screen with marketing labels ("Explore", "Get Started", "Learn more", "View Platform", "Open Toolkit").
+
+A workbench tool route's first viewport must contain working controls and a result, not introductory content.
+
+### 2.8 No marketing voice
+
+Forbidden phrases in shipped public copy:
+
+- "Precision Tools for the Analog Enthusiast"
+- "Built as modules from day one"
+- "Focused tools, shared foundation"
+- "A clean public toolkit"
+- "Explore the Tools"
+- "Public productization track"
+- "Launch chain"
+- "GitHub to Cloudflare is live"
+- "Cloudflare Pages deployment verified"
+- "Workers static-assets fallback verified"
+- "Public productization rules established"
+- Any sentence that describes infrastructure status to the end user.
+- Any sentence that uses "we" referring to the project team to the end user.
+
+The user is opening a tool. They do not care that the deployment chain is verified. They do not care that the project is built as modules from day one. They care that they can compute a resonance frequency and get a defensible answer.
+
+Replace marketing copy with operational copy:
+
+- Bad: "Precision Tools for the Analog Enthusiast."
+- Good: "Engrove Audio Tools" (wordmark only, no tagline).
+- Bad: "Built as modules from day one."
+- Good: nothing — delete the section.
+- Bad: "GitHub to Cloudflare is live."
+- Good: nothing — delete the section.
+
+### 2.9 No infrastructure self-congratulation
+
+Do not ship sections, panels, or copy that describe the project's own deployment, build pipeline, hosting, or technical stack to end users. This information belongs in `/docs`, in `README.md`, in `wrangler.toml`, in `package.json`. It does not belong on any public route.
+
+### 2.10 No "Planned" or "Coming soon" tool cards
+
+A tool either ships or it does not exist on the home index. There are no placeholder cards for tools that are not yet built. The user opening the site sees only working tools.
+
+If only one tool works, the home route shows one tool plus a single line of meta text ("More tools coming. This is a hobby project."). It does not show four cards with three of them disabled.
 
 ---
 
-## 3. Design model
+## 3. Normative source references for industrial UI
 
-### 3.1 The intended feel
+The following are normative references for this project's UI character. The implementer must consult at least one of these per design decision and must not consult SaaS marketing references (Tailwind UI, Stripe, Linear, etc.) for layout or copy patterns.
 
-Engrove Audio Tools should feel like:
+### 3.1 Industrial UI design firms
 
-- a premium audio measurement/control surface,
-- a studio-grade configuration tool,
-- a technical calculator with editorial clarity,
-- a modern industrial web application.
+- **Cadera Design** — `caderadesign.de/en/services/user-interface-design`. Industrial UI services. Patterns: working-surface-first, density beats whitespace, reduced color palette doing semantic work.
+- **Design Mark** — `design-mark.com/understanding-user-interface-design-for-industrial-applications/`. Industrial application UI patterns: state visibility, predictability over delight.
+- **Scream Pixel** — `screampixel.com/industries/industrial/`. Industrial vertical UI examples. Patterns: dense control panels, calm visual hierarchy.
+- **David Taylor Digital** — `davidtaylordigital.com/blog/manufacturing-web-design/`. Manufacturing web design patterns: function over form.
 
-It must not feel like:
+### 3.2 Engineering and operational UI references
 
-- a blog page,
-- a SaaS marketing landing page,
-- a generic admin dashboard,
-- a raw HTML form,
-- a toy demo,
-- a mobile-first consumer wizard on desktop.
+- **Siemens Industrial Design System** — `developer.siemens.com/resources/design-systems/overview.html`. Token-driven, status-aware, monochromatic-first. The reference design system for this project.
+- **UXMatters: UX for the Industrial Environment** — `uxmatters.com/mt/archives/2017/08/ux-for-the-industrial-environment-part-1.php`. Operators are not consumers. Speed over discoverability. Recoverable errors.
+- **Quality Magazine: Modern UI for IIoT** — `qualitymag.com/articles/94389-modern-ui-design-for-the-industrial-internet-of-things`. Real-time feedback loop is the product. Density of information matched by clarity of hierarchy.
+- **Fulminous Software: Industrial Best Practices** — `fulminoussoftware.com/user-interface-best-practices-for-industrial-websites`. Predictability, state visibility, repeated-task support.
 
-### 3.2 Core design tension
+### 3.3 Architectural pattern reference
 
-Two goals must be balanced:
+- **Metaphorical: Building Modular Interfaces** — `metaphorical.medium.com/building-modular-interfaces-a4e4076b4307`. Modularity comes from data contracts, not from CSS components. Tools share a domain model, not a shell.
 
-1. **Look**: premium, dark, calm, branded, audio-oriented.
-2. **Work**: compact, direct, fast, stable, data-heavy when needed.
+### 3.4 Domain-correctness reference (binding)
 
-When these conflict on tool routes, usability wins. Visual style supports the work, it does not push it down the page.
+The reference data model produced for the Tonearm Match Lab (resonance formula derivation, compliance handling per generator type, classification bands with physical justification, propagated uncertainty, Ladegaard B&K AN 17-233, Carlson AES 1954, IEC 60098, Jovanovic JAES 2022) is binding for any UI element that displays calculation results. UI choices that contradict the reference model (e.g., displaying "Perfect," including tracking force in the resonance mass term, treating Japanese 100 Hz compliance as if it were 10 Hz) are defects regardless of how visually polished they are.
+
+The Reffc bug report (Lenco Heaven, October 2025) — ZYX cartridge compliance values misclassified as 10 Hz when they are published at 100 Hz — must be resolved in the data layer before any relaunch announcement.
 
 ---
 
-## 4. Design tokens (canonical reference)
+## 4. Design tokens (canonical reference, complete)
 
-This is the single source of truth for visual values. All routes consume these tokens. Hard-coded color or spacing literals outside this token layer are defects.
+This is the **single source of truth** for visual values. All routes consume these tokens. Hard-coded color, spacing, font-size, motion, or z-index literals outside this token layer are defects.
 
-### 4.1 Spacing scale
+CSS that uses fallback values like `var(--color-status-ideal, #34d399)` is a **partial defect**: the fallback indicates the token is missing from the canonical layer. The fix is to add the token to the layer, not to keep the fallback. Token completeness is a precondition for shipping.
+
+### 4.1 Token namespace
+
+All tokens use the `--ea-*` prefix (Engrove App). Sub-prefixes:
+
+- `--ea-color-*` color tokens
+- `--ea-text-*` text-color subset (high/medium/low/disabled)
+- `--ea-bg-*` background-color subset
+- `--ea-border-*` border-color subset
+- `--ea-status-*` status-color subset
+- `--ea-space-*` spacing scale
+- `--ea-size-*` size scale (control heights, panel widths)
+- `--ea-radius-*` corner radius scale
+- `--ea-shadow-*` elevation scale
+- `--ea-z-*` z-index scale
+- `--ea-motion-duration-*` motion duration scale
+- `--ea-motion-easing-*` motion easing scale
+- `--ea-font-family-*` font-family stacks
+- `--ea-font-weight-*` font weight scale
+- `--ea-font-size-*` font size scale
+- `--ea-line-height-*` line height scale
+- `--ea-letter-spacing-*` letter spacing scale
+
+The legacy v0.2 namespace `--color-*`, `--space-*`, etc. (no prefix) is **deprecated**. The Tonearm Match Lab CSS that uses `var(--color-status-ideal, ...)` is using a defunct namespace and must be migrated. All variants must be `--ea-*`.
+
+### 4.2 Spacing scale
 
 ```css
---space-0: 0;
---space-1: 0.25rem;   /*  4px */
---space-2: 0.5rem;    /*  8px */
---space-3: 0.75rem;   /* 12px */
---space-4: 1rem;      /* 16px */
---space-5: 1.25rem;   /* 20px */
---space-6: 1.5rem;    /* 24px */
---space-7: 2rem;      /* 32px */
---space-8: 2.5rem;    /* 40px */
---space-9: 3rem;      /* 48px */
---space-10: 4rem;     /* 64px */
-```
-
-Tool routes use `--space-2` to `--space-5` for primary gaps. Home page may use `--space-7` to `--space-10` for hero spacing.
-
-### 4.2 Color tokens — dark theme (default)
-
-All values are explicit. Comments document intended use.
-
-```css
-:root, [data-theme="dark"] {
-  /* Surface */
-  --color-bg-app: #0B0E12;            /* page background */
-  --color-bg-app-gradient-from: #0B0E12;
-  --color-bg-app-gradient-to: #11161D;
-  --color-bg-panel: rgb(255 255 255 / 0.035);  /* primary panel surface */
-  --color-bg-panel-elevated: rgb(255 255 255 / 0.06);  /* nested or active */
-  --color-bg-panel-overlay: rgb(0 0 0 / 0.4);  /* modal scrim */
-  --color-bg-input: rgb(0 0 0 / 0.25);
-  --color-bg-input-focus: rgb(0 0 0 / 0.35);
-
-  /* Border */
-  --color-border-subtle: rgb(255 255 255 / 0.08);
-  --color-border-default: rgb(255 255 255 / 0.12);
-  --color-border-strong: rgb(255 255 255 / 0.20);
-  --color-border-focus: #4FD1C5;
-
-  /* Text */
-  --color-text-primary: #E8EAED;       /* contrast 13.5:1 on #0B0E12 */
-  --color-text-secondary: #B0B4BA;     /* contrast 7.8:1 */
-  --color-text-muted: #8A9099;         /* contrast 4.9:1, body-OK floor */
-  --color-text-disabled: #5A6068;      /* contrast 2.6:1, non-text only */
-  --color-text-on-accent: #0B0E12;
-
-  /* Accents */
-  --color-accent-teal: #4FD1C5;        /* interactive, selected, primary action */
-  --color-accent-teal-hover: #5EE0D4;
-  --color-accent-teal-pressed: #3FB8AC;
-  --color-accent-amber: #F6AD55;       /* tool category, kicker, attention */
-  --color-accent-amber-soft: rgb(246 173 85 / 0.15);
-
-  /* Status (must remain readable on bg-panel) */
-  --color-status-ideal: #34D399;       /* central deep-green (9-11 Hz band) */
-  --color-status-good: #48BB78;        /* good (8-12 Hz band) */
-  --color-status-acceptable: #ECC94B;  /* yellow (7-8, 12-13 Hz) */
-  --color-status-marginal: #ED8936;    /* orange (6-7, 13-14 Hz) */
-  --color-status-poor: #F56565;        /* red (<6, >14 Hz) */
-  --color-status-info: #63B3ED;        /* informational neutral */
-
-  /* Status soft fills (for badge backgrounds) */
-  --color-status-ideal-soft: rgb(52 211 153 / 0.16);
-  --color-status-good-soft: rgb(72 187 120 / 0.14);
-  --color-status-acceptable-soft: rgb(236 201 75 / 0.16);
-  --color-status-marginal-soft: rgb(237 137 54 / 0.16);
-  --color-status-poor-soft: rgb(245 101 101 / 0.16);
-
-  /* Confidence bands (uncertainty visualization) */
-  --color-confidence-band: rgb(79 209 197 / 0.18);
-  --color-confidence-band-edge: rgb(79 209 197 / 0.4);
+:root {
+  --ea-space-0: 0;
+  --ea-space-1: 0.25rem;   /*  4px */
+  --ea-space-2: 0.5rem;    /*  8px */
+  --ea-space-3: 0.75rem;   /* 12px */
+  --ea-space-4: 1rem;      /* 16px */
+  --ea-space-5: 1.25rem;   /* 20px */
+  --ea-space-6: 1.5rem;    /* 24px */
+  --ea-space-7: 2rem;      /* 32px */
+  --ea-space-8: 2.5rem;    /* 40px */
+  --ea-space-9: 3rem;      /* 48px */
+  --ea-space-10: 4rem;     /* 64px */
 }
 ```
 
-### 4.3 Color tokens — light theme (parity)
+Workbench routes use `--ea-space-2` to `--ea-space-5` for primary gaps. The home index may use `--ea-space-6` to `--ea-space-7` between tool tiles. **No route uses `--ea-space-9` or `--ea-space-10` for layout gaps.** They exist as a safety valve, not as recommended values.
+
+### 4.3 Color tokens — dark theme (default)
+
+```css
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Surface */
+  --ea-bg-app: #0B0E12;
+  --ea-bg-app-from: #0B0E12;
+  --ea-bg-app-to: #11161D;
+  --ea-bg-panel: rgb(255 255 255 / 0.035);
+  --ea-bg-panel-elevated: rgb(255 255 255 / 0.06);
+  --ea-bg-panel-overlay: rgb(0 0 0 / 0.45);
+  --ea-bg-input: rgb(0 0 0 / 0.25);
+  --ea-bg-input-focus: rgb(0 0 0 / 0.35);
+
+  /* Border */
+  --ea-border-subtle: rgb(255 255 255 / 0.08);
+  --ea-border-default: rgb(255 255 255 / 0.12);
+  --ea-border-strong: rgb(255 255 255 / 0.20);
+  --ea-border-focus: #4FD1C5;
+
+  /* Text */
+  --ea-text-high: #E8EAED;       /* contrast 13.5:1 on --ea-bg-app */
+  --ea-text-medium: #B0B4BA;     /* contrast 7.8:1 */
+  --ea-text-low: #8A9099;        /* contrast 4.9:1, body floor */
+  --ea-text-disabled: #5A6068;   /* non-text only */
+  --ea-text-on-accent: #0B0E12;
+
+  /* Accent */
+  --ea-color-accent: #4FD1C5;
+  --ea-color-accent-hover: #5EE0D4;
+  --ea-color-accent-pressed: #3FB8AC;
+  --ea-color-accent-soft: rgb(79 209 197 / 0.16);
+  --ea-color-kicker: #F6AD55;
+  --ea-color-kicker-soft: rgb(246 173 85 / 0.15);
+
+  /* Status — bands matching the resonance reference model */
+  --ea-status-ideal: #34D399;
+  --ea-status-ideal-soft: rgb(52 211 153 / 0.16);
+  --ea-status-good: #48BB78;
+  --ea-status-good-soft: rgb(72 187 120 / 0.14);
+  --ea-status-acceptable: #ECC94B;
+  --ea-status-acceptable-soft: rgb(236 201 75 / 0.16);
+  --ea-status-marginal: #ED8936;
+  --ea-status-marginal-soft: rgb(237 137 54 / 0.16);
+  --ea-status-poor: #F56565;
+  --ea-status-poor-soft: rgb(245 101 101 / 0.16);
+  --ea-status-info: #63B3ED;
+  --ea-status-info-soft: rgb(99 179 237 / 0.16);
+
+  /* Confidence band (uncertainty visualization on gauge) */
+  --ea-color-confidence-band: rgb(79 209 197 / 0.18);
+  --ea-color-confidence-band-edge: rgb(79 209 197 / 0.4);
+
+  /* Provenance badges */
+  --ea-color-provenance-converted: var(--ea-color-kicker);
+  --ea-color-provenance-converted-soft: var(--ea-color-kicker-soft);
+  --ea-color-provenance-estimate: var(--ea-status-info);
+  --ea-color-provenance-estimate-soft: var(--ea-status-info-soft);
+  --ea-color-provenance-vintage: #B794F4;
+  --ea-color-provenance-vintage-soft: rgb(183 148 244 / 0.15);
+}
+```
+
+### 4.4 Color tokens — light theme (parity)
 
 ```css
 [data-theme="light"] {
-  --color-bg-app: #F7F8FA;
-  --color-bg-app-gradient-from: #F7F8FA;
-  --color-bg-app-gradient-to: #ECEFF3;
-  --color-bg-panel: rgb(0 0 0 / 0.025);
-  --color-bg-panel-elevated: rgb(0 0 0 / 0.045);
-  --color-bg-panel-overlay: rgb(0 0 0 / 0.35);
-  --color-bg-input: #FFFFFF;
-  --color-bg-input-focus: #FFFFFF;
+  color-scheme: light;
 
-  --color-border-subtle: rgb(0 0 0 / 0.06);
-  --color-border-default: rgb(0 0 0 / 0.12);
-  --color-border-strong: rgb(0 0 0 / 0.22);
-  --color-border-focus: #0E7C72;
+  --ea-bg-app: #F7F8FA;
+  --ea-bg-app-from: #F7F8FA;
+  --ea-bg-app-to: #ECEFF3;
+  --ea-bg-panel: rgb(0 0 0 / 0.025);
+  --ea-bg-panel-elevated: rgb(0 0 0 / 0.045);
+  --ea-bg-panel-overlay: rgb(0 0 0 / 0.35);
+  --ea-bg-input: #FFFFFF;
+  --ea-bg-input-focus: #FFFFFF;
 
-  --color-text-primary: #161A1F;
-  --color-text-secondary: #3D434B;
-  --color-text-muted: #5A6068;
-  --color-text-disabled: #9AA0A6;
-  --color-text-on-accent: #FFFFFF;
+  --ea-border-subtle: rgb(0 0 0 / 0.06);
+  --ea-border-default: rgb(0 0 0 / 0.12);
+  --ea-border-strong: rgb(0 0 0 / 0.22);
+  --ea-border-focus: #0E7C72;
 
-  --color-accent-teal: #0E7C72;
-  --color-accent-teal-hover: #117D72;
-  --color-accent-teal-pressed: #0A6058;
-  --color-accent-amber: #B7791F;
-  --color-accent-amber-soft: rgb(183 121 31 / 0.12);
+  --ea-text-high: #161A1F;
+  --ea-text-medium: #3D434B;
+  --ea-text-low: #5A6068;
+  --ea-text-disabled: #9AA0A6;
+  --ea-text-on-accent: #FFFFFF;
 
-  --color-status-ideal: #166534;
-  --color-status-good: #2F855A;
-  --color-status-acceptable: #B7791F;
-  --color-status-marginal: #C05621;
-  --color-status-poor: #C53030;
-  --color-status-info: #2B6CB0;
+  --ea-color-accent: #0E7C72;
+  --ea-color-accent-hover: #117D72;
+  --ea-color-accent-pressed: #0A6058;
+  --ea-color-accent-soft: rgb(14 124 114 / 0.12);
+  --ea-color-kicker: #B7791F;
+  --ea-color-kicker-soft: rgb(183 121 31 / 0.12);
+
+  --ea-status-ideal: #166534;
+  --ea-status-ideal-soft: rgb(22 101 52 / 0.12);
+  --ea-status-good: #2F855A;
+  --ea-status-good-soft: rgb(47 133 90 / 0.10);
+  --ea-status-acceptable: #B7791F;
+  --ea-status-acceptable-soft: rgb(183 121 31 / 0.12);
+  --ea-status-marginal: #C05621;
+  --ea-status-marginal-soft: rgb(192 86 33 / 0.12);
+  --ea-status-poor: #C53030;
+  --ea-status-poor-soft: rgb(197 48 48 / 0.12);
+  --ea-status-info: #2B6CB0;
+  --ea-status-info-soft: rgb(43 108 176 / 0.10);
+
+  --ea-color-confidence-band: rgb(14 124 114 / 0.14);
+  --ea-color-confidence-band-edge: rgb(14 124 114 / 0.35);
 }
 ```
 
-All status, accent, and text tokens above target WCAG 2.2 AA contrast (4.5:1 for body text, 3:1 for graphical UI components and large text). When a contributor adds a new token, contrast must be verified and the result documented next to the token.
+All tokens above target WCAG 2.2 AA contrast (§19). When a contributor adds a new color token, contrast must be verified and the result documented next to the token.
 
-### 4.4 Typography stack
+### 4.5 Typography stack
 
 ```css
---font-family-sans: "Inter", "Inter var", system-ui, -apple-system, "Segoe UI",
-                    Roboto, "Helvetica Neue", Arial, sans-serif;
---font-family-mono: "JetBrains Mono", "Fira Code", "SF Mono", Menlo,
-                    Consolas, "Liberation Mono", monospace;
---font-family-numeric: var(--font-family-mono);
+:root {
+  --ea-font-family-sans:
+      "Inter", "Inter var", system-ui, -apple-system, "Segoe UI",
+      Roboto, "Helvetica Neue", Arial, sans-serif;
+  --ea-font-family-mono:
+      "JetBrains Mono", "Fira Code", "SF Mono", Menlo,
+      Consolas, "Liberation Mono", monospace;
+  --ea-font-family-numeric: var(--ea-font-family-mono);
 
---font-weight-regular: 400;
---font-weight-medium: 500;
---font-weight-semibold: 600;
---font-weight-bold: 700;
+  --ea-font-weight-regular: 400;
+  --ea-font-weight-medium: 500;
+  --ea-font-weight-semibold: 600;
+  --ea-font-weight-bold: 700;
 
---font-size-microcopy: 0.78rem;      /* 12.5px */
---font-size-helper: 0.86rem;         /*  ~14px */
---font-size-label: 0.95rem;          /*  ~15px */
---font-size-body: 1rem;              /*   16px */
---font-size-body-large: 1.05rem;     /*  ~17px */
---font-size-panel-heading: 1.15rem;  /*  ~18px */
---font-size-section-heading: 1.5rem; /*   24px */
---font-size-tool-title: 1.875rem;    /*   30px */  /* tool routes */
---font-size-page-hero: clamp(2.25rem, 5vw, 3.75rem); /* home page only */
+  /* Font sizes — every value used in the codebase must come from here */
+  --ea-font-size-microcopy: 0.78rem;        /* 12.5px — provenance badges, scale labels */
+  --ea-font-size-helper: 0.86rem;           /* ~14px — helper text, secondary labels */
+  --ea-font-size-label: 0.95rem;            /* ~15px — form labels */
+  --ea-font-size-body: 1rem;                /* 16px — body text */
+  --ea-font-size-body-large: 1.05rem;       /* ~17px — emphasized body */
+  --ea-font-size-panel-heading: 1.15rem;    /* ~18px — panel titles */
+  --ea-font-size-section-heading: 1.5rem;   /* 24px — section titles */
+  --ea-font-size-tool-title: 1.875rem;      /* 30px — tool route h1 (MAX) */
+  --ea-font-size-result-large: 2.5rem;      /* 40px — primary result number */
 
---line-height-tight: 1.2;
---line-height-normal: 1.5;
---line-height-relaxed: 1.65;
+  /* Legacy alias for compatibility — REMOVE in v0.4 */
+  --ea-font-size-small: var(--ea-font-size-helper);
 
---letter-spacing-kicker: 0.08em;     /* uppercase category tags */
+  --ea-line-height-tight: 1.2;
+  --ea-line-height-normal: 1.5;
+  --ea-line-height-relaxed: 1.65;
+  --ea-line-height-small: 1.4;
+
+  --ea-letter-spacing-tight: -0.01em;
+  --ea-letter-spacing-normal: 0;
+  --ea-letter-spacing-kicker: 0.08em;
+}
 ```
 
-Numeric values in result panels use `--font-family-numeric` to keep digit widths stable across refresh.
+**The largest h1 anywhere in this product is `--ea-font-size-tool-title` (1.875rem = 30 px).** There is no exception. The home page does not need a larger h1. Tool routes do not need a larger h1. The wordmark in the topbar uses 1.125rem.
 
-### 4.5 Radius
+The result number on the gauge (e.g., "9.5 Hz") may use `--ea-font-size-result-large` (2.5rem = 40 px). This is a **value display**, not a heading, and is the only typographic element allowed above the tool-title size.
+
+Numeric values in result panels use `--ea-font-family-numeric` with `font-variant-numeric: tabular-nums`.
+
+### 4.6 Radius
 
 ```css
---radius-sm: 0.375rem;   /*  6px (badges, small chips) */
---radius-md: 0.5rem;     /*  8px (inputs, buttons) */
---radius-lg: 0.75rem;    /* 12px (panels) */
---radius-xl: 1rem;       /* 16px (modals, hero cards) */
---radius-pill: 9999px;
+:root {
+  --ea-radius-sm: 0.375rem;   /*  6px — badges, small chips */
+  --ea-radius-md: 0.5rem;     /*  8px — inputs, buttons */
+  --ea-radius-lg: 0.75rem;    /* 12px — panels */
+  --ea-radius-xl: 1rem;       /* 16px — modals */
+  --ea-radius-pill: 9999px;
+}
 ```
 
-### 4.6 Shadow
+`--ea-radius-xl` is reserved for modal dialogs only. Do not use it on tool cards on the home page.
+
+### 4.7 Shadow
 
 ```css
---shadow-none: none;
---shadow-sm: 0 1px 2px rgb(0 0 0 / 0.18);
---shadow-md: 0 6px 16px rgb(0 0 0 / 0.22);
---shadow-lg: 0 16px 40px rgb(0 0 0 / 0.28);
---shadow-modal: 0 24px 64px rgb(0 0 0 / 0.45);
---shadow-focus-ring: 0 0 0 2px var(--color-bg-app), 0 0 0 4px var(--color-border-focus);
+:root {
+  --ea-shadow-none: none;
+  --ea-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.18);
+  --ea-shadow-md: 0 6px 16px rgb(0 0 0 / 0.22);
+  --ea-shadow-lg: 0 16px 40px rgb(0 0 0 / 0.28);
+  --ea-shadow-modal: 0 24px 64px rgb(0 0 0 / 0.45);
+  --ea-shadow-focus-ring: 0 0 0 2px var(--ea-bg-app), 0 0 0 4px var(--ea-border-focus);
+}
 ```
 
-Avoid stacking multiple `--shadow-lg` shadows in dense work areas.
+Avoid stacking multiple `--ea-shadow-lg` shadows in dense work areas. Tool route panels use `--ea-shadow-md`. Modals use `--ea-shadow-modal`. Tool index cards on the home use `--ea-shadow-sm` only.
 
-### 4.7 Motion
+### 4.8 Motion
 
 ```css
---motion-duration-instant: 80ms;     /* state flip (focus, press) */
---motion-duration-fast: 160ms;       /* small UI transitions */
---motion-duration-normal: 240ms;     /* default */
---motion-duration-slow: 360ms;       /* modal open/close */
---motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
---motion-easing-emphasized: cubic-bezier(0.2, 0, 0.2, 1.4);
---motion-easing-decelerate: cubic-bezier(0, 0, 0, 1);
+:root {
+  --ea-motion-duration-instant: 80ms;
+  --ea-motion-duration-fast: 160ms;
+  --ea-motion-duration-normal: 240ms;
+  --ea-motion-duration-slow: 360ms;
+  --ea-motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ea-motion-easing-emphasized: cubic-bezier(0.2, 0, 0.2, 1.4);
+  --ea-motion-easing-decelerate: cubic-bezier(0, 0, 0, 1);
+}
 ```
 
-All motion respects `prefers-reduced-motion` (see §18).
+All motion respects `prefers-reduced-motion` (see §19).
 
-### 4.8 Z-index scale
+### 4.9 Z-index scale
 
 ```css
---z-base: 0;
---z-elevated: 10;        /* sticky panels */
---z-dropdown: 100;
---z-sticky-result: 200;
---z-overlay: 1000;
---z-modal: 1100;
---z-popover: 1200;
---z-tooltip: 1300;
---z-toast: 1400;
+:root {
+  --ea-z-base: 0;
+  --ea-z-elevated: 10;
+  --ea-z-dropdown: 100;
+  --ea-z-sticky-result: 200;
+  --ea-z-overlay: 1000;
+  --ea-z-modal: 1100;
+  --ea-z-popover: 1200;
+  --ea-z-tooltip: 1300;
+  --ea-z-toast: 1400;
+}
 ```
 
 Hard-coded z-index outside this scale is a defect.
 
-### 4.9 Breakpoints
+### 4.10 Layout sizes and widths
 
 ```css
---bp-mobile: 720px;
---bp-tablet: 1024px;
---bp-desktop: 1100px;     /* aligned with workbench grid minimum, see §5.7 */
---bp-wide: 1440px;
---bp-ultra: 1920px;
+:root {
+  /* Workbench — wide */
+  --ea-size-workbench-max: 1760px;
+  --ea-size-workbench-padding: clamp(1rem, 2.5vw, 2rem);
+  --ea-size-workbench-gap: clamp(1rem, 1.5vw, 1.25rem);
+
+  /* Home index — narrower than workbench, wider than article */
+  --ea-size-home-max: 1280px;
+
+  /* Reading measure (long prose only — methodology page, help) */
+  --ea-size-reading-max: 64ch;
+
+  /* Control heights */
+  --ea-size-control-compact: 2.25rem;   /* 36px */
+  --ea-size-control-default: 2.5rem;    /* 40px */
+  --ea-size-control-large: 2.75rem;     /* 44px touch baseline */
+  --ea-size-control-xl: 3rem;           /* 48px primary modal action */
+
+  /* Panel padding */
+  --ea-size-panel-padding-compact: var(--ea-space-4);
+  --ea-size-panel-padding-default: var(--ea-space-5);
+  --ea-size-panel-padding-editorial: var(--ea-space-6);
+}
 ```
 
-Note: desktop breakpoint is **1100 px**, not 1024 px. This is the smallest viewport at which the two-zone workbench layout (§5.7) renders without overflow.
+**The legacy `--ea-page-max: 1180px` is deprecated as of v0.3 and must be removed.** It constrained workbenches to article width and is the root cause of the wasted horizontal space on the live deployment. Replace every reference with `--ea-size-workbench-max` for tool routes or `--ea-size-home-max` for the home index.
+
+### 4.11 Breakpoints
+
+```css
+:root {
+  --ea-bp-mobile: 720px;
+  --ea-bp-tablet: 1024px;
+  --ea-bp-desktop: 1100px;
+  --ea-bp-wide: 1440px;
+  --ea-bp-ultra: 1920px;
+}
+```
+
+Note: desktop breakpoint is **1100 px**, not 1024 px. This is the smallest viewport at which the two-zone workbench (§5.5) renders without overflow.
 
 ---
 
 ## 5. Layout doctrine
 
-### 5.1 Home page vs tool routes
+### 5.1 Home route
 
-Home page may use:
+The home route is the **tool index**. It is built as a workbench, not a landing page.
 
-- hero presentation,
-- larger typography (`--font-size-page-hero`),
-- marketing sections,
-- looser spacing (`--space-7` to `--space-10`).
+Required structure:
 
-Tool routes must use:
-
-- compact tool headers (max title size `--font-size-tool-title`, 30 px),
-- persistent workspace layout,
-- clear panels,
-- visible result feedback,
-- dense but readable forms,
-- minimal scroll for primary work.
-
-### 5.2 Tool route vertical structure
-
-Desktop tool route structure:
-
-```text
-Topbar:           56-72 px
-Tool header:      72-120 px (compact title + one sentence)
-Workbench:        fills main viewport
-Secondary notes:  below or collapsible
+```
+Topbar (sticky, ≤ 56 px)
+Wordmark + theme toggle
+Brief project descriptor (single line, 1 sentence, ≤ 12 words, sized at --ea-font-size-body)
+Tool tiles (2-4 per row at desktop)
+Optional: Methodology link, About link (footer-anchor)
 ```
 
-The primary working area must begin within the first viewport. Large vertical gaps before the first actionable control are defects.
+Forbidden on the home route:
 
-### 5.3 No oversized hero on tools
+- Hero section.
+- Backdrop image.
+- Marketing headline.
+- Two-button CTA cluster.
+- "Platform" or "Toolkit" sections.
+- "Launch chain" or any deployment-status content.
+- Cards for tools that do not yet work ("Planned", "Foundation module", "Coming soon").
 
-Bad pattern:
+The home route uses width `--ea-size-home-max` (1280 px). Tool tiles are functional launchers — clicking one navigates to the tool, not to a marketing description. The tile shows: tool name, one-line operational description, current status if relevant ("Beta" / "Stable").
 
-```text
-Topbar
-Large decorative hero
-Large heading
-Large description
-Large empty space
-Then tool
+Maximum total height of the home route at 1920×1080 desktop: **one viewport**. The user sees all available tools without scrolling. If there are more tools than fit in one viewport, the layout uses a denser grid, not a longer page.
+
+### 5.2 Tool route
+
+Tool route structure:
+
+```
+Topbar (sticky, ≤ 56 px)
+Tool header (≤ 80 px total, NOT a hero)
+  - h1 (--ea-font-size-tool-title MAX, single line)
+  - One-sentence description (--ea-font-size-helper, optional)
+Workbench (fills viewport)
+  - Two-zone grid at ≥ 1100 px desktop
+  - Single column below
+Secondary panel (collapsed <details> by default)
 ```
 
-Good pattern:
+The first viewport of a tool route at 1920×1080 contains all primary inputs and the result. **The user does not scroll to compute.** This is a hard acceptance criterion (§24).
 
-```text
-Topbar
-Compact tool title (1.875rem) + one sentence
-Workbench: inputs + result visible
-```
+### 5.3 Hero ban (binding)
 
-The previous version of this document allowed `clamp(2.25rem, 5vw, 4.5rem)` for tool titles. That is a hero-size title and is now explicitly forbidden on tool routes. Use `--font-size-tool-title` (1.875rem) for tool routes; reserve `--font-size-page-hero` for the home page only.
+There is no hero on any route.
 
-### 5.4 Desktop viewport target
+The implementer is reminded: this means the live code in `renderHomePage.ts` containing `<section class="ea-hero">` and the live code in `renderTonearmMatchLabPage.ts` containing `<section class="tm-lab-hero">` are both defects and must be removed in the same PR that adopts this version of the document.
 
-On a common desktop viewport (1920×1080), the user must be able to see at least:
+The replacement for `.ea-hero` is `.ea-tool-index-header` (compact, ≤ 80 px tall, no backdrop image, h1 at `--ea-font-size-tool-title`).
 
-- compact route header,
-- dataset picker controls,
-- all primary numeric inputs,
-- quick result / diagnosis,
-- enough context to understand the setup.
+The replacement for `.tm-lab-hero` is deletion. The Tonearm Match Lab does not need its own page-level header at all because the global topbar already provides identity. A single h1 inside the workbench panel with `--ea-font-size-tool-title` is sufficient.
 
-The default desktop workflow does not require scrolling after every value change.
-
-### 5.5 Use available width
-
-Do not constrain the entire tool route to a narrow content-reading width.
-
-For tool routes:
+### 5.4 Workbench width
 
 ```css
-.tool-route {
-  inline-size: min(100% - 2rem, 1760px);
+.ea-route--tool {
+  inline-size: min(100% - var(--ea-space-4) * 2, var(--ea-size-workbench-max));
   margin-inline: auto;
+  padding-inline: var(--ea-size-workbench-padding);
 }
 ```
 
-Rationale for 1760 px: leaves ~80 px outer breathing room on a 1920 px viewport while preventing extreme stretch on ultrawide displays. On viewports >1920 px, content remains capped.
+Rationale for 1760 px: leaves ~80 px outer breathing room on a 1920 px viewport while preventing extreme stretch on ultrawide displays.
 
-### 5.6 Control width is not panel width
-
-Full page width does not mean inputs become huge.
+### 5.5 Two-zone workbench grid
 
 ```css
-.tm-fields {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 320px));
-  gap: var(--space-4);
-}
-.tm-field input {
-  inline-size: 100%;
-  max-inline-size: 22rem;
-}
-```
-
-Panel width uses the viewport. Individual controls remain ergonomic.
-
-### 5.7 Workbench grid
-
-Desktop tool routes use a two-zone workbench:
-
-```text
-┌──────────────────────────────────────────┬─────────────────────────────┐
-│ Input, picker and setup controls         │ Result, diagnosis, summary  │
-│ 2-3 compact columns where useful         │ sticky or always visible    │
-└──────────────────────────────────────────┴─────────────────────────────┘
-```
-
-```css
-.tool-workbench {
+.ea-workbench {
   display: grid;
   grid-template-columns: minmax(580px, 1.6fr) minmax(380px, 1fr);
-  gap: var(--space-4);
+  gap: var(--ea-size-workbench-gap);
 }
 
 @media (max-width: 1099px) {
-  .tool-workbench {
+  .ea-workbench {
     grid-template-columns: 1fr;
   }
 }
 ```
 
-Rationale for 1.6fr / 1fr: golden-ratio-inspired allocation favoring the input panel. The previous 1.25fr / 0.75fr ratio was arbitrary and produced a left panel barely wider than the right; result-heavy routes were unbalanced. Minimum widths (580 + 380 + gap = ~976 px content) align with the 1100 px desktop breakpoint (§4.9) accounting for outer padding.
+Minimum widths (580 + 380 + gap ≈ 976 px content) align with the 1100 px desktop breakpoint allowing for outer padding.
 
-### 5.8 Result visibility
+### 5.6 Sticky result panel
 
-Calculation result must be near the inputs.
+```css
+.ea-workbench__result {
+  position: sticky;
+  inset-block-start: calc(56px + var(--ea-space-4));  /* topbar + spacing */
+  z-index: var(--ea-z-sticky-result);
+  align-self: start;
+}
 
-For interactive calculators:
+@media (max-width: 1099px) {
+  .ea-workbench__result {
+    position: static;
+  }
+}
+```
 
-- result updates immediately on input change,
-- result stays visible while editing on desktop (sticky if needed),
-- result is not pushed below long setup text,
-- result does not require scrolling after normal input changes.
+Result panel stays visible while editing on desktop. Collapses to natural flow below 1100 px.
 
-A sticky result panel uses `position: sticky; top: var(--space-4); z-index: var(--z-sticky-result);` and must not overlap input controls. It collapses on viewports below `--bp-desktop`.
+### 5.7 Control widths
 
-### 5.9 Secondary content
+Panel width uses the viewport. Individual controls remain ergonomic:
 
-Assumptions, notes, explanations and future-release text are secondary. They do not dominate the primary calculation route.
+```css
+.ea-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 320px));
+  gap: var(--ea-space-4);
+}
+.ea-field input {
+  inline-size: 100%;
+  max-inline-size: 22rem;
+}
+```
 
-Prefer:
+### 5.8 Secondary content
 
-- compact notes panel,
-- collapsible details (`<details>` element),
-- below-workbench section,
-- short bullet list,
-- secondary visual priority (lower contrast, smaller heading).
+Assumptions, notes, methodology references, and explanations are **secondary**. They live in:
 
-Long explanatory sections must not be placed between inputs and results.
+1. A `<details>` element collapsed by default beneath the workbench, OR
+2. A separate `/methodology` route reachable from a footer-anchor link.
+
+They do not occupy primary visual real estate. They do not appear between inputs and result.
 
 ---
 
-## 6. Density standard
+## 6. Density
 
-### 6.1 Density goal
+### 6.1 Density principle
 
-Tool routes are dense enough for work and spacious enough for readability. Avoid both extremes.
+Tool routes are dense enough for work and spacious enough for readability. Both extremes are wrong.
 
 ### 6.2 Control heights
 
-```css
---control-height-compact: 2.25rem;   /* 36px */
---control-height-default: 2.5rem;    /* 40px */
---control-height-large: 2.75rem;     /* 44px - touch baseline */
---control-height-xl: 3rem;           /* 48px - primary modal action */
-```
-
-Tool routes use `--control-height-default`. Modal primary actions may use `--control-height-xl`. Mobile uses `--control-height-large` minimum.
+Tool routes use `--ea-size-control-default` (40 px) for inputs and buttons. Mobile uses `--ea-size-control-large` (44 px) minimum. Modal primary actions may use `--ea-size-control-xl` (48 px).
 
 ### 6.3 Panel padding
 
-```css
---panel-padding-compact: var(--space-4);   /* 1rem */
---panel-padding-default: var(--space-5);   /* 1.25rem */
---panel-padding-editorial: var(--space-6); /* 1.5rem */
-```
+Tool route panels use `--ea-size-panel-padding-default` (`--ea-space-5`, 20 px). Compact panels (e.g., dataset picker controls inside the workbench) use `--ea-size-panel-padding-compact` (16 px). The methodology page may use editorial padding (24 px).
 
-Avoid `--space-7+` padding inside every nested tool panel.
+Padding above 24 px on tool routes is forbidden.
 
 ### 6.4 Field rhythm
 
 ```css
-.field {
+.ea-field {
   display: grid;
   gap: 0.35rem;
 }
-.field-group {
+.ea-field-group {
   display: grid;
-  gap: var(--space-4);
+  gap: var(--ea-space-4);
 }
 ```
 
-Each field occupies: label (1 line) + input + optional helper (1 line). Total vertical footprint: ~5.5–6 rem.
+Each field's vertical footprint: label (1 line) + input + optional helper (1 line). Total ≈ 5.5–6 rem.
 
 ---
 
 ## 7. Typography (applied)
 
-### 7.1 Tone
-
-Typography is confident, technical, clear, premium. Not playful. Not condensed for body text.
-
-### 7.2 Tool route type scale
+### 7.1 Tool route type scale
 
 ```css
-.tool-title       { font-size: var(--font-size-tool-title); font-weight: var(--font-weight-semibold); line-height: var(--line-height-tight); }
-.section-heading  { font-size: var(--font-size-section-heading); font-weight: var(--font-weight-semibold); }
-.panel-heading    { font-size: var(--font-size-panel-heading); font-weight: var(--font-weight-medium); }
-.label            { font-size: var(--font-size-label); font-weight: var(--font-weight-medium); color: var(--color-text-secondary); }
-.body             { font-size: var(--font-size-body); line-height: var(--line-height-normal); }
-.helper           { font-size: var(--font-size-helper); color: var(--color-text-muted); }
-.microcopy        { font-size: var(--font-size-microcopy); color: var(--color-text-muted); }
-.kicker           { font-size: var(--font-size-microcopy); text-transform: uppercase; letter-spacing: var(--letter-spacing-kicker); color: var(--color-accent-amber); font-weight: var(--font-weight-semibold); }
-.numeric          { font-family: var(--font-family-numeric); font-variant-numeric: tabular-nums; }
-```
+.ea-tool-title {
+  font-size: var(--ea-font-size-tool-title);
+  font-weight: var(--ea-font-weight-semibold);
+  line-height: var(--ea-line-height-tight);
+  letter-spacing: var(--ea-letter-spacing-tight);
+  margin: 0;
+}
 
-### 7.3 Text measure
+.ea-section-heading {
+  font-size: var(--ea-font-size-section-heading);
+  font-weight: var(--ea-font-weight-semibold);
+}
 
-Long paragraphs have a readable max width:
+.ea-panel-heading {
+  font-size: var(--ea-font-size-panel-heading);
+  font-weight: var(--ea-font-weight-medium);
+}
 
-```css
-.tool-header p {
-  max-inline-size: 64ch;
+.ea-label {
+  font-size: var(--ea-font-size-label);
+  font-weight: var(--ea-font-weight-medium);
+  color: var(--ea-text-medium);
+}
+
+.ea-body {
+  font-size: var(--ea-font-size-body);
+  line-height: var(--ea-line-height-normal);
+}
+
+.ea-helper {
+  font-size: var(--ea-font-size-helper);
+  color: var(--ea-text-low);
+  line-height: var(--ea-line-height-small);
+}
+
+.ea-microcopy {
+  font-size: var(--ea-font-size-microcopy);
+  color: var(--ea-text-low);
+}
+
+.ea-kicker {
+  font-size: var(--ea-font-size-microcopy);
+  text-transform: uppercase;
+  letter-spacing: var(--ea-letter-spacing-kicker);
+  color: var(--ea-color-kicker);
+  font-weight: var(--ea-font-weight-semibold);
+}
+
+.ea-numeric {
+  font-family: var(--ea-font-family-numeric);
+  font-variant-numeric: tabular-nums;
+}
+
+.ea-result-value {
+  font-family: var(--ea-font-family-numeric);
+  font-size: var(--ea-font-size-result-large);
+  font-weight: var(--ea-font-weight-bold);
+  line-height: 1;
+  letter-spacing: var(--ea-letter-spacing-tight);
+  font-variant-numeric: tabular-nums;
 }
 ```
 
-The entire workbench is not constrained to make a paragraph readable.
+### 7.2 Reading measure
 
-### 7.4 Labels
+Long prose has a maximum width:
+
+```css
+.ea-prose {
+  max-inline-size: var(--ea-size-reading-max); /* 64ch */
+}
+```
+
+Workbench panels do not have this constraint.
+
+### 7.3 Labels (binding)
 
 Labels are direct and unit-aware:
 
@@ -599,11 +797,11 @@ Mounting screws/fasteners, g
 Tracking force, g (setup only — not in resonance calc)
 ```
 
-Note on compliance unit: Modern manufacturer specifications use `µm/mN`. The legacy `cu` is dimensionally identical (`1 cu = 1 µm/mN = 10⁻³ m/N`). UI labels use `µm/mN`; helper text may note "also called cu" for users with vintage data sheets.
+The compliance unit is `µm/mN`. Helper text may note "1 µm/mN equals 1 cu" for users with vintage data sheets.
 
-### 7.5 Helper text
+### 7.4 Helper text
 
-Helper text is concise and functional. Long explanations live in the assumptions/notes section.
+Concise and operational. Long explanations live in the `<details>` notes section or on `/methodology`.
 
 ---
 
@@ -611,43 +809,28 @@ Helper text is concise and functional. Long explanations live in the assumptions
 
 ### 8.1 Theme switching
 
-Theme is selected by a `data-theme` attribute on `<html>`:
+Theme is selected by `data-theme` on `<html>`:
 
 ```html
 <html data-theme="dark">  <!-- default -->
 <html data-theme="light">
 ```
 
-The theme toggle in the topbar (§16) writes to `localStorage` (key: `engrove-theme`) and updates the attribute. Default is dark. The `prefers-color-scheme` media query is consulted on first load if no stored preference exists.
+Theme toggle writes to `localStorage.engrove-theme`. Default is dark. `prefers-color-scheme` is consulted on first load if no stored preference.
 
-### 8.2 Accent hierarchy
+### 8.2 Status color binding
 
-Use accents sparingly. Per panel, no more than two accent colors except in calibrated status visualizations (e.g., the resonance gauge in §13).
+The status colors are bound to the resonance reference model. The same colors appear in the gauge (§13), in result-card badges, and in any other classifier-style visualization.
 
-### 8.3 Status colors (canonical mapping)
+| Band | Token | Use |
+|---|---|---|
+| Ideal | `--ea-status-ideal` | central optimal subzone (9–11 Hz) |
+| Good | `--ea-status-good` | inside accepted band (8–9, 11–12 Hz) |
+| Acceptable | `--ea-status-acceptable` | edges of accepted band (7–8, 12–13 Hz) |
+| Marginal | `--ea-status-marginal` | outside, recoverable (6–7, 13–14 Hz) |
+| Poor | `--ea-status-poor` | outside, not recommended (<6, >14 Hz) |
 
-This mapping is binding for any calculator that produces a band-classified result. The same colors appear in the gauge (§13) and in result-card badges:
-
-| Band | Token | Hex (dark) | Use |
-|---|---|---|---|
-| Ideal | `--color-status-ideal` | `#34D399` | central optimal subzone |
-| Good | `--color-status-good` | `#48BB78` | inside accepted band |
-| Acceptable | `--color-status-acceptable` | `#ECC94B` | edges of accepted band |
-| Marginal | `--color-status-marginal` | `#ED8936` | outside accepted band, recoverable |
-| Poor | `--color-status-poor` | `#F56565` | outside, not recommended |
-
-### 8.4 Contrast (binding)
-
-WCAG 2.2 AA minimum:
-
-- body text on its background: ≥ 4.5:1,
-- large text (≥ 18.66 px regular, or ≥ 14 px bold) on its background: ≥ 3:1,
-- UI component / graphical object boundary: ≥ 3:1,
-- non-text indicator (icon, status fill): ≥ 3:1 against adjacent surface.
-
-Muted text (`--color-text-muted`) is the floor for body content (4.9:1 in dark, 5.1:1 in light). `--color-text-disabled` is for non-text or non-essential UI only.
-
-`forced-colors` mode (Windows high contrast) must not break layout. UI components should declare `forced-color-adjust: auto` and remain functional with system colors.
+Color is **never the only indicator**. Every status is paired with a textual label and an icon (✓, ★, ⚠, ✗). See §13.3.
 
 ---
 
@@ -656,26 +839,26 @@ Muted text (`--color-text-muted`) is the floor for body content (4.9:1 in dark, 
 ### 9.1 Panels
 
 ```css
-.panel {
-  background: var(--color-bg-panel);
-  border: 1px solid var(--color-border-default);
-  border-radius: var(--radius-lg);
-  padding: var(--panel-padding-default);
+.ea-panel {
+  background: var(--ea-bg-panel);
+  border: 1px solid var(--ea-border-default);
+  border-radius: var(--ea-radius-lg);
+  padding: var(--ea-size-panel-padding-default);
 }
-.panel--active,
-.panel--selected {
-  border-color: var(--color-border-strong);
-  background: var(--color-bg-panel-elevated);
+.ea-panel--active,
+.ea-panel--selected {
+  border-color: var(--ea-border-strong);
+  background: var(--ea-bg-panel-elevated);
 }
 ```
 
 ### 9.2 Shadow
 
-Use `--shadow-md` for elevated panels. Use `--shadow-lg` only for the topmost surface in a stacked section. Use `--shadow-modal` for dialogs.
+`--ea-shadow-md` for elevated panels. `--ea-shadow-lg` only for the topmost surface in a stacked section. `--ea-shadow-modal` for dialogs.
 
 ### 9.3 Nested panels
 
-Nested panels use `--color-bg-panel-elevated` and `--color-border-subtle` to register as inset rather than as a second floating card.
+Nested panels use `--ea-bg-panel-elevated` and `--ea-border-subtle` to register as inset rather than as a second floating card.
 
 ---
 
@@ -683,53 +866,51 @@ Nested panels use `--color-bg-panel-elevated` and `--color-border-subtle` to reg
 
 ### 10.1 Hierarchy
 
-- **Primary**: filled accent. One per panel/route.
-- **Secondary**: outlined. Cancel, neutral.
-- **Tertiary**: text-only. Minor or link-like.
-- **Destructive**: red filled. Used only when the action removes or overwrites user-visible state.
+- **Primary** filled accent. One per panel/route.
+- **Secondary** outlined. Cancel, neutral.
+- **Tertiary** text-only. Minor or link-like.
+- **Destructive** red filled. Used only when the action removes or overwrites user-visible state.
 
 ### 10.2 Sizing
 
 ```css
-.btn {
-  min-block-size: var(--control-height-default);
-  padding-inline: var(--space-4);
-  border-radius: var(--radius-md);
-  font-weight: var(--font-weight-medium);
-  font-size: var(--font-size-body);
-  transition: background-color var(--motion-duration-fast) var(--motion-easing-standard),
-              border-color var(--motion-duration-fast) var(--motion-easing-standard);
+.ea-btn {
+  min-block-size: var(--ea-size-control-default);
+  padding-inline: var(--ea-space-4);
+  border-radius: var(--ea-radius-md);
+  font-weight: var(--ea-font-weight-medium);
+  font-size: var(--ea-font-size-body);
+  transition: background-color var(--ea-motion-duration-fast) var(--ea-motion-easing-standard),
+              border-color var(--ea-motion-duration-fast) var(--ea-motion-easing-standard);
 }
-.btn--compact { min-block-size: var(--control-height-compact); padding-inline: var(--space-3); }
-.btn--large   { min-block-size: var(--control-height-xl); padding-inline: var(--space-5); }
+.ea-btn--compact { min-block-size: var(--ea-size-control-compact); padding-inline: var(--ea-space-3); }
+.ea-btn--large   { min-block-size: var(--ea-size-control-xl); padding-inline: var(--ea-space-5); }
 ```
 
 ### 10.3 States
 
-Every interactive control declares: default, hover, focus-visible, active/pressed, disabled. Focus-visible uses `--shadow-focus-ring`.
+Every interactive control declares: default, hover, focus-visible, active/pressed, disabled, loading. Focus-visible uses `--ea-shadow-focus-ring`.
 
-### 10.4 Dataset picker buttons
+### 10.4 Forbidden button labels
 
-Dataset picker buttons are compact and adjacent to the field they affect.
+The following button labels are forbidden anywhere in the bundle:
 
-Good:
+- "Explore the Tools"
+- "Get Started"
+- "View Platform"
+- "Learn more"
+- "Discover"
+- Any button label that does not state what the click will do.
 
-```text
-[Select cartridge from dataset]   Selected cartridge: Denon DL-103
-[Select tonearm from dataset]     Selected tonearm: Rega RB300
-```
+Operational labels are required:
 
-Bad: full-width banner buttons that displace inputs below the fold.
-
-### 10.5 Disabled state
-
-Disabled actions are visually clear and explainable. Loading states use a determinate label:
-
-```text
-Loading public runtime data…
-```
-
-Buttons enable when data is ready.
+- "Open Resonance Calculator"
+- "Open Compliance Estimator"
+- "Calculate"
+- "Apply"
+- "Cancel"
+- "Reset"
+- "Select cartridge from dataset"
 
 ---
 
@@ -737,9 +918,9 @@ Buttons enable when data is ready.
 
 ### 11.1 Inputs in calculators
 
-Numeric input is core workflow.
+Numeric input is the primary workflow. Inputs:
 
-- visible without excessive scrolling,
+- visible without scrolling on tool routes,
 - consistent width,
 - unit in label,
 - short helper text,
@@ -747,50 +928,70 @@ Numeric input is core workflow.
 
 ### 11.2 Decimal handling
 
-The app accepts both `.` and `,` as decimal separators on numeric inputs (European keyboards). The internal model uses dot. UI never echoes back a converted form silently — if conversion happened, helper text declares it. If full locale handling is not yet implemented, the current behavior is documented in tests, not implied in UI.
+Accept `.` and `,` as decimal separators. Internal model uses dot. Helper text declares conversion when it happens.
 
 ### 11.3 Input layout
 
-Desktop preferred:
+Desktop preferred: 2 columns or 3 compact columns. A single vertical stack of five inputs at desktop is a defect.
 
-```text
-2 columns or 3 compact columns
-```
+### 11.4 Default values at load
 
-Five fields in a single vertical stack on desktop (when viewport supports columns) is a defect.
+Tool routes may pre-populate inputs with sensible default values to demonstrate the calculation. When they do:
 
-### 11.4 Helper text priority
+- The result panel must clearly label the result as **"Example values"** until the user changes any input.
+- The first user edit removes the "Example values" label and treats the input as the user's setup.
+- The default values must be physically sensible (e.g., not 0 g effective mass) and produce a result inside the Good or Ideal band, so the example is informative.
 
-Use helper text only where it reduces error:
-
-- compliance source frequency (10 Hz vs 100 Hz),
-- conversion factor used,
-- tracking force not included in moving mass,
-- estimated/community-source data flag.
+The current implementation pre-fills `tonearmEffectiveMassG: 12, cartridgeMassG: 6.5, fastenerMassG: 1, trackingForceG: 1.8, compliance10HzCu: 18` — fine values, but the resulting example must be labeled.
 
 ### 11.5 Errors
 
-Error messages are:
-
-- placed near the affected control or result panel,
-- in English,
-- specific,
-- actionable.
+Error messages are placed near the affected control or result panel, in English, specific, actionable.
 
 Bad: `Invalid.`
 Good: `Compliance @10 Hz must be a positive number.`
 
-### 11.6 Provenance/confidence indicators
+### 11.6 Provenance and confidence indicators (binding)
 
-Per the reference data model, every input that derives from converted or estimated data displays a provenance badge inline:
+Every numeric input that derives from converted, estimated, or aged-spec data displays a provenance badge inline:
 
-```text
-[ converted from 100 Hz · ×1.7 ]
-[ community estimate ]
-[ vintage spec — see notes ]
+```html
+<span class="ea-provenance-badge ea-provenance-badge--converted">
+  converted from 100 Hz · ×1.7
+</span>
+<span class="ea-provenance-badge ea-provenance-badge--estimate">
+  community estimate
+</span>
+<span class="ea-provenance-badge ea-provenance-badge--vintage">
+  vintage spec — see notes
+</span>
 ```
 
-Badges use `--color-accent-amber-soft` background, `--color-text-secondary` text, `--font-size-microcopy`, and `--radius-sm`.
+```css
+.ea-provenance-badge {
+  display: inline-flex;
+  gap: var(--ea-space-1);
+  padding: 0 var(--ea-space-2);
+  border-radius: var(--ea-radius-sm);
+  font-size: var(--ea-font-size-microcopy);
+  font-weight: var(--ea-font-weight-medium);
+  vertical-align: middle;
+}
+.ea-provenance-badge--converted {
+  background: var(--ea-color-provenance-converted-soft);
+  color: var(--ea-color-provenance-converted);
+}
+.ea-provenance-badge--estimate {
+  background: var(--ea-color-provenance-estimate-soft);
+  color: var(--ea-color-provenance-estimate);
+}
+.ea-provenance-badge--vintage {
+  background: var(--ea-color-provenance-vintage-soft);
+  color: var(--ea-color-provenance-vintage);
+}
+```
+
+The current Tonearm Match Lab does not surface provenance. This is a defect to fix before relaunch.
 
 ---
 
@@ -798,139 +999,115 @@ Badges use `--color-accent-amber-soft` background, `--color-text-secondary` text
 
 ### 12.1 When to use a modal picker
 
-Modal picker required when:
-
 - dataset is large,
 - user must search/filter before selecting,
 - selection should not mutate the calculator until confirmed,
 - user benefits from previewing values.
 
-Cartridge and tonearm selection use modal picker behavior, never inline mega lists.
+Cartridge and tonearm selection use modal pickers, never inline mega lists.
 
 ### 12.2 Modal structure
 
 ```text
-Header:
-  Title
-  Close button (accessible label)
-
-Body:
-  Filter panel
-  Results list (capped)
-  Selected preview
-
-Footer:
-  Cancel
-  Apply (primary)
+Header: title + accessible close button
+Body: filter panel + results list (capped) + selected preview
+Footer: Cancel + Apply (primary)
 ```
 
 ### 12.3 Modal behavior (binding)
 
 - Open from compact control on page.
 - Search/filter inside modal.
-- Result list is capped (default 100 rows).
+- Result list capped (default 100 rows).
 - Row click changes draft selection only.
-- Preview updates from draft selection.
-- **Apply** mutates calculator fields and dispatches `input`/`change` events so derived results recalculate.
-- **Cancel**, **X close**, **Escape**, and **backdrop click** do not mutate.
-- Modal traps focus while open (see §18).
+- Preview updates from draft.
+- **Apply** mutates fields and dispatches `input`/`change` events.
+- **Cancel**, **X close**, **Escape**, **backdrop click** do not mutate.
+- Modal traps focus while open (binding, not future).
+- Focus returns to opener on close.
 
-### 12.4 Result cap
+### 12.4 Filtering
 
-Default cap: 100 visible results. Future: virtualization or pagination. For now, cap and filter.
+Cartridge: search, generator type (MM/MI/MC LO/MC HO/SG), mass min/max, compliance min/max, match-ready flag, provenance confidence floor.
 
-### 12.5 Filtering
+Tonearm: search, effective-mass min/max, headshell convention.
 
-Cartridge minimum filters: search text, type, mass min/max, compliance min/max, generator type (MM/MI/MC LO/MC HO/SG), match-ready flag.
+### 12.5 Preview
 
-Tonearm minimum filters: search text, effective-mass min/max, headshell convention (integrated/detachable/unknown).
+Preview shows the values that will be applied with provenance badges visible.
 
-### 12.6 Preview
+For cartridge: name, type, mass, compliance @10 Hz (with badge if converted/estimated).
+For tonearm: name, effective mass (with badge if community-estimated).
 
-Preview shows the values that will be applied:
+Preview text: "Apply copies these values to the calculator. Cancel does not."
 
-For cartridge: name, type, mass, compliance @10 Hz (with provenance badge if converted/estimated).
-
-For tonearm: name, effective mass (with provenance badge if community-estimated).
-
-Preview text explains: "Apply copies these values to the calculator. Cancel does not."
-
-### 12.7 Modal density
-
-Modal may be denser than the main page. Row height: 2.5–3 rem. Font size: `--font-size-helper` for secondary fields, `--font-size-body` for primary.
-
-### 12.8 Modal accessibility (binding)
+### 12.6 Modal accessibility (binding)
 
 - `role="dialog"`,
 - `aria-modal="true"`,
-- `aria-labelledby` pointing to a visible title,
-- close button with accessible name (`aria-label="Close"` if icon-only),
+- `aria-labelledby` to a visible title,
+- close button with accessible name,
 - Escape closes,
-- focus moves into the modal on open,
-- focus trap retains focus inside while open,
-- focus restores to the originating control on close.
-
-Focus trap is **required**, not deferred.
+- focus enters modal on open,
+- focus trap retains focus,
+- focus restores to opener on close.
 
 ---
 
-## 13. Result and gauge standard
+## 13. Result and gauge (binding)
 
 ### 13.1 Result priority
 
 The result is the feedback loop. Visually prominent, near the inputs.
 
-For Tonearm Match Lab, the result panel shows:
+For Tonearm Match Lab the result panel shows:
 
 - resonance frequency `f₀` (1 decimal, e.g., `9.5 Hz`),
-- propagated uncertainty band (e.g., `±1.0 Hz`),
+- propagated uncertainty band (`±1.0 Hz`),
 - classification badge (Ideal/Good/Acceptable/Marginal/Poor),
-- short diagnosis sentence,
-- target-zone text (e.g., "Target zone 8–12 Hz"),
+- one-sentence diagnosis,
+- target zone text ("Target zone 8–12 Hz, ideal 9–11 Hz"),
 - 2–3 short suggestions if applicable.
 
 ### 13.2 Numerical formatting
 
 ```text
-9.5 Hz                  (1 decimal)
-±1.0 Hz                 (1 decimal)
-19.3 g                  (1 decimal)
-12 µm/mN @10 Hz         (integer, optional 1 decimal)
+9.5 Hz            (1 decimal)
+±1.0 Hz           (1 decimal)
+19.3 g            (1 decimal)
+12 µm/mN @10 Hz   (integer or 1 decimal)
 ```
 
-Result panels do not display raw implementation fields (e.g., internal float64 values).
+Result panels do not display raw implementation fields.
 
-### 13.3 Classification badges
+### 13.3 Classification badges (binding)
 
-Per the reference data model:
-
-| Band | Label | Color token | Icon (Unicode pair) |
+| Band | Label | Token | Icon |
 |---|---|---|---|
-| Ideal | `Ideal` | `--color-status-ideal` | `★` |
-| Good | `Good` | `--color-status-good` | `✓` |
-| Acceptable | `Acceptable but not optimal` | `--color-status-acceptable` | `⚠` |
-| Marginal | `Marginal` | `--color-status-marginal` | `⚠` |
-| Poor | `Poor` | `--color-status-poor` | `✗` |
-
-Badge style:
+| Ideal | `Ideal` | `--ea-status-ideal` | `★` |
+| Good | `Good` | `--ea-status-good` | `✓` |
+| Acceptable | `Acceptable but not optimal` | `--ea-status-acceptable` | `⚠` |
+| Marginal | `Marginal` | `--ea-status-marginal` | `⚠` |
+| Poor | `Poor` | `--ea-status-poor` | `✗` |
 
 ```css
-.result-badge {
+.ea-result-badge {
   display: inline-flex;
-  gap: var(--space-2);
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-pill);
-  font-size: var(--font-size-helper);
-  font-weight: var(--font-weight-semibold);
+  gap: var(--ea-space-2);
+  align-items: center;
+  padding: var(--ea-space-1) var(--ea-space-3);
+  border-radius: var(--ea-radius-pill);
+  font-size: var(--ea-font-size-helper);
+  font-weight: var(--ea-font-weight-semibold);
 }
-.result-badge--ideal      { background: var(--color-status-ideal-soft);      color: var(--color-status-ideal); }
-.result-badge--good       { background: var(--color-status-good-soft);       color: var(--color-status-good); }
-.result-badge--acceptable { background: var(--color-status-acceptable-soft); color: var(--color-status-acceptable); }
-.result-badge--marginal   { background: var(--color-status-marginal-soft);   color: var(--color-status-marginal); }
-.result-badge--poor       { background: var(--color-status-poor-soft);       color: var(--color-status-poor); }
+.ea-result-badge--ideal      { background: var(--ea-status-ideal-soft);      color: var(--ea-status-ideal); }
+.ea-result-badge--good       { background: var(--ea-status-good-soft);       color: var(--ea-status-good); }
+.ea-result-badge--acceptable { background: var(--ea-status-acceptable-soft); color: var(--ea-status-acceptable); }
+.ea-result-badge--marginal   { background: var(--ea-status-marginal-soft);   color: var(--ea-status-marginal); }
+.ea-result-badge--poor       { background: var(--ea-status-poor-soft);       color: var(--ea-status-poor); }
 ```
 
-Per accessibility (§18), color is paired with both a textual label and an icon — color alone is never the indicator.
+The legacy `.tm-lab-result--low` and `.tm-lab-result--high` variants in the current codebase are deprecated and must be removed in the same PR that adopts v0.3.
 
 ### 13.4 Resonance gauge
 
@@ -938,32 +1115,40 @@ A horizontal gauge spanning 5–16 Hz visualizes the result.
 
 Specification:
 
-- **Display range:** 5–16 Hz, linear scale.
-- **Background zones (left to right):** poor (5–6) red — marginal (6–7) orange — acceptable (7–8) yellow — good (8–12) green — within good, ideal subzone (9–11) deep-green strip — acceptable (12–13) yellow — marginal (13–14) orange — poor (14–16) red.
-- **Marker:** vertical line at `f₀`, one decimal precision, `2px` stroke, color `--color-text-primary`.
-- **Confidence band:** translucent horizontal bracket of width `±σ_f` centered on the marker, color `--color-confidence-band`, edges `--color-confidence-band-edge`. Always rendered. When provenance flags weaken (converted, community-estimated, vintage), band widens.
+- **Display range:** 5–16 Hz, linear.
+- **Background zones:** Poor (5–6) red, Marginal (6–7) orange, Acceptable (7–8) yellow, Good (8–12) green, Ideal subzone (9–11) deep-green strip with border, Acceptable (12–13) yellow, Marginal (13–14) orange, Poor (14–16) red.
+- **Marker:** vertical line at `f₀`, 1 decimal precision, 2px stroke, color `--ea-text-high`.
+- **Confidence band:** translucent horizontal bracket of width `±σ_f` centered on the marker. Color `--ea-color-confidence-band`, edges `--ea-color-confidence-band-edge`. Always rendered. Wider when provenance flags weaken.
 - **Out-of-range result:** if `f₀ < 5` or `> 16`, marker pegs at edge with chevron and a textual "f = X.X Hz, outside displayed range" line below.
-- **Missing input:** gauge renders disabled (greyed) with prompt: "Enter cartridge mass, compliance, and tonearm effective mass to compute resonance."
+- **Missing input:** gauge in disabled state with prompt: "Enter cartridge mass, compliance, and tonearm effective mass to compute resonance."
 
 Accessibility:
 
-- gauge has `role="img"` with `aria-label` summarizing the result (e.g., "Resonance 9.5 Hz, status Ideal, confidence ±1.0 Hz"),
-- a textual sibling line presents the same data for screen readers,
-- shape/icon at zone boundaries (✓, ★, ⚠, ✗) ensures monochrome rendering remains parseable.
+- gauge has `role="img"` with `aria-label` summarizing the result,
+- a textual sibling line presents the same data,
+- shape/icon at zone boundaries (✓, ★, ⚠, ✗) for monochrome rendering.
 
-### 13.5 Diagnosis language
+The current Tonearm Match Lab gauge implementation (`tm-lab-gauge__*` classes) is essentially correct in structure but uses the deprecated `--color-*` namespace. Migration to `--ea-*` namespace required.
 
-Diagnosis copy is calm and practical.
+### 13.5 Diagnosis language (binding)
+
+Calm and practical.
 
 Good: `Resonance is inside the common 8–12 Hz target zone.`
 
-Avoid: `Perfect match!` `Guaranteed safe!` `Magic number!`
+Forbidden:
+
+- `Perfect match!`
+- `Guaranteed safe!`
+- `Magic number!`
+- `You nailed it!`
+- Any exclamation mark in result diagnosis.
 
 Per reference data model: avoid the word "Perfect" entirely. The defensible terminology is "Ideal" (9–11 Hz subzone). Propagated uncertainty (~±1 Hz at 10 Hz) is larger than the entire ideal subzone, so "Perfect" is an overpromise.
 
 ### 13.6 Suggestions
 
-Suggestions are short and operational:
+Short and operational:
 
 - "Recheck compliance value if it was converted from a 100 Hz spec."
 - "Confirm tracking force is set within the cartridge manufacturer range (display only — does not affect this calculation)."
@@ -973,86 +1158,68 @@ Suggestions are short and operational:
 
 ## 14. Tables
 
-For result lists, comparison views, and dataset summaries.
+For result lists, comparison views, dataset summaries.
 
 ```css
-.table {
+.ea-table {
   inline-size: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  font-size: var(--font-size-helper);
+  font-size: var(--ea-font-size-helper);
 }
-.table th {
+.ea-table th {
   position: sticky;
   inset-block-start: 0;
-  background: var(--color-bg-panel-elevated);
-  border-block-end: 1px solid var(--color-border-default);
-  font-weight: var(--font-weight-semibold);
+  background: var(--ea-bg-panel-elevated);
+  border-block-end: 1px solid var(--ea-border-default);
+  font-weight: var(--ea-font-weight-semibold);
   text-align: start;
-  padding: var(--space-3);
+  padding: var(--ea-space-3);
 }
-.table td {
-  padding: var(--space-3);
-  border-block-end: 1px solid var(--color-border-subtle);
+.ea-table td {
+  padding: var(--ea-space-3);
+  border-block-end: 1px solid var(--ea-border-subtle);
 }
-.table tr:hover td {
-  background: var(--color-bg-panel-elevated);
+.ea-table tr:hover td {
+  background: var(--ea-bg-panel-elevated);
 }
-.table .numeric {
+.ea-table .ea-numeric {
   text-align: end;
   font-variant-numeric: tabular-nums;
 }
 ```
 
-Row height: 2.25–2.75 rem. No zebra striping by default — rely on subtle row borders. Sticky header is mandatory for any table > 10 rows.
+Row height: 2.25–2.75 rem. No zebra striping. Sticky header for any table > 10 rows.
 
 ---
 
-## 15. Charts and data visualization
+## 15. Charts
 
-For frequency response, IM-distortion vs Q, warp-spectrum, and similar plots.
-
-### 15.1 Tokens
+For frequency response, IM-distortion vs Q, warp-spectrum, similar plots.
 
 ```css
---chart-axis-color: var(--color-text-muted);
---chart-grid-color: var(--color-border-subtle);
---chart-label-size: var(--font-size-microcopy);
---chart-line-width: 2px;
---chart-line-width-emphasized: 3px;
---chart-marker-radius: 4px;
+:root {
+  --ea-chart-axis-color: var(--ea-text-low);
+  --ea-chart-grid-color: var(--ea-border-subtle);
+  --ea-chart-label-size: var(--ea-font-size-microcopy);
+  --ea-chart-line-width: 2px;
+  --ea-chart-line-width-emphasized: 3px;
+  --ea-chart-marker-radius: 4px;
+}
 ```
 
-### 15.2 Series colors
+Series colors in order: `--ea-color-accent`, `--ea-status-acceptable`, `--ea-status-marginal`, `--ea-color-kicker`, `--ea-status-info`, `--ea-status-poor`. Beyond six series, switch to a categorical scheme or split.
 
-Sequential series in a single chart use, in order: `--color-accent-teal`, `--color-status-acceptable`, `--color-status-marginal`, `--color-accent-amber`, `--color-status-info`, `--color-status-poor`. Beyond six series, switch to a categorical scheme or split the chart.
-
-### 15.3 Axis and grid
-
-Axes use `--chart-axis-color` and `1px` stroke. Grid lines use `--chart-grid-color` and `1px` stroke. Both are toggleable per chart.
-
-### 15.4 Tooltips
-
-Chart tooltips render in a small panel using `--shadow-md`, `--radius-md`, `--panel-padding-compact`. Numeric values use `--font-family-numeric`.
-
-### 15.5 Accessibility
-
-Every chart has:
-
-- a textual summary alternative (`<figcaption>` or `aria-describedby`),
-- a tabular data fallback toggle (button to swap to a `<table>`),
-- color paired with shape/dash patterns when more than two series share a region.
+Every chart has a textual summary alternative (`<figcaption>` or `aria-describedby`), a tabular fallback toggle, and color paired with shape/dash patterns when more than two series share a region.
 
 ---
 
 ## 16. Iconography
 
-### 16.1 Icon system
-
-Icons are inline SVG, rendered at `currentColor`, drawn on a 24×24 grid with 2 px stroke.
+Inline SVG, rendered at `currentColor`, drawn on a 24×24 grid with 2 px stroke.
 
 ```css
-.icon {
+.ea-icon {
   inline-size: 1.25em;
   block-size: 1.25em;
   stroke: currentColor;
@@ -1060,97 +1227,156 @@ Icons are inline SVG, rendered at `currentColor`, drawn on a 24×24 grid with 2 
   stroke-width: 2;
   vertical-align: middle;
 }
-.icon--sm { inline-size: 1em; block-size: 1em; }
-.icon--lg { inline-size: 1.5em; block-size: 1.5em; }
+.ea-icon--sm { inline-size: 1em; block-size: 1em; }
+.ea-icon--lg { inline-size: 1.5em; block-size: 1.5em; }
 ```
 
-### 16.2 Icon-only buttons
-
-```html
-<button class="btn btn--icon" aria-label="Close picker">
-  <svg class="icon" aria-hidden="true">…</svg>
-</button>
-```
-
-`aria-label` is mandatory for icon-only buttons. The SVG is `aria-hidden="true"`.
-
-### 16.3 Icon source
-
-Icons are committed under `src/shared/ui/icons/` as individual SVG files. No icon-font runtime dependency. Only commit icons that are actually used.
+Icon-only buttons require `aria-label`. SVG is `aria-hidden="true"`. Icons live under `src/shared/ui/icons/` as individual SVG files. No icon-font runtime dependency. Only commit icons that are actually used.
 
 ---
 
-## 17. Responsive behavior
+## 17. CSS architecture
 
-### 17.1 Breakpoints (binding)
+### 17.1 File responsibility (binding)
 
-```css
-/* mobile:        < --bp-mobile  (< 720px)   */
-/* tablet:        --bp-mobile to --bp-tablet (720-1023px) */
-/* narrow desktop: --bp-tablet to --bp-desktop (1024-1099px) */
-/* desktop:       --bp-desktop to --bp-wide (1100-1439px) */
-/* wide desktop:  --bp-wide to --bp-ultra (1440-1919px) */
-/* ultra:         >= --bp-ultra (>= 1920px) */
+| Path | Responsibility |
+|---|---|
+| `src/shared/ui/styles/reset.css` | CSS reset, base typography, scroll behavior. |
+| `src/shared/ui/styles/tokens.css` | All `--ea-*` design tokens. Single source of truth. |
+| `src/shared/ui/styles/base.css` | Global element styles using tokens. |
+| `src/shared/ui/styles/layout.css` | Shared layout primitives: app shell, topbar, footer, workbench grid. |
+| `src/shared/ui/styles/components.css` | Shared components: buttons, inputs, panels, badges, modal frame. |
+| `src/shared/ui/styles/home.css` | Home-route-specific styles only. **Not for tool-specific styles.** |
+| `src/modules/<module>/ui/<module>.css` | One CSS file per module, scoped to that module's classes. |
+
+The current `home.css` contains 1849 lines with Tonearm Match Lab styles appended after line 516. **This is a defect.** All `.tm-lab-*` selectors must be moved to `src/modules/tonearm-match-lab/ui/tonearmMatchLab.css` (which already exists, 315 lines, but is incomplete because the appended rules in `home.css` were never moved).
+
+### 17.2 Class naming
+
+```text
+ea-*               global Engrove app shell, layout, shared components
+ea-route--*        route-specific scope (e.g., ea-route--home, ea-route--tool)
+tm-*               Tonearm module (legacy alias for tonearm-match-lab)
+tm-lab-*           Tonearm Match Lab specific
+runtime-*          shared runtime picker modal
+util-*             single-purpose utility classes
 ```
 
-The two-zone workbench grid (§5.7) requires `>= --bp-desktop`. Below that it collapses to single-column.
+### 17.3 Class contract is binding (binding)
 
-### 17.2 Desktop (≥ 1100 px)
+If markup emits `ea-site-shell`, CSS styles `ea-site-shell`. The current code emits `ea-site-shell` and `ea-topbar` while `layout.css` defines `ea-app-shell` and `ea-header`. The unused definitions must be removed.
+
+### 17.4 No fragile selectors
+
+Avoid selectors that depend on deep DOM structure. Prefer intentional class hooks.
+
+### 17.5 No global resets that damage pages
+
+```css
+/* not allowed except in reset.css: */
+button { ... }
+input { ... }
+main { ... }
+```
+
+### 17.6 CSS comments
+
+Comments clarify purpose, not narrate workflow phases.
+
+Allowed:
+```css
+/* Tonearm Match Lab workbench layout */
+```
+
+Forbidden in shipped CSS:
+```css
+/* Phase 17.2d fix */
+/* TODO: remove after Hjalmar review */
+/* Engrove Audio Tools 3.0 — 2.0-inspired public landing page */
+```
+
+The third example appears literally in the current `home.css` line 1. This is a defect. Internal phase identifiers and references to v2.0 inspiration must be removed.
+
+### 17.7 No fallback values that hide token gaps
+
+Forbidden:
+```css
+color: var(--color-status-ideal, #34d399);
+```
+
+The fallback hides the fact that `--color-status-ideal` is not defined in the token layer. Either the token must exist in `tokens.css`, or the property must use the canonical `--ea-*` token.
+
+Permitted only for graceful degradation in CSS-in-JS injected runtime fragments where token availability cannot be guaranteed at parse time. This is rare and must be documented inline.
+
+---
+
+## 18. Responsive behavior
+
+### 18.1 Breakpoints (binding)
+
+```css
+/* mobile:        < 720px            */
+/* tablet:        720-1023px         */
+/* narrow desktop: 1024-1099px       */
+/* desktop:       1100-1439px        */
+/* wide desktop:  1440-1919px        */
+/* ultra:         >= 1920px          */
+```
+
+The two-zone workbench (§5.5) requires `>= 1100 px`. Below that it collapses to single-column.
+
+### 18.2 Desktop (≥ 1100 px)
 
 Two-zone workbench. Primary inputs and result simultaneously visible.
 
-### 17.3 Narrow desktop / tablet (720–1099 px)
+### 18.3 Narrow desktop / tablet (720–1099 px)
 
 Single-column stacked panels. Result appears directly after inputs, never after long notes.
 
-### 17.4 Mobile (< 720 px)
+### 18.4 Mobile (< 720 px)
 
-Single column. Compact topbar (≤ 56 px). Compact header (≤ 96 px). Controls full width. Modals nearly full-screen. Touch target minimum 44 px (use `--control-height-large`).
+Single column. Compact topbar (≤ 56 px). Compact header (≤ 96 px). Controls full width. Modals nearly full-screen. Touch target minimum 44 px (`--ea-size-control-large`).
 
-### 17.5 Avoid horizontal overflow
+### 18.5 No horizontal overflow
 
 ```css
-.container {
+.ea-container {
   min-inline-size: 0;
   box-sizing: border-box;
   overflow-wrap: anywhere;
 }
 ```
 
-No route creates accidental horizontal scrolling.
-
 ---
 
-## 18. Accessibility (binding)
+## 19. Accessibility (binding)
 
 Compliance target: **WCAG 2.2 Level AA**.
 
-### 18.1 Baseline
+### 19.1 Baseline
 
-All interactive UI has:
+- visible focus state via `:focus-visible` and `--ea-shadow-focus-ring`,
+- keyboard-accessible operation,
+- semantic HTML (`<button>` for actions, `<a>` for navigation),
+- labels for all inputs,
+- accessible names for icon-only controls,
+- contrast meeting §4.3 / §4.4.
 
-- visible focus state via `:focus-visible` and `--shadow-focus-ring`,
-- keyboard-accessible operation (Tab, Enter, Space as appropriate),
-- semantic HTML (use `<button>` for actions, `<a>` for navigation),
-- labels for all inputs (`<label for>` or `aria-labelledby`),
-- accessible names for icon-only controls (`aria-label`),
-- contrast meeting §8.4.
+### 19.2 Focus management
 
-### 18.2 Focus management
+- `:focus-visible` for keyboard focus styling,
+- focus moves into modal on open,
+- focus is **trapped** in modal while open (mandatory),
+- focus restores to originating control on modal close,
+- skip-link from topbar to main content.
 
-- `:focus-visible` selector used for keyboard focus styling (no `:focus` outline removal without replacement),
-- focus moves into modal on open (first interactive element or the title),
-- focus is trapped in modal while open (mandatory, not future),
-- focus restores to the originating control on modal close,
-- skip-link from topbar to main content for keyboard users.
-
-### 18.3 Target sizes
+### 19.3 Target sizes
 
 - desktop dense controls: ≥ 32 px,
-- desktop standard: ≥ 36 px (`--control-height-compact`),
-- touch/mobile: ≥ 44 px (`--control-height-large`).
+- desktop standard: ≥ 36 px,
+- touch/mobile: ≥ 44 px.
 
-### 18.4 Reduced motion
+### 19.4 Reduced motion
 
 ```css
 @media (prefers-reduced-motion: reduce) {
@@ -1163,38 +1389,41 @@ All interactive UI has:
 }
 ```
 
-No animation conveys information that is not also conveyed in a static state.
+### 19.5 Forced colors
 
-### 18.5 Forced colors / Windows high contrast
+UI components remain operable with system colors. Test with `forced-colors: active`. Borders and focus rings use `currentColor` or system tokens.
 
-UI components remain operable with system colors. Test with `forced-colors: active` media query. Borders and focus rings must use `currentColor` or system tokens (`Highlight`, `ButtonText`) when appropriate.
-
-### 18.6 Screen reader support
+### 19.6 Screen reader
 
 - `<main>`, `<nav>`, `<header>`, `<footer>` landmarks,
 - one `<h1>` per route,
-- heading hierarchy is monotonic (no h2 → h4 jumps),
-- live regions (`aria-live="polite"`) for result updates that change without explicit user action,
-- charts and gauges have textual alternatives (§13.4, §15.5),
-- form errors use `aria-describedby` to associate message with field.
-
-### 18.7 Internationalization scope
-
-Public UI is English-only (§2.1). The CSS uses logical properties (`inline-size`, `padding-inline`, `margin-inline-start`) throughout to keep RTL adaptation possible without rewriting layout, but RTL is not currently in scope.
+- monotonic heading hierarchy,
+- live regions (`aria-live="polite"`) for result updates,
+- charts and gauges have textual alternatives,
+- form errors use `aria-describedby`.
 
 ---
 
-## 19. Public copy standard
+## 20. Public copy
 
-### 19.1 Voice
+### 20.1 Voice
 
-Clear, technical, calm, concise, trustworthy.
+Clear, technical, calm, concise, trustworthy. Treats the user as a competent operator.
 
-### 19.2 Avoid hype
+### 20.2 Forbidden phrases
 
-Do not use: `magic`, `perfect`, `guaranteed`, `revolutionary`, AI-style superlatives.
+In addition to §2.8, the following are forbidden:
 
-### 19.3 Preferred wording
+- "magic"
+- "perfect"
+- "guaranteed"
+- "revolutionary"
+- "AI-powered" (unless literally describing AI use, which this product does not have)
+- "Welcome to the Engrove Audio Toolkit"
+- "We hope you enjoy"
+- Any second-person sentence that addresses the user with a marketing tone.
+
+### 20.3 Preferred wording
 
 ```text
 Estimate
@@ -1208,12 +1437,16 @@ Selected tonearm
 Apply
 Cancel
 Close
+Open
+Calculate
+Reset
 Ideal / Good / Acceptable / Marginal / Poor   (band labels)
 Converted from 100 Hz spec   (provenance)
 Community estimate            (provenance)
+Vintage spec — aged elastomer note   (provenance)
 ```
 
-### 19.4 Error wording
+### 20.4 Error wording
 
 Errors explain what failed and what the user can do.
 
@@ -1221,235 +1454,219 @@ Errors explain what failed and what the user can do.
 Runtime picker data could not be loaded. Check the public data route and try again.
 ```
 
-### 19.5 Empty states
-
-Empty states are useful.
+### 20.5 Empty states
 
 ```text
 No matching dataset items found. Try broadening the filters.
 ```
 
-Avoid: `Nothing here.`
+Forbidden: `Nothing here.`
+
+### 20.6 Footer copy
+
+The footer contains:
+
+- product wordmark or short product name,
+- version number (`v3.0.0`),
+- last-updated hint,
+- link to `/methodology`,
+- link to GitHub repository,
+- license note.
+
+The footer does not contain marketing taglines like "Public productization track."
 
 ---
 
-## 20. Tonearm Match Lab specific standard
+## 21. Tonearm Match Lab specific (binding)
 
-### 20.1 Intended desktop layout
+### 21.1 Required layout
 
 ```text
-Topbar
-Compact tool header (title 1.875rem max, single-sentence description)
-Workbench (two-zone):
-  Left/main:
-    Dataset picker controls
-    Numeric setup fields (2-3 columns)
-  Right:
-    Quick Match result (sticky)
-    Resonance gauge
-    Diagnosis + classification badge
-    Compact assumptions/notes if room
+Topbar (global, sticky)
+Tool header (≤ 80 px total):
+  - h1 "Tonearm Match Lab" (--ea-font-size-tool-title)
+  - One-sentence operational description
+Workbench (two-zone at desktop):
+  Left: dataset pickers + numeric setup fields (2-3 columns)
+  Right: result panel with gauge (sticky)
+Secondary: <details> assumptions/notes, collapsed by default
 ```
 
-### 20.2 Primary visible items (desktop)
+The current implementation has a `.tm-lab-hero` section between topbar and workbench. **This section must be removed** in the same PR that adopts this version of the document. The h1 lives inside the workbench panel intro, not in a hero.
 
-User must see without scrolling:
+### 21.2 Primary visible items at 1920×1080
 
-- selected cartridge summary (with provenance badge if applicable),
-- selected tonearm summary (with provenance badge if applicable),
+Without scrolling:
+
+- selected cartridge summary with provenance badge if applicable,
+- selected tonearm summary with provenance badge if applicable,
 - tonearm effective mass input,
 - cartridge mass input,
 - mounting screws/fasteners input,
-- compliance input (with frequency selector or label clearly stating @10 Hz),
-- resonance result with classification badge,
+- compliance input with `@10 Hz` label and provenance badge if converted,
+- resonance result with frequency, uncertainty, classification badge,
 - gauge with confidence band,
-- tracking force display (visibly separated from resonance math).
+- tracking force display visibly separated from resonance fields.
 
-### 20.3 Dataset pickers
+### 21.3 Tracking force grouping (binding)
 
-Dataset picker controls do not dominate the page. They are support controls.
-
-```text
-Dataset pickers
-[Select cartridge] Selected cartridge: Denon DL-103
-[Select tonearm]   Selected tonearm: Rega RB300
-```
-
-### 20.4 Result card
-
-Result card stays close to inputs. Result is never placed below long notes.
-
-### 20.5 Assumptions
-
-Assumptions are secondary and compact. Pattern:
-
-```text
-<details> Assumptions and notes </details>
-```
-
-Collapsed by default. Or rendered as a small side panel below the workbench.
-
-### 20.6 Tracking force (binding)
-
-Tracking force is **setup context**. It is not added to moving mass in the resonance calculation.
+Tracking force is **setup context only**.
 
 UI rules:
 
-- Tracking force input is visually grouped with cartridge setup, not with the resonance math fields.
+- Tracking force input is in a separate visual group from the resonance math fields. Use a panel divider, separate sub-heading, or a dedicated `.tm-lab-setup-context` container. The current implementation places it as field `trackingForceG` in the same `.tm-lab-form` grid as the resonance fields, which is **wrong**. Move it.
 - Helper text states: `Tracking force is set during turntable setup. It does not affect the resonance calculation.`
 - When a cartridge is selected from the dataset, the recommended VTF range pre-fills (display only).
-- Editing tracking force does not trigger a resonance recalculation.
+- Editing tracking force does **not** trigger a resonance recalculation.
 
-### 20.7 Compliance handling (binding)
+### 21.4 Compliance handling (binding)
 
-- Compliance is labeled with explicit frequency: `Compliance @10 Hz, µm/mN`.
-- If the dataset record provides only a 100 Hz value, the UI either:
-  - prompts the user to confirm the conversion and the factor used (default 1.7×, with per-generator-type defaults from the reference model), or
-  - applies the conversion automatically and displays a `converted from 100 Hz · ×1.7` provenance badge plus a widened confidence band.
-- Converted values never appear without their provenance badge.
+- Compliance label: `Compliance @10 Hz, µm/mN`.
+- If the dataset record provides only a 100 Hz value, the UI:
+  - applies the per-generator-type conversion factor from the reference model (1.5× MM/MI, 2.0× MC LO, 1.7× MC HO),
+  - displays a `converted from 100 Hz · ×1.7` provenance badge,
+  - widens the gauge confidence band.
+- Converted values never appear without the provenance badge.
 
-### 20.8 Generator-type awareness
+### 21.5 Generator-type awareness
 
-When the cartridge has a known generator type (MM, MI, MC LO, MC HO, SG), the suggested compliance conversion factor and the warning thresholds adapt per the reference model. The UI surfaces this with a small generator-type pill near the cartridge name.
+When the cartridge has a known generator type (MM, MI, MC LO, MC HO, SG), a small generator-type pill appears near the cartridge name. The conversion factor and warning thresholds adapt per reference model.
 
-### 20.9 Vintage / aged-suspension flag
+### 21.6 Vintage flag
 
-Cartridges with `release_year < 1985` carry a "Vintage spec — aged elastomer may differ" note in the cartridge preview and in the result panel's confidence-band tooltip.
+Cartridges with `release_year < 1985` carry a "Vintage spec — aged elastomer may differ" badge (`--ea-color-provenance-vintage`).
 
-### 20.10 Linear-tracking arms
+### 21.7 Linear-tracking warning
 
-When the selected tonearm has `arm_geometry: linear_tangential`, the result panel surfaces a hard warning: `Linear-tracking arms have very different lateral and vertical effective masses. A single-axis resonance is a strong simplification.` Optionally exposes an advanced mode for per-axis input.
+When the selected tonearm has `arm_geometry: linear_tangential`, the result panel surfaces a hard warning: `Linear-tracking arms have very different lateral and vertical effective masses. A single-axis resonance is a strong simplification.`
 
----
+### 21.8 ZYX bug fix (binding before relaunch)
 
-## 21. Visual anti-patterns
+The data layer must correct the ZYX cartridge records that are currently stored as 10 Hz compliance when the published values are at 100 Hz (Reffc, Lenco Heaven, October 2025). Either:
 
-The following are blockers or strong needs-patch signals.
+- Tag affected records with `compliance_source_freq: 100` and apply the runtime conversion per §21.4, or
+- Replace the stored values with manufacturer-published 10 Hz values where available.
 
-### 21.1 Landing-page tool route
-
-A tool route that begins with a hero pushing the actual tool below the fold is wrong.
-
-### 21.2 Excessive scroll for primary workflow
-
-If the user must scroll every time they change a value to see the result, the layout is wrong.
-
-### 21.3 Arbitrary narrow max-width
-
-A workbench constrained to article width wastes desktop space.
-
-### 21.4 Huge input controls
-
-Oversized inputs reduce information density and slow comparison work.
-
-### 21.5 Inline mega lists
-
-Thousands of dataset records inline are forbidden.
-
-### 21.6 CSS/markup mismatch
-
-If markup emits classes that CSS does not style (or vice versa), the patch is incomplete.
-
-### 21.7 Internal phase copy
-
-No internal phase identifiers, internal contributor names, or workflow terms in public UI, public CSS, public HTML, or public commit-visible files in the production bundle.
-
-### 21.8 Unescaped dataset rendering
-
-Any raw dataset string in `innerHTML` is a render-safety defect.
-
-### 21.9 Hard-coded color or spacing literals
-
-Color or spacing literals outside the token layer (§4) are defects. Use tokens.
-
-### 21.10 Missing focus state
-
-Any interactive control without a `:focus-visible` style is a defect.
-
-### 21.11 "Perfect" verdict in result UI
-
-Result UI must not use "Perfect" as a status label. The defensible label is "Ideal" (§13.5).
+The relaunch announcement must not occur until this is fixed.
 
 ---
 
-## 22. CSS architecture
+## 22. Visual anti-patterns (binding)
 
-### 22.1 CSS location
+The following are blockers.
 
-Shared CSS lives in `src/shared/ui/styles/`. Route-specific CSS lives alongside the route or in clearly marked sections of shared files.
+### 22.1 Hero on any route
+Selectors `.ea-hero`, `.tm-lab-hero`, `.*-hero`, `.*__hero`, and the structural pattern (giant centered headline + backdrop + two CTAs) are forbidden on every route.
 
-### 22.2 Class naming
+### 22.2 Marketing voice
+Phrases listed in §2.8 and §20.2 are forbidden in shipped output.
 
-Route/module prefixes:
+### 22.3 Infrastructure self-congratulation
+"Launch chain" / "GitHub to Cloudflare is live" / deployment-status panels are forbidden in user-facing copy.
 
-```text
-ea-*         global Engrove app shell (topbar, footer, app frame)
-tm-*         Tonearm module
-tm-lab-*     Tonearm Lab page shell/workbench
-runtime-*    shared runtime picker modal
-util-*       single-purpose utility classes
-```
+### 22.4 Placeholder tool cards
+Cards for tools that do not yet work ("Planned module", "Foundation module", "Coming soon") are forbidden.
 
-Avoid ambiguous generic classes (`.card`, `.panel`, `.button`) unless scoped or used as a base layer documented here.
+### 22.5 Article-width workbench
+`--ea-page-max: 1180px` is deprecated. Workbench must use `--ea-size-workbench-max` (1760 px).
 
-### 22.3 Class contract is binding
+### 22.6 Token-layer gaps with fallback values
+CSS using `var(--missing-token, hardcoded-fallback)` is a defect. Token must exist in `tokens.css` under the `--ea-*` namespace.
 
-If markup emits `tm-lab-*`, CSS styles `tm-lab-*`. A mismatch between emitted classes and CSS selectors is a blocker.
+### 22.7 CSS file responsibility violation
+Tool-specific CSS in `home.css` is a defect. Move to `src/modules/<module>/ui/<module>.css`.
 
-### 22.4 Avoid fragile CSS
+### 22.8 Class contract drift
+Markup emitting class names that no CSS file styles, or CSS styling class names no markup emits. Both are defects.
 
-Avoid selectors that depend on deep DOM structure. Prefer intentional class hooks.
+### 22.9 Excessive hero text
+Any `font-size` above `--ea-font-size-tool-title` (1.875 rem) on a heading element is a defect, except for the result-value display which uses `--ea-font-size-result-large` (2.5 rem) and is not a heading.
 
-### 22.5 Avoid global resets that damage pages
+### 22.10 Internal phase or contributor identifiers
+`Fas`, `Phase`, `EIC`, internal contributor names, or workflow terms in shipped CSS, HTML, or visible copy.
 
-```css
-/* not allowed except in the documented base layer: */
-button { ... }
-input { ... }
-main { ... }
-```
+### 22.11 Unescaped dataset rendering
+Raw dataset string in `innerHTML`.
 
-Global resets live in a single, reviewed `base.css`.
+### 22.12 Missing focus state
+Any interactive control without `:focus-visible` styling.
 
-### 22.6 CSS comments
+### 22.13 "Perfect" verdict
+Result UI using "Perfect" as a status label.
 
-Comments clarify purpose, not narrate workflow phases.
+### 22.14 Tracking force in resonance form group
+Tracking force visually placed inside the resonance-math input group rather than separated.
 
-Allowed:
-```css
-/* Tonearm Match Lab workbench layout */
-```
-
-Not allowed in shipped CSS:
-```css
-/* Phase 17.2d fix */
-```
+### 22.15 Scroll for primary task
+At 1920×1080 desktop, if the user must scroll to see inputs and result simultaneously on any tool route, the layout is wrong.
 
 ---
 
-## 23. Performance and rendering
+## 23. CSS migration plan from current state
 
-### 23.1 DOM volume
+This section is non-permanent. It documents the migration required to bring the current repo to v0.3 compliance. Once complete (target: same PR that adopts v0.3), this section is moved to `/docs/release/v0.3-migration-complete.md` and removed from this stylesheet.
 
-Do not render thousands of controls or rows. Use caps, filters, pagination, and (in future) virtualization.
+### 23.1 Token namespace migration
 
-### 23.2 Runtime data loading
+| Current | Replace with |
+|---|---|
+| `--color-bg-app` (anywhere) | `--ea-bg-app` |
+| `--color-bg-panel` | `--ea-bg-panel` |
+| `--color-bg-panel-elevated` | `--ea-bg-panel-elevated` |
+| `--color-text-primary` | `--ea-text-high` |
+| `--color-text-secondary` | `--ea-text-medium` |
+| `--color-text-muted` | `--ea-text-low` |
+| `--color-status-ideal` | `--ea-status-ideal` |
+| `--color-status-good` | `--ea-status-good` |
+| `--color-status-acceptable` | `--ea-status-acceptable` |
+| `--color-status-marginal` | `--ea-status-marginal` |
+| `--color-status-poor` | `--ea-status-poor` |
+| `--color-confidence-band` | `--ea-color-confidence-band` |
+| `--color-confidence-band-edge` | `--ea-color-confidence-band-edge` |
+| `--space-*` | `--ea-space-*` |
+| `--font-size-*` | `--ea-font-size-*` |
+| `--radius-*` | `--ea-radius-*` |
 
-Runtime data loads asynchronously after page interaction binding. Loading states are clear and English.
+All fallback values in `var(--token, fallback)` patterns must be removed once the canonical token is added.
 
-### 23.3 Avoid unnecessary re-renders
+### 23.2 Page-max migration
 
-When filtering a modal, re-render only the modal content/list. Whole-page re-renders are acceptable in current phase only when the impact is bounded; document the boundary.
+| File | Replace |
+|---|---|
+| `tokens.css` line 42 | Remove `--ea-page-max`. Add `--ea-size-workbench-max` and `--ea-size-home-max` per §4.10. |
+| `layout.css` line 22 | `width: min(100%, var(--ea-page-max));` → `width: min(100%, var(--ea-size-home-max));` for home shell. |
+| `home.css` topbar | Same migration. |
+| `home.css` `.tm-lab-*` topbar | Migrate to `--ea-size-workbench-max`. |
 
-### 23.4 Bundle discipline
+### 23.3 Hero deletion
 
-Avoid dependencies for UI polish. Hand-written TypeScript/CSS preferred until an explicit, version-bumped revision approves a dependency.
+Files that must lose hero markup and CSS:
+
+- `src/app/home/renderHomePage.ts`: delete `<section class="ea-hero">` block (lines 108–123). Also delete the "Platform" section (lines 137–167) and the "Launch chain" section (lines 169–181). The home becomes: topbar + tool-index header (compact) + tool grid + footer.
+- `src/modules/tonearm-match-lab/ui/renderTonearmMatchLabPage.ts`: delete `<section class="tm-lab-hero">` block (lines 676–683). Move h1 inside the first workbench panel header.
+- `src/shared/ui/styles/home.css`: delete all `.ea-hero*` rules and all `.tm-lab-hero*` rules.
+
+### 23.4 CSS file split
+
+Tonearm Match Lab styles in `home.css` (lines 516–1849) must be moved to `src/modules/tonearm-match-lab/ui/tonearmMatchLab.css`. After the move, `home.css` should be < 500 lines and contain only home-route styles.
+
+### 23.5 Class contract reconciliation
+
+`layout.css` defines `.ea-app-shell` / `.ea-header` (unused). `home.css` defines `.ea-site-shell` / `.ea-topbar` (used). Pick one canonical name for each (recommended: `.ea-app-shell` and `.ea-topbar`), update the renderer to emit those, and delete the other.
+
+### 23.6 Result classification deduplication
+
+`home.css` lines 814–823 define `.tm-lab-result--ideal` / `.tm-lab-result--low` / `.tm-lab-result--high` (legacy). The renderer emits `--ideal/--good/--acceptable/--marginal/--poor` (current). Delete the legacy variants.
+
+### 23.7 Comment cleanup
+
+`home.css` line 1: `/* Engrove Audio Tools 3.0 — 2.0-inspired public landing page */` — delete. The reference to "2.0-inspired" and "landing page" both contradict v0.3 framing.
 
 ---
 
 ## 24. Review checklist
 
-Before a UI patch is accepted, all of the following pass.
+Every PR runs all of the following.
 
 ### 24.1 Source gates
 
@@ -1463,137 +1680,179 @@ npm run check:tonearm-selectors
 npm run build
 ```
 
-Plus data-validation script:
-
-- bash:        `node tools/validate-audio-data-v3.mjs`
-- powershell:  `powershell -NoProfile -ExecutionPolicy Bypass -File ./tools/Validate-AudioDataV3.ps1`
-
-Public UI grep (ensures no leakage of internal/Swedish strings):
+Plus data-validation script with both shells:
 
 ```bash
-# bash / linux / macOS
-grep -REn "Passar|pickup med|min tonarm|Phase 17|kommer|Fas " ./src/**/*.{ts,css,html} || echo "OK"
+node tools/validate-audio-data.mjs
 ```
-
 ```powershell
-# windows
-Select-String -Path .\src\**\*.ts,.\src\**\*.css,.\src\**\*.html `
-  -Pattern "Passar|pickup med|min tonarm|Fas 17|kommer" -ErrorAction SilentlyContinue
+powershell -NoProfile -ExecutionPolicy Bypass -File ./tools/Validate-AudioDataV3.ps1
 ```
 
-Both forms must be present in repo tooling so the gate runs on any contributor's OS.
+The bash variant is required — it does not currently exist in `tools/` and must be added (`tools/validate-audio-data-v3.mjs` or rename of existing `tools/validate-audio-data.mjs` to satisfy the contract).
 
-### 24.2 Visual gates
+### 24.2 Hero grep gate (new)
 
-For tool routes, verify desktop screenshots at minimum:
+```bash
+# Must return zero matches
+grep -REn 'class="[^"]*hero|tm-lab-hero|ea-hero|__lede|__backdrop|--lede|--backdrop' src/ || echo "OK"
+grep -REn '"ea-page-max"|--ea-page-max' src/ || echo "OK"
+grep -REn 'Precision Tools|Built as modules|Launch chain|GitHub to Cloudflare|Public productization' src/ || echo "OK"
+```
 
-- top of route (compact header visible),
-- primary workbench area (inputs and result both in viewport at 1920×1080),
-- result area (gauge + classification + diagnosis),
-- modal open (focus visibly inside modal),
-- after Apply (result updated, badge visible).
+### 24.3 Token namespace gate (new)
 
-### 24.3 UX gates
+```bash
+# Must return zero matches in src/ outside of tokens.css and migration scaffolding
+grep -REn 'var\(--color-|var\(--space-|var\(--font-size-|var\(--radius-' src/modules src/app src/shared/ui/styles/home.css src/shared/ui/styles/layout.css src/shared/ui/styles/components.css src/shared/ui/styles/base.css || echo "OK"
+```
 
-Confirm:
+### 24.4 Visual gates
 
-- primary task begins in first viewport,
-- controls and result are simultaneously visible at desktop breakpoint,
+For tool routes, screenshots required at:
+
+- 1920×1080 (top of route, full primary workflow visible),
+- 1440×900 (workbench grid),
+- 1100×900 (narrow desktop boundary),
+- 375×812 (mobile),
+- modal open (focus visible inside),
+- after Apply (result updated).
+
+### 24.5 UX gates
+
+- primary task begins in first viewport at 1920×1080,
+- inputs and result simultaneously visible at desktop breakpoint,
 - no large inline dataset list,
-- no unnecessary scroll for core desktop workflow,
+- no scroll to compute,
 - modal Apply/Cancel mutation rule holds,
 - public UI copy is English-only,
 - "Perfect" verdict is not present,
-- provenance badges render where required.
+- provenance badges render where required,
+- tracking force visibly separated from resonance fields,
+- no hero anywhere,
+- no marketing copy.
 
-### 24.4 Accessibility gates
+### 24.6 Accessibility gates
 
-Confirm:
-
-- contrast meets WCAG 2.2 AA (§8.4),
+- contrast meets WCAG 2.2 AA,
 - all interactive controls have `:focus-visible` styles,
-- modal focus trap works (tab cycles within, Escape closes, focus returns to opener),
+- modal focus trap works (tab cycles, Escape closes, focus returns),
 - icon-only buttons have `aria-label`,
 - charts/gauges have textual alternatives,
-- `prefers-reduced-motion` respected.
+- `prefers-reduced-motion` respected,
+- skip-link present in topbar.
 
-### 24.5 Browser gates
+### 24.7 Browser gates
 
 - no console errors,
 - runtime public data paths load,
 - route reload works,
-- direct `/tonearm-calculator` route works,
-- forced-colors mode does not break layout.
+- `forced-colors: active` does not break layout,
+- light theme parity verified.
 
 ---
 
-## 25. Patch delivery requirements
+## 25. PR template requirements
 
-When a contributor delivers UI work, the patch includes:
+Every PR includes:
 
 ```text
-Changed files
-Implementation summary
-CSS/class-contract explanation
-UX behavior notes
-Render-safety notes (where relevant)
-Modal/data behavior notes (where relevant)
-Static/test output (if test gates were run)
-Remaining blockers
+## Stylesheet sections touched
+List each §X section number from UI_STYLESHEET.md v0.3 that this patch touches.
+If none, state explicitly: "No stylesheet sections touched."
+
+## Files changed
+List with brief reason per file.
+
+## Implementation summary
+2-4 sentences.
+
+## Class-contract changes
+List any new, renamed, or removed CSS classes. If markup changed, list the
+emitted class names. CSS and markup must match.
+
+## Token additions or changes
+If tokens.css changed, list the token, its value, its rationale, and the
+WCAG contrast result if it is a color token.
+
+## Render-safety notes
+If any dataset string is rendered, confirm escapeHtml/renderText/escapeAttribute usage.
+
+## Modal behavior
+If a modal is touched, confirm: focus trap works, Apply/Cancel mutation rule,
+Escape closes, backdrop click does not mutate.
+
+## Screenshots
+Attach screenshots at:
+- 1920×1080 (full route)
+- 1440×900
+- 1100×900
+- 375×812
+- Modal open if applicable
+
+## Source gates output
+Paste output of npm run check + grep gates from §24.
+
+## Remaining blockers
+Be specific.
 ```
 
-For larger code/text deliveries:
-
-- review canvas may be used for inspection,
-- durable delivery uses repository commits with explicit file paths,
-- avoid sandbox/preview links as the primary delivery path,
-- include checksums or commit SHAs.
+PRs missing any of the above are rejected without further review.
 
 ---
 
-## 26. Phase guidance (current cycle)
+## 26. Phase guidance (current cycle, aligned with ROADMAP v0.2)
 
-### 26.1 Next layout direction
+### 26.1 Adoption of v0.3
 
-Normalize the Tonearm Match Lab route to the workbench specification:
+In the first PR that adopts this version:
 
-- compact tool title (`--font-size-tool-title`, max 1.875rem),
-- full available desktop width via §5.5,
-- two-zone workbench grid per §5.7,
-- inputs and result simultaneously visible on 1920×1080,
-- compact dataset picker controls (§10.4),
-- modal logic preserved,
-- gauge + classification badges per §13,
-- all gates from §24 pass.
+1. Add v0.3 of UI_STYLESHEET.md.
+2. Bump `tokens.css` to the complete `--ea-*` namespace per §4.
+3. Delete all `.ea-hero*` and `.tm-lab-hero*` selectors and markup.
+4. Delete the home page "Platform" and "Launch chain" sections.
+5. Reduce home page to: topbar + tool-index header + tool grid + footer.
+6. Move Tonearm Match Lab styles from `home.css` to `tonearmMatchLab.css`.
+7. Reconcile `.ea-app-shell`/`.ea-site-shell` and `.ea-header`/`.ea-topbar`.
+8. Replace `--ea-page-max` with `--ea-size-workbench-max` / `--ea-size-home-max`.
+9. Add the bash variant of the validation script.
+10. Add hero/marketing/token grep gates to npm scripts.
+11. Verify all §24 gates pass at 1920×1080.
 
-### 26.2 What not to change in this cycle
+### 26.2 Phase 1: Resonance Calculator completion
 
-- new dataset filters,
-- new routes,
-- new data-quality work beyond what §11.6 / §20.7 require,
-- visual redesign of modal logic,
-- package/dependency changes,
-- light-theme rollout (token layer is ready; full audit is a separate cycle).
+Per ROADMAP v0.2 Phase 1. The Tonearm Match Lab is the lighthouse tool. After v0.3 is adopted, Phase 1 work focuses on:
+
+- Provenance UI (§11.6) with real flags from the data layer.
+- Tracking force visual separation (§21.3).
+- ZYX dataset correction (§21.8).
+- Gauge migration to `--ea-*` token namespace.
+- Confidence-band uncertainty propagation rendering.
+- Mobile layout review.
+
+No second tool starts until Phase 1 is complete.
 
 ---
 
-## 27. Summary standard
-
-Engrove Audio Tools 3.0 UI is:
+## 27. Summary
 
 ```text
-premium but functional
-dark by default, light theme tokenized for parity
-dense but not cramped
-technical but understandable
-wide when useful
-compact where work demands it
-safe with dataset strings
-WCAG 2.2 AA at minimum
-English-only in public UI
-honest about uncertainty (Ideal, not Perfect)
+A workbench, not a website.
+A tool index, not a brochure.
+A workspace, not a landing page.
+No hero, anywhere.
+The user opens the site to do work.
+
+WCAG 2.2 AA at minimum.
+English-only in public UI.
+Tokens are the single source of truth.
+Marketing voice forbidden.
+Infrastructure self-congratulation forbidden.
+"Perfect" forbidden in result copy.
+Honest about uncertainty.
+
+Industrial reference: Cadera, Siemens, UXMatters, Quality Magazine IIoT.
+Domain reference: Carlson 1954, Ladegaard B&K 17-233, Jovanovic JAES 2022.
 ```
 
-Guiding sentence:
-
-> A tool route is a workbench, not a landing page.
+The implementer is reminded: when in doubt, **err toward less visual content, denser controls, and more direct copy**. The product gets better as the visual surface gets quieter.
