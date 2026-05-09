@@ -432,6 +432,23 @@ function normalizeSelector(selector) {
   return selector.replace(/\s+/g, ' ').trim();
 }
 
+function normalizeAtRulePrelude(prelude) {
+  return prelude.replace(/\s+/g, ' ').trim();
+}
+
+function atRuleContextKey(stack) {
+  const context = stack
+    .filter((item) => item.isAtRule)
+    .map((item) => item.prelude)
+    .filter(Boolean);
+
+  return context.length > 0 ? context.join(' > ') : '(root)';
+}
+
+function isInsideKeyframes(stack) {
+  return stack.some((item) => item.isAtRule && /^@(?:-[A-Za-z]+-)?keyframes\b/u.test(item.prelude));
+}
+
 function reportDuplicateCssSelectors(cssFiles, warnings) {
   for (const filePath of cssFiles) {
     if (!pathExists(filePath)) {
@@ -442,36 +459,51 @@ function reportDuplicateCssSelectors(cssFiles, warnings) {
     const rawText = readText(filePath);
     const text = stripCssComments(rawText);
     const seen = new Map();
-    const openBracePattern = /\{/g;
+    const bracePattern = /[{}]/g;
+    const stack = [];
     let match;
 
-    while ((match = openBracePattern.exec(text)) !== null) {
-      const prelude = selectorPreludeAt(text, match.index);
-      if (!prelude || prelude.startsWith('@') || prelude.includes('@keyframes')) {
+    while ((match = bracePattern.exec(text)) !== null) {
+      if (match[0] === '}') {
+        stack.pop();
         continue;
       }
 
-      for (const selector of prelude.split(',')) {
-        const normalized = normalizeSelector(selector);
-        if (!normalized || normalized.startsWith('@')) {
-          continue;
-        }
+      const prelude = selectorPreludeAt(text, match.index);
+      const normalizedPrelude = normalizeAtRulePrelude(prelude);
+      const isAtRule = normalizedPrelude.startsWith('@');
+      const contextKey = atRuleContextKey(stack);
 
-        const line = lineForIndex(text, match.index);
-        if (!seen.has(normalized)) {
-          seen.set(normalized, { line });
-          continue;
-        }
+      if (!isAtRule && !isInsideKeyframes(stack)) {
+        for (const selector of prelude.split(',')) {
+          const normalized = normalizeSelector(selector);
+          if (!normalized || normalized.startsWith('@')) {
+            continue;
+          }
 
-        const first = seen.get(normalized);
-        addWarning(
-          warnings,
-          'duplicate-css-selectors',
-          relPath,
-          line,
-          normalized + ' duplicates selector first seen at line ' + first.line,
-        );
+          const duplicateKey = contextKey + '\n' + normalized;
+          const line = lineForIndex(text, match.index);
+          if (!seen.has(duplicateKey)) {
+            seen.set(duplicateKey, { line, context: contextKey });
+            continue;
+          }
+
+          const first = seen.get(duplicateKey);
+          const contextSuffix = first.context === '(root)' ? '' : ' in ' + first.context;
+          addWarning(
+            warnings,
+            'duplicate-css-selectors',
+            relPath,
+            line,
+            normalized + ' duplicates selector first seen at line ' + first.line + contextSuffix,
+          );
+        }
       }
+
+      stack.push({
+        isAtRule,
+        prelude: normalizedPrelude,
+      });
     }
   }
 }
