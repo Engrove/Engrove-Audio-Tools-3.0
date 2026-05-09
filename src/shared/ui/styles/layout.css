@@ -134,13 +134,6 @@
   text-transform: uppercase;
 }
 
-.ea-lead {
-  color: var(--ea-text-medium);
-  font-size: clamp(1.05rem, 2vw, 1.3rem);
-  line-height: 1.65;
-  max-width: 68ch;
-}
-
 .ea-muted {
   color: var(--ea-text-medium);
 }
