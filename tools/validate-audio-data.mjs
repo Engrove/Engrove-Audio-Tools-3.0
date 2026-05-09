@@ -69,7 +69,11 @@ async function readJsonFile(relativePath, options = {}) {
   }
 
   if (options.requireLf && text.includes('\r\n')) {
-    add('error', 'json.crlf', relativePath, 'JSON file must use LF line endings.');
+    add('error', 'json.crlf', relativePath, 'JSON file must use LF line endings; found CRLF line endings.');
+  }
+
+  if (options.requireLf && /\r(?!\n)/u.test(text)) {
+    add('error', 'json.cr', relativePath, 'JSON file must use LF line endings; found CR-only line endings.');
   }
 
   return {
@@ -78,6 +82,7 @@ async function readJsonFile(relativePath, options = {}) {
     text,
     size_bytes: buffer.length,
     sha256: sha256(buffer),
+    relativePath,
   };
 }
 
@@ -240,6 +245,19 @@ function assertJsonEqual(source, delivered, location) {
   }
 }
 
+function assertRuntimeMirrorParity(sourcePath, source, publicPath, delivered) {
+  if (source.buffer.equals(delivered.buffer)) {
+    return;
+  }
+
+  add(
+    'error',
+    'runtime.mirror_byte_mismatch',
+    `${sourcePath} <-> ${publicPath}`,
+    `Runtime source/public mirror byte mismatch. ${sourcePath}: size=${source.size_bytes}, sha256=${source.sha256}; ${publicPath}: size=${delivered.size_bytes}, sha256=${delivered.sha256}.`,
+  );
+}
+
 function manifestOutputs(manifest) {
   if (!isObject(manifest)) {
     add('error', 'manifest.invalid', files.publicManifest, 'Public manifest must be an object.');
@@ -291,13 +309,16 @@ const [
   publicTonearms,
   publicManifest,
 ] = await Promise.all([
-  readJsonFile(files.sourceCartridges),
-  readJsonFile(files.sourceTonearms),
+  readJsonFile(files.sourceCartridges, { requireNoBom: true, requireLf: true }),
+  readJsonFile(files.sourceTonearms, { requireNoBom: true, requireLf: true }),
   readJsonFile(files.summary),
   readJsonFile(files.publicCartridges, { requireNoBom: true, requireLf: true }),
   readJsonFile(files.publicTonearms, { requireNoBom: true, requireLf: true }),
   readJsonFile(files.publicManifest, { requireNoBom: true, requireLf: true }),
 ]);
+
+assertRuntimeMirrorParity(files.sourceCartridges, sourceCartridges, files.publicCartridges, publicCartridges);
+assertRuntimeMirrorParity(files.sourceTonearms, sourceTonearms, files.publicTonearms, publicTonearms);
 
 const cartridgesAreArray = assertArray(publicCartridges.data, files.publicCartridges, 'cartridges.not_array');
 const tonearmsAreArray = assertArray(publicTonearms.data, files.publicTonearms, 'tonearms.not_array');
