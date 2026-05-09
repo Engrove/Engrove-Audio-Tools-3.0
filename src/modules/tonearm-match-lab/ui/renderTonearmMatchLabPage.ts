@@ -719,7 +719,7 @@ export function renderTonearmMatchLabPage(): string {
         </aside>
       </section>
 
-      <section class="tm-lab-panel tm-lab-panel--assumptions" id="assumptions" aria-labelledby="assumptions-title">
+      <section class="tm-lab-panel--assumptions" id="assumptions" aria-labelledby="assumptions-title">
         <details class="tm-lab-notes">
           <summary id="assumptions-title">Assumptions and notes</summary>
           <ul>
