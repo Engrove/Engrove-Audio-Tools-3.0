@@ -71,6 +71,13 @@ const APPLY_RULE_GROUP = {
   name: 'No old apply scripts in repo source tree',
 };
 
+const LEAD_LEDE_RULE_GROUP = {
+  id: 'F',
+  name: 'No lead/lede semantic class-name segments in shipped source',
+};
+
+const LEAD_LEDE_SEGMENT_PATTERN = /(^|[-_])(lead|lede)s?($|[-_])/i;
+
 /**
  * Explicit allowlist for source-string false positives.
  * Keep this empty unless a shipped-source use is genuinely public-safe.
@@ -170,7 +177,8 @@ function isShippedSourceFile(filePath) {
 }
 
 function findLineNumber(text, searchText) {
-  const lines = text.split(/\r?\n/);
+  const lines = text.split(/?
+/);
   for (let index = 0; index < lines.length; index += 1) {
     if (lines[index].includes(searchText)) {
       return index + 1;
@@ -178,6 +186,11 @@ function findLineNumber(text, searchText) {
   }
 
   return 1;
+}
+
+function lineForIndex(text, index) {
+  return text.slice(0, index).split(/?
+/).length;
 }
 
 function isAllowed(violation) {
@@ -193,6 +206,127 @@ function isAllowed(violation) {
       (typeof entry.line !== 'number' || entry.line === violation.line)
     );
   });
+}
+
+function stripCssComments(text) {
+  return text.replace(//*[sS]*?*//g, (match) => ' '.repeat(match.length));
+}
+
+function addClassToken(tokens, className, file, line) {
+  if (!/^[A-Za-z_-][A-Za-z0-9_-]*$/.test(className)) {
+    return;
+  }
+
+  tokens.push({ className, file, line });
+}
+
+function collectClassNamesFromAttributeValue(attrValue) {
+  return attrValue
+    .split(/s+/)
+    .map((value) => value.trim())
+    .filter((value) => /^[A-Za-z_-][A-Za-z0-9_-]*$/.test(value));
+}
+
+function collectEmittedClassTokens(text, file) {
+  const tokens = [];
+  const patterns = [
+    /classs*=s*["'`]([^"'`]+)["'`]/g,
+    /classNames*=s*["'`]([^"'`]+)["'`]/g,
+    /(?:const|let|var)s+[A-Za-z0-9_]*Class(?:Name|Names)?s*=s*["'`]([^"'`]+)["'`]/g,
+  ];
+
+  for (const pattern of patterns) {
+    let match;
+    while ((match = pattern.exec(text)) !== null) {
+      for (const className of collectClassNamesFromAttributeValue(match[1])) {
+        addClassToken(tokens, className, file, lineForIndex(text, match.index));
+      }
+    }
+  }
+
+  return tokens;
+}
+
+function extractTypeScriptCssFragments(text) {
+  const fragments = [];
+  const cssAssignmentPattern =
+    /(?:const|let|var)s+[A-Za-z0-9_]*(?:Css|CSS|Styles|Style)[A-Za-z0-9_]*s*=s*(`[sS]*?`|'[sS]*?'|"[sS]*?")/g;
+  let assignmentMatch;
+
+  while ((assignmentMatch = cssAssignmentPattern.exec(text)) !== null) {
+    const literal = assignmentMatch[1];
+    const quote = literal[0];
+    const body = literal.slice(1, -1);
+    const decoded = quote === '`' ? body : body.replace(/\n/g, '
+');
+
+    if (decoded.includes('{') && /.[A-Za-z_-][A-Za-z0-9_-]*s*[{,:#.s]/.test(decoded)) {
+      fragments.push({
+        text: decoded,
+        startIndex: assignmentMatch.index + assignmentMatch[0].indexOf(literal) + 1,
+      });
+    }
+  }
+
+  return fragments;
+}
+
+function collectCssClassTokens(text, file, baseIndex = 0) {
+  const tokens = [];
+  const cleanText = stripCssComments(text);
+  const pattern = /.([A-Za-z_-][A-Za-z0-9_-]*)/g;
+  let match;
+
+  while ((match = pattern.exec(cleanText)) !== null) {
+    addClassToken(tokens, match[1], file, lineForIndex(text, match.index + baseIndex));
+  }
+
+  return tokens;
+}
+
+function collectClassLikeTokens(filePath) {
+  const file = normalizePath(filePath);
+  const extension = path.extname(filePath);
+  const text = fs.readFileSync(filePath, 'utf8');
+  const tokens = [...collectEmittedClassTokens(text, file)];
+
+  if (extension === '.css') {
+    tokens.push(...collectCssClassTokens(text, file));
+  }
+
+  if (extension === '.ts') {
+    for (const fragment of extractTypeScriptCssFragments(text)) {
+      tokens.push(...collectCssClassTokens(fragment.text, file, fragment.startIndex));
+    }
+  }
+
+  return tokens;
+}
+
+function collectLeadLedeClassViolations(sourceFiles) {
+  const violations = [];
+
+  for (const filePath of sourceFiles) {
+    for (const token of collectClassLikeTokens(filePath)) {
+      if (!LEAD_LEDE_SEGMENT_PATTERN.test(token.className)) {
+        continue;
+      }
+
+      const violation = {
+        ruleId: LEAD_LEDE_RULE_GROUP.id,
+        ruleGroup: `${LEAD_LEDE_RULE_GROUP.id}. ${LEAD_LEDE_RULE_GROUP.name}`,
+        file: token.file,
+        line: token.line,
+        match: token.className,
+      };
+
+      if (!isAllowed(violation)) {
+        violations.push(violation);
+      }
+    }
+  }
+
+  return violations;
 }
 
 function collectSourceViolations(sourceFiles) {
@@ -251,7 +385,7 @@ function collectApplyScriptViolations() {
 
   const entries = fs
     .readdirSync(toolsDir, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && /^apply-.*\.mjs$/.test(entry.name))
+    .filter((entry) => entry.isFile() && /^apply-.*.mjs$/.test(entry.name))
     .sort((a, b) => a.name.localeCompare(b.name));
 
   const violations = [];
@@ -283,6 +417,7 @@ function main() {
   const sourceFiles = allFiles.filter(isShippedSourceFile);
   const violations = [
     ...collectSourceViolations(sourceFiles),
+    ...collectLeadLedeClassViolations(sourceFiles),
     ...collectApplyScriptViolations(),
   ];
 
@@ -299,7 +434,7 @@ function main() {
 
   console.log('PASS check-ui-doctrine');
   console.log(`Files scanned: ${sourceFiles.length}`);
-  console.log(`Rule groups checked: ${RULE_GROUPS.length + 1}`);
+  console.log(`Rule groups checked: ${RULE_GROUPS.length + 2}`);
 }
 
 main();
