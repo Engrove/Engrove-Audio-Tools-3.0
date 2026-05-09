@@ -136,6 +136,22 @@ function lineForIndex(text, index) {
   return text.slice(0, index).split(/\r?\n/).length;
 }
 
+function addClassLocation(classes, className, file, line) {
+  if (!/^[A-Za-z_-][A-Za-z0-9_-]*$/.test(className)) {
+    return;
+  }
+
+  if (!classes.has(className)) {
+    classes.set(className, []);
+  }
+
+  const locations = classes.get(className);
+  const duplicate = locations.some((location) => location.file === file && location.line === line);
+  if (!duplicate) {
+    locations.push({ file, line });
+  }
+}
+
 function collectGlobalTokenDefinitions(tokensPath) {
   const definitions = new Set();
 
@@ -204,7 +220,39 @@ function collectUsedEaTokens(sourceFiles) {
   return used;
 }
 
-function collectCssClassSelectors(cssFiles) {
+function extractTypeScriptCssFragments(text) {
+  const fragments = [];
+  const runtimeCssPattern =
+    /\b(?:const|let|var)\s+[A-Za-z0-9_]*(?:Css|CSS|Styles|Style)[A-Za-z0-9_]*\s*=\s*(`[\s\S]*?`|'[\s\S]*?'|"[\s\S]*?")/g;
+  let assignmentMatch;
+
+  while ((assignmentMatch = runtimeCssPattern.exec(text)) !== null) {
+    const literal = assignmentMatch[1];
+    const quote = literal[0];
+    const body = literal.slice(1, -1);
+    const decoded = quote === '`' ? body : body.replace(/\\n/g, '\n');
+    if (decoded.includes('{') && /\.[A-Za-z_-][A-Za-z0-9_-]*\s*[{,:#.\s]/.test(decoded)) {
+      fragments.push({
+        text: decoded,
+        startIndex: assignmentMatch.index + assignmentMatch[0].indexOf(literal) + 1,
+      });
+    }
+  }
+
+  return fragments;
+}
+
+function collectClassesFromCssText(text, relPath, classes, baseIndex = 0) {
+  const cleanText = stripCssComments(text);
+  const pattern = /\.([A-Za-z_-][A-Za-z0-9_-]*)/g;
+  let match;
+
+  while ((match = pattern.exec(cleanText)) !== null) {
+    addClassLocation(classes, match[1], relPath, lineForIndex(text, match.index + baseIndex));
+  }
+}
+
+function collectCssClassSelectors(cssFiles, sourceFiles) {
   const classes = new Map();
 
   for (const filePath of cssFiles) {
@@ -213,23 +261,29 @@ function collectCssClassSelectors(cssFiles) {
     }
 
     const relPath = normalizePath(filePath);
-    const text = stripCssComments(readText(filePath));
-    const pattern = /\.([A-Za-z_-][A-Za-z0-9_-]*)/g;
-    let match;
+    collectClassesFromCssText(readText(filePath), relPath, classes);
+  }
 
-    while ((match = pattern.exec(text)) !== null) {
-      const className = match[1];
-      if (!classes.has(className)) {
-        classes.set(className, []);
-      }
-      classes.get(className).push({
-        file: relPath,
-        line: lineForIndex(text, match.index),
-      });
+  for (const filePath of sourceFiles) {
+    if (path.extname(filePath) !== '.ts') {
+      continue;
+    }
+
+    const relPath = normalizePath(filePath);
+    const text = readText(filePath);
+    for (const fragment of extractTypeScriptCssFragments(text)) {
+      collectClassesFromCssText(fragment.text, relPath, classes, fragment.startIndex);
     }
   }
 
   return classes;
+}
+
+function collectClassNamesFromAttributeValue(attrValue) {
+  return attrValue
+    .split(/\s+/)
+    .map((value) => value.trim())
+    .filter((value) => /^[A-Za-z_-][A-Za-z0-9_-]*$/.test(value));
 }
 
 function collectEmittedClasses(sourceFiles) {
@@ -238,24 +292,18 @@ function collectEmittedClasses(sourceFiles) {
   for (const filePath of sourceFiles) {
     const relPath = normalizePath(filePath);
     const text = readText(filePath);
-    const classAttrPattern = /\bclass\s*=\s*["'`]([^"'`]+)["'`]/g;
-    let match;
+    const patterns = [
+      /\bclass\s*=\s*["'`]([^"'`]+)["'`]/g,
+      /\bclassName\s*=\s*["'`]([^"'`]+)["'`]/g,
+      /\b(?:const|let|var)\s+[A-Za-z0-9_]*Class(?:Name|Names)?\s*=\s*["'`]([^"'`]+)["'`]/g,
+    ];
 
-    while ((match = classAttrPattern.exec(text)) !== null) {
-      const attrValue = match[1];
-      for (const rawName of attrValue.split(/\s+/)) {
-        const className = rawName.trim();
-        if (!/^[A-Za-z_-][A-Za-z0-9_-]*$/.test(className)) {
-          continue;
+    for (const pattern of patterns) {
+      let match;
+      while ((match = pattern.exec(text)) !== null) {
+        for (const className of collectClassNamesFromAttributeValue(match[1])) {
+          addClassLocation(classes, className, relPath, lineForIndex(text, match.index));
         }
-
-        if (!classes.has(className)) {
-          classes.set(className, []);
-        }
-        classes.get(className).push({
-          file: relPath,
-          line: lineForIndex(text, match.index),
-        });
       }
     }
   }
@@ -429,7 +477,7 @@ function reportDuplicateCssSelectors(cssFiles, warnings) {
 }
 
 function reportClassContractDrift(sourceFiles, cssFiles, warnings) {
-  const styled = collectCssClassSelectors(cssFiles);
+  const styled = collectCssClassSelectors(cssFiles, sourceFiles);
   const emitted = collectEmittedClasses(sourceFiles);
 
   let styledMissingCount = 0;
@@ -588,11 +636,6 @@ function main() {
   reportClassContractDrift(sourceFiles, cssAuditFiles, warnings);
   reportRouteCssGlobalSelectors(warnings);
   reportDoctrineCandidates(cssAuditFiles, sourceFiles, warnings);
-
-  const counts = new Map();
-  for (const group of groups) {
-    counts.set(group.id, warnings.filter((warning) => warning.group === group.id).length);
-  }
 
   if (strictMode && warnings.length > 0) {
     console.log('FAIL check-token-layout-drift');
