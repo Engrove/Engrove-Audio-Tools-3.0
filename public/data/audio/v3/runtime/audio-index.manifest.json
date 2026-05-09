@@ -1,11 +1,11 @@
 {
   "generated_at": "2026-05-07T14:42:20.819Z",
   "outputs": [
-        {
+    {
       "path": "/data/audio/v3/runtime/cartridges.index.json",
       "records": 2973,
-      "size_bytes": 1140717,
-      "sha256": "d1b6600b9afaf3a99a4780ea9da8f4826bba1d95ecd571052e15a40582670c28"
+      "size_bytes": 1671953,
+      "sha256": "1587fae418491095774caad45ca2cc5b998d24bc8b7e691e115ab86d592c0342"
     },
     {
       "path": "/data/audio/v3/runtime/tonearms.index.json",
