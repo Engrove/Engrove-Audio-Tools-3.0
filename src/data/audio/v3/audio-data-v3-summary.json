@@ -1,82 +1,81 @@
 ﻿{
-    "generated_at":  "2026-05-07T07:21:17.9576043Z",
-    "source":  {
-                   "repo":  "Engrove/Engrove-Audio-Tools-2.0",
-                   "ref":  "main",
-                   "legacy_dir":  "src/data/legacy/engrove-2.0/public/data"
-               },
-    "note":  "3.0 schemas are intentionally deferred until after converted data review.",
-    "inspected_structure":  {
-                                "cartridges_shape":  "row_array",
-                                "tonearms_shape":  "row_array"
-                            },
-    "cartridges":  {
-                       "input_records":  2973,
-                       "output_records":  2973,
-                       "match_ready_records":  1510,
-                       "by_type":  {
-                                       "MM":  220,
-                                       "MC":  217,
-                                       "MI":  54,
-                                       "Strain Gauge":  4,
-                                       "High Output Moving Coil":  111,
-                                       "Moving Coil":  659,
-                                       "Moving Magnet":  1052,
-                                       "Moving Iron":  194,
-                                       "unknown":  138,
-                                       "Ceramic":  123,
-                                       "Induced Magnet":  44,
-                                       "Variable Reluctance":  24,
-                                       "Crystal":  76,
-                                       "Dynamic Coil":  8,
-                                       "Electret Condenser":  23,
-                                       "Condensor":  17,
-                                       "Ribbon":  3,
-                                       "Photoelectric":  6
-                                   },
-                       "compliance_10hz_source":  {
-                                                      "provided":  1564,
-                                                      "estimated":  78,
-                                                      "missing":  1331
-                                                  }
-                   },
-    "tonearms":  {
-                     "input_records":  1588,
-                     "output_records":  1588,
-                     "match_ready_records":  639,
-                     "by_headshell_connector":  {
-                                                    "integrated":  348,
-                                                    "unknown":  1010,
-                                                    "sme_universal":  184,
-                                                    "proprietary":  44,
-                                                    "p_mount_t4p":  2
-                                                }
-                 },
-    "outputs":  [
-                    {
-                        "path":  "src/data/audio/v3/cartridges.v3.json",
-                        "records":  2973,
-                        "size_bytes":  4733280,
-                        "sha256":  "3aae5c91cdbeb83baa92dac8cbad47143763c24e6f447d14bf255efc1240984c"
-                    },
-                    {
-                        "path":  "src/data/audio/v3/tonearms.v3.json",
-                        "records":  1588,
-                        "size_bytes":  1757093,
-                        "sha256":  "b61b4b0aa403905faca3c14f7b435e78aeb3ed350804e454ace8c8d7fae7401b"
-                    },
-                    {
-                        "path":  "src/data/audio/v3/runtime/cartridges.index.json",
-                        "records":  2973,
-                        "size_bytes":  1723325,
-                        "sha256":  "9a827205aa452be3f12918f9386e99796b664bd318e0057a13370e11a2b07c4c"
-                    },
-                    {
-                        "path":  "src/data/audio/v3/runtime/tonearms.index.json",
-                        "records":  1588,
-                        "size_bytes":  513768,
-                        "sha256":  "148438e455f7711f80948337cdf3e0596f67ab167b6a5ef66eca8bc2a8a2d355"
-                    }
-                ]
+  "generated_at": "2026-05-07T07:21:17.9576043Z",
+  "source": {
+    "repo": "Engrove/Engrove-Audio-Tools-2.0",
+    "ref": "main",
+    "legacy_dir": "src/data/legacy/engrove-2.0/public/data"
+  },
+  "note": "3.0 schemas are intentionally deferred until after converted data review.",
+  "inspected_structure": {
+    "cartridges_shape": "row_array",
+    "tonearms_shape": "row_array"
+  },
+  "cartridges": {
+    "input_records": 2973,
+    "output_records": 2973,
+    "match_ready_records": 1510,
+    "by_type": {
+      "MM": 220,
+      "MC": 217,
+      "MI": 54,
+      "Strain Gauge": 4,
+      "High Output Moving Coil": 111,
+      "Moving Coil": 659,
+      "Moving Magnet": 1052,
+      "Moving Iron": 194,
+      "unknown": 138,
+      "Ceramic": 123,
+      "Induced Magnet": 44,
+      "Variable Reluctance": 24,
+      "Crystal": 76,
+      "Dynamic Coil": 8,
+      "Electret Condenser": 23,
+      "Condensor": 17,
+      "Ribbon": 3,
+      "Photoelectric": 6
+    },
+    "compliance_10hz_source": {
+      "provided": 1563,
+      "estimated": 78,
+      "missing": 1332
+    }
+  },
+  "tonearms": {
+    "input_records": 1588,
+    "output_records": 1588,
+    "match_ready_records": 639,
+    "by_headshell_connector": {
+      "integrated": 348,
+      "unknown": 1010,
+      "sme_universal": 184,
+      "proprietary": 44,
+      "p_mount_t4p": 2
+    }
+  },
+  "outputs": [
+    {
+      "path": "src/data/audio/v3/cartridges.v3.json",
+      "records": 2973,
+      "size_bytes": 4616595,
+      "sha256": "aaccc507e548adceee591fca5435297646a2133aab70bfc4ea5cc48b5591775c"
+    },
+    {
+      "path": "src/data/audio/v3/tonearms.v3.json",
+      "records": 1588,
+      "size_bytes": 1757093,
+      "sha256": "b61b4b0aa403905faca3c14f7b435e78aeb3ed350804e454ace8c8d7fae7401b"
+    },
+    {
+      "path": "src/data/audio/v3/runtime/cartridges.index.json",
+      "records": 2973,
+      "size_bytes": 1671956,
+      "sha256": "ae00e7a228e393bc8c277a3c4c7ec5935b8c1a73956d000e9886053c64c268bc"
+    },
+    {
+      "path": "src/data/audio/v3/runtime/tonearms.index.json",
+      "records": 1588,
+      "size_bytes": 513768,
+      "sha256": "148438e455f7711f80948337cdf3e0596f67ab167b6a5ef66eca8bc2a8a2d355"
+    }
+  ]
 }
-

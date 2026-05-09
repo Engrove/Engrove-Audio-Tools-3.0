@@ -95,6 +95,15 @@ function displayName(record) {
     : 'unnamed record';
 }
 
+const integratedCartridgeMountingStyles = new Set([
+  'integrated_headshell',
+  'integrated_shell',
+]);
+
+function isIntegratedShellCartridge(record) {
+  return integratedCartridgeMountingStyles.has(record?.mounting_style);
+}
+
 function findForbiddenKeys(value, location) {
   if (Array.isArray(value)) {
     value.forEach((item, index) => findForbiddenKeys(item, `${location}[${index}]`));
@@ -144,10 +153,14 @@ function validateCartridge(record, index) {
     }
   }
 
+  const highMassWithoutIntegratedModel =
+    isNumber(record.mass_g) &&
+    record.mass_g > limits.maxReasonableCartridgeMassG &&
+    !isIntegratedShellCartridge(record);
+
   if (
     isNumber(record.mass_g) &&
-    (record.mass_g < limits.minReasonableCartridgeMassG ||
-      record.mass_g > limits.maxReasonableCartridgeMassG)
+    (record.mass_g < limits.minReasonableCartridgeMassG || highMassWithoutIntegratedModel)
   ) {
     add('warning', 'cartridge.mass_range', `${location}.mass_g`, `${displayName(record)} mass_g = ${record.mass_g}`);
   }

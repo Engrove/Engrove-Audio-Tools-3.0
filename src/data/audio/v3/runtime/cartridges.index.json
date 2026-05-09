@@ -24616,20 +24616,21 @@
         "match_ready":  true
     },
     {
-        "id":  "cartridge:1184:ikeda-9-musa",
-        "display_name":  "Ikeda 9 MUSA",
-        "manufacturer":  "Ikeda",
-        "model":  "9 MUSA",
-        "type":  "Moving Coil",
-        "mass_g":  43,
-        "compliance_10hz_cu":  6,
-        "compliance_10hz_source":  "provided",
-        "tracking_force_g":  {
-                                 "min":  1.75,
-                                 "max":  2,
-                                 "recommended":  1.875
-                             },
-        "match_ready":  true
+        "id": "cartridge:1184:ikeda-9-musa",
+        "display_name": "Ikeda 9 MUSA",
+        "manufacturer": "Ikeda",
+        "model": "9 MUSA",
+        "type": "Moving Coil",
+        "mass_g": 43,
+        "mounting_style": "integrated_headshell",
+        "compliance_10hz_cu": 6,
+        "compliance_10hz_source": "provided",
+        "tracking_force_g": {
+            "min": 1.75,
+            "max": 2,
+            "recommended": 1.875
+        },
+        "match_ready": true
     },
     {
         "id":  "cartridge:1185:ikeda-9-omega",
@@ -24664,20 +24665,21 @@
         "match_ready":  true
     },
     {
-        "id":  "cartridge:1187:ikeda-9-supreme",
-        "display_name":  "Ikeda 9 Supreme",
-        "manufacturer":  "Ikeda",
-        "model":  "9 Supreme",
-        "type":  "Moving Coil",
-        "mass_g":  47,
-        "compliance_10hz_cu":  6,
-        "compliance_10hz_source":  "provided",
-        "tracking_force_g":  {
-                                 "min":  1.5,
-                                 "max":  1.75,
-                                 "recommended":  1.625
-                             },
-        "match_ready":  true
+        "id": "cartridge:1187:ikeda-9-supreme",
+        "display_name": "Ikeda 9 Supreme",
+        "manufacturer": "Ikeda",
+        "model": "9 Supreme",
+        "type": "Moving Coil",
+        "mass_g": 47,
+        "mounting_style": "integrated_headshell",
+        "compliance_10hz_cu": 6,
+        "compliance_10hz_source": "provided",
+        "tracking_force_g": {
+            "min": 1.5,
+            "max": 1.75,
+            "recommended": 1.625
+        },
+        "match_ready": true
     },
     {
         "id":  "cartridge:1188:ikeda-9b",
@@ -37893,36 +37895,35 @@
         "match_ready":  false
     },
     {
-        "id":  "cartridge:2094:general-electric-1rm6c",
-        "display_name":  "General Electric 1RM6C",
-        "manufacturer":  "General Electric",
-        "model":  "1RM6C",
-        "type":  "Variable Reluctance",
-        "compliance_10hz_cu":  0.87,
-        "compliance_10hz_source":  "provided",
-        "tracking_force_g":  {
-                                 "min":  0.75,
-                                 "max":  1.25,
-                                 "recommended":  1
-                             },
-        "match_ready":  false,
-        "tags":  [
-                     {
-                         "Length":  7
-                     },
-                     {
-                         "Length":  8
-                     },
-                     {
-                         "Length":  5
-                     },
-                     {
-                         "Length":  7
-                     },
-                     {
-                         "Length":  9
-                     }
-                 ]
+        "id": "cartridge:2094:general-electric-1rm6c",
+        "display_name": "General Electric 1RM6C",
+        "manufacturer": "General Electric",
+        "model": "1RM6C",
+        "type": "Variable Reluctance",
+        "compliance_10hz_source": "missing",
+        "tracking_force_g": {
+            "min": 21.26,
+            "max": 35.44,
+            "recommended": 28.35
+        },
+        "match_ready": false,
+        "tags": [
+            {
+                "Length": 7
+            },
+            {
+                "Length": 8
+            },
+            {
+                "Length": 5
+            },
+            {
+                "Length": 7
+            },
+            {
+                "Length": 9
+            }
+        ]
     },
     {
         "id":  "cartridge:2095:recoton-um-500-a",
