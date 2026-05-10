@@ -208,8 +208,7 @@
   gap: var(--ea-space-3);
 }
 
-.tm-lab-math-fields,
-.tm-lab-form__fields {
+.tm-lab-math-fields {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 18rem));
   gap: var(--ea-space-3);
@@ -603,7 +602,6 @@
 
   .tm-runtime-picker-controls__grid,
   .tm-lab-math-fields,
-  .tm-lab-form__fields,
   .tm-lab-setup-context,
   .tm-lab-result__summary,
   .tm-lab-result__details dl {
@@ -769,8 +767,7 @@
   grid-column: 2;
 }
 
-.tm-lab-math-fields,
-.tm-lab-form__fields {
+.tm-lab-math-fields {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 18rem));
   gap: var(--ea-space-3);
@@ -828,7 +825,6 @@
 
   .tm-runtime-picker-controls__grid,
   .tm-lab-math-fields,
-  .tm-lab-form__fields,
   .tm-lab-setup-context {
     grid-template-columns: 1fr;
   }
