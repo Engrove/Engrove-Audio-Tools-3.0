@@ -534,6 +534,18 @@ function hasDeclarationPropertyOverlap(left, right) {
   return false;
 }
 
+function overlappingDeclarationProperties(left, priorEntries) {
+  const overlaps = new Set();
+
+  for (const property of left) {
+    if (priorEntries.some((entry) => entry.declarationProperties.has(property))) {
+      overlaps.add(property);
+    }
+  }
+
+  return [...overlaps].sort((a, b) => a.localeCompare(b));
+}
+
 function reportDuplicateCssSelectors(cssFiles, warnings, infos) {
   for (const filePath of cssFiles) {
     if (!pathExists(filePath)) {
@@ -583,12 +595,17 @@ function reportDuplicateCssSelectors(cssFiles, warnings, infos) {
             || priorEntries.some((entry) => hasDeclarationPropertyOverlap(declarationProperties, entry.declarationProperties));
 
           if (overlapsPriorDeclaration) {
+            const overlappingDeclarationPropertiesList = overlappingDeclarationProperties(declarationProperties, priorEntries);
+            const duplicateOverlapDetail = overlappingDeclarationPropertiesList.length > 0
+              ? '; overlapping declarations: ' + overlappingDeclarationPropertiesList.join(', ')
+              : '; overlapping declarations: unknown';
+
             addWarning(
               warnings,
               'duplicate-css-selectors',
               relPath,
               line,
-              normalized + ' duplicates selector first seen at line ' + first.line + contextSuffix,
+              normalized + ' duplicates selector first seen at line ' + first.line + contextSuffix + duplicateOverlapDetail,
             );
           } else {
             addInfo(
