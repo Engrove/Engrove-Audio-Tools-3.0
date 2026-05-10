@@ -56,6 +56,7 @@ const groups = [
 
 const infoGroups = [
   { id: 'shared-foundation-class-inventory', title: 'Shared foundation styled-only classes' },
+  { id: 'additive-duplicate-selector-reuses', title: 'Additive duplicate selector reuses' },
 ];
 
 function normalizePath(filePath) {
@@ -487,7 +488,53 @@ function isInsideKeyframes(stack) {
   return stack.some((item) => item.isAtRule && /^@(?:-[A-Za-z]+-)?keyframes\b/u.test(item.prelude));
 }
 
-function reportDuplicateCssSelectors(cssFiles, warnings) {
+function findClosingBraceIndex(text, openBraceIndex) {
+  let depth = 0;
+
+  for (let index = openBraceIndex; index < text.length; index += 1) {
+    const char = text[index];
+    if (char === '{') {
+      depth += 1;
+    } else if (char === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        return index;
+      }
+    }
+  }
+
+  return -1;
+}
+
+function declarationPropertiesForBlock(text, openBraceIndex) {
+  const closeBraceIndex = findClosingBraceIndex(text, openBraceIndex);
+  if (closeBraceIndex === -1) {
+    return new Set();
+  }
+
+  const body = text.slice(openBraceIndex + 1, closeBraceIndex);
+  const properties = new Set();
+  const declarationPattern = /(?:^|[;\n\r])\s*((?:--)?[A-Za-z_][\w-]*)\s*:/gu;
+  let match;
+
+  while ((match = declarationPattern.exec(body)) !== null) {
+    properties.add(match[1].toLowerCase());
+  }
+
+  return properties;
+}
+
+function hasDeclarationPropertyOverlap(left, right) {
+  for (const property of left) {
+    if (right.has(property)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function reportDuplicateCssSelectors(cssFiles, warnings, infos) {
   for (const filePath of cssFiles) {
     if (!pathExists(filePath)) {
       continue;
@@ -513,6 +560,8 @@ function reportDuplicateCssSelectors(cssFiles, warnings) {
       const contextKey = atRuleContextKey(stack);
 
       if (!isAtRule && !isInsideKeyframes(stack)) {
+        const declarationProperties = declarationPropertiesForBlock(text, match.index);
+
         for (const selector of prelude.split(',')) {
           const normalized = normalizeSelector(selector);
           if (!normalized || normalized.startsWith('@')) {
@@ -521,20 +570,37 @@ function reportDuplicateCssSelectors(cssFiles, warnings) {
 
           const duplicateKey = contextKey + '\n' + normalized;
           const line = lineForIndex(text, match.index);
+          const current = { line, context: contextKey, declarationProperties };
           if (!seen.has(duplicateKey)) {
-            seen.set(duplicateKey, { line, context: contextKey });
+            seen.set(duplicateKey, [current]);
             continue;
           }
 
-          const first = seen.get(duplicateKey);
+          const priorEntries = seen.get(duplicateKey);
+          const first = priorEntries[0];
           const contextSuffix = first.context === '(root)' ? '' : ' in ' + first.context;
-          addWarning(
-            warnings,
-            'duplicate-css-selectors',
-            relPath,
-            line,
-            normalized + ' duplicates selector first seen at line ' + first.line + contextSuffix,
-          );
+          const overlapsPriorDeclaration = declarationProperties.size === 0
+            || priorEntries.some((entry) => hasDeclarationPropertyOverlap(declarationProperties, entry.declarationProperties));
+
+          if (overlapsPriorDeclaration) {
+            addWarning(
+              warnings,
+              'duplicate-css-selectors',
+              relPath,
+              line,
+              normalized + ' duplicates selector first seen at line ' + first.line + contextSuffix,
+            );
+          } else {
+            addInfo(
+              infos,
+              'additive-duplicate-selector-reuses',
+              relPath,
+              line,
+              normalized + ' reuses selector first seen at line ' + first.line + ' with no overlapping declaration properties' + contextSuffix,
+            );
+          }
+
+          priorEntries.push(current);
         }
       }
 
@@ -727,7 +793,7 @@ function main() {
   reportEaFallbackPatterns(sourceFiles, warnings);
   reportMissingGlobalTokens(sourceFiles, warnings);
   reportModuleLocalTokenDefinitions(sourceFiles, warnings);
-  reportDuplicateCssSelectors(cssAuditFiles, warnings);
+  reportDuplicateCssSelectors(cssAuditFiles, warnings, infos);
   reportClassContractDrift(sourceFiles, cssAuditFiles, warnings, infos);
   reportRouteCssGlobalSelectors(warnings);
   reportDoctrineCandidates(cssAuditFiles, sourceFiles, warnings);
