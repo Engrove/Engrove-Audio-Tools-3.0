@@ -17,6 +17,30 @@ const CSS_AUDIT_FILES = [
 ];
 const DYNAMIC_EA_FALLBACK_ALLOWLIST = new Set(['--ea-scroll-progress']);
 const MAX_CLASS_DRIFT_ITEMS_PER_SIDE = 80;
+const S12A_SHARED_FOUNDATION_STYLED_ONLY_CLASSES = new Map([
+  ['compact-theme', 'src/shared/ui/styles/tokens.css'],
+  ['ea-app-shell', 'src/shared/ui/styles/layout.css'],
+  ['ea-brand', 'src/shared/ui/styles/layout.css'],
+  ['ea-brand__mark', 'src/shared/ui/styles/layout.css'],
+  ['ea-card', 'src/shared/ui/styles/layout.css'],
+  ['ea-card__body', 'src/shared/ui/styles/layout.css'],
+  ['ea-cluster', 'src/shared/ui/styles/layout.css'],
+  ['ea-header', 'src/shared/ui/styles/layout.css'],
+  ['ea-header__inner', 'src/shared/ui/styles/layout.css'],
+  ['ea-kicker', 'src/shared/ui/styles/layout.css'],
+  ['ea-module-grid', 'src/shared/ui/styles/layout.css'],
+  ['ea-muted', 'src/shared/ui/styles/layout.css'],
+  ['ea-panel', 'src/shared/ui/styles/layout.css'],
+  ['ea-split', 'src/shared/ui/styles/layout.css'],
+  ['ea-stack', 'src/shared/ui/styles/layout.css'],
+  ['ea-badge', 'src/shared/ui/styles/components.css'],
+  ['ea-badge--accent', 'src/shared/ui/styles/components.css'],
+  ['ea-button', 'src/shared/ui/styles/components.css'],
+  ['ea-button--primary', 'src/shared/ui/styles/components.css'],
+  ['ea-button--secondary', 'src/shared/ui/styles/components.css'],
+  ['ea-check-list', 'src/shared/ui/styles/components.css'],
+  ['ea-status-list', 'src/shared/ui/styles/components.css'],
+]);
 
 const groups = [
   { id: 'deprecated-width-token', title: 'Deprecated width token' },
@@ -28,6 +52,10 @@ const groups = [
   { id: 'class-contract-drift', title: 'Emitted vs styled class drift' },
   { id: 'route-css-global-selectors', title: 'Global element selectors inside route CSS' },
   { id: 'doctrine-candidates', title: 'Doctrine false-negative candidates' },
+];
+
+const infoGroups = [
+  { id: 'shared-foundation-class-inventory', title: 'Shared foundation styled-only classes' },
 ];
 
 function normalizePath(filePath) {
@@ -126,6 +154,16 @@ function addWarning(warnings, group, file, line, detail) {
     line,
     detail,
   });
+}
+
+function addInfo(infos, group, file, line, detail) {
+  infos.push({ group, file, line, detail });
+}
+
+function getSharedFoundationStyledOnlyFile(className, locations) {
+  const expectedFile = S12A_SHARED_FOUNDATION_STYLED_ONLY_CLASSES.get(className);
+  if (!expectedFile) return null;
+  return locations.some((location) => location.file === expectedFile) ? expectedFile : null;
 }
 
 function stripCssComments(text) {
@@ -508,13 +546,20 @@ function reportDuplicateCssSelectors(cssFiles, warnings) {
   }
 }
 
-function reportClassContractDrift(sourceFiles, cssFiles, warnings) {
+function reportClassContractDrift(sourceFiles, cssFiles, warnings, infos) {
   const styled = collectCssClassSelectors(cssFiles, sourceFiles);
   const emitted = collectEmittedClasses(sourceFiles);
 
   let styledMissingCount = 0;
   for (const [className, locations] of [...styled.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
     if (emitted.has(className)) {
+      continue;
+    }
+
+    const sharedFoundationFile = getSharedFoundationStyledOnlyFile(className, locations);
+    if (sharedFoundationFile !== null) {
+      const first = locations.find((location) => location.file === sharedFoundationFile) ?? locations[0];
+      addInfo(infos, 'shared-foundation-class-inventory', first.file, first.line, '.' + className + ' styled foundation class not found in emitted source');
       continue;
     }
 
@@ -653,11 +698,29 @@ function printGroupedWarnings(warnings) {
   }
 }
 
+function printGroupedInfos(infos) {
+  const byGroup = new Map();
+  for (const info of infos) {
+    if (!byGroup.has(info.group)) byGroup.set(info.group, []);
+    byGroup.get(info.group).push(info);
+  }
+  for (const group of infoGroups) {
+    const items = byGroup.get(group.id) ?? [];
+    console.log('');
+    console.log('[' + group.title + '] ' + items.length);
+    for (const item of items) {
+      const line = item.line > 0 ? ':' + item.line : '';
+      console.log('- ' + item.file + line + ' | ' + item.detail);
+    }
+  }
+}
+
 function main() {
   const allFiles = walkFiles(repoRoot).sort((a, b) => normalizePath(a).localeCompare(normalizePath(b)));
   const sourceFiles = allFiles.filter(isShippedSourceFile);
   const cssAuditFiles = CSS_AUDIT_FILES.map((relPath) => path.join(repoRoot, relPath));
   const warnings = [];
+  const infos = [];
 
   reportDeprecatedWidthToken(sourceFiles, warnings);
   reportLegacyFallbackPatterns(sourceFiles, warnings);
@@ -665,7 +728,7 @@ function main() {
   reportMissingGlobalTokens(sourceFiles, warnings);
   reportModuleLocalTokenDefinitions(sourceFiles, warnings);
   reportDuplicateCssSelectors(cssAuditFiles, warnings);
-  reportClassContractDrift(sourceFiles, cssAuditFiles, warnings);
+  reportClassContractDrift(sourceFiles, cssAuditFiles, warnings, infos);
   reportRouteCssGlobalSelectors(warnings);
   reportDoctrineCandidates(cssAuditFiles, sourceFiles, warnings);
 
@@ -678,8 +741,10 @@ function main() {
   console.log('Mode: ' + (strictMode ? 'strict' : 'normal'));
   console.log('Files scanned: ' + sourceFiles.length);
   console.log('Report groups checked: ' + groups.length);
+  console.log('Informational groups checked: ' + infoGroups.length);
   console.log('Warnings: ' + warnings.length);
   printGroupedWarnings(warnings);
+  printGroupedInfos(infos);
 
   if (strictMode && warnings.length > 0) {
     process.exitCode = 1;
