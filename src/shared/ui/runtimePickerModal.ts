@@ -60,8 +60,8 @@ const runtimePickerCss = `
   grid-template-rows: auto 1fr auto;
   border: 1px solid rgb(148 163 184 / 0.28);
   border-radius: 1.25rem;
-  background: var(--color-surface, #101216);
-  color: var(--color-text, #f8fafc);
+  background: #101216;
+  color: #f8fafc;
   box-shadow: 0 24px 80px rgb(0 0 0 / 0.44);
 }
 
@@ -150,7 +150,7 @@ const runtimePickerCss = `
 
 .runtime-picker-count {
   margin: 0 0 0.75rem;
-  color: var(--color-muted, #cbd5e1);
+  color: #cbd5e1;
   font-size: 0.92rem;
 }
 
@@ -184,7 +184,7 @@ const runtimePickerCss = `
 .runtime-picker-result-detail,
 .runtime-picker-preview-detail,
 .runtime-picker-empty {
-  color: var(--color-muted, #cbd5e1);
+  color: #cbd5e1;
   font-size: 0.9rem;
 }
 
@@ -196,7 +196,7 @@ const runtimePickerCss = `
 }
 
 .runtime-picker-preview-list dt {
-  color: var(--color-muted, #cbd5e1);
+  color: #cbd5e1;
 }
 
 .runtime-picker-preview-list dd {
@@ -208,7 +208,7 @@ const runtimePickerCss = `
   border-left: 3px solid rgb(20 184 166 / 0.8);
   padding: 0.75rem;
   background: rgb(2 6 23 / 0.34);
-  color: var(--color-muted, #cbd5e1);
+  color: #cbd5e1;
 }
 
 .runtime-picker-cancel,
