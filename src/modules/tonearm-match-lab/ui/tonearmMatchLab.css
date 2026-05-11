@@ -567,6 +567,7 @@
 
   .tm-runtime-picker-control__button {
     inline-size: 100%;
+    min-block-size: 2.75rem;
   }
 
   .tm-lab-result__badge {
@@ -758,10 +759,6 @@
     grid-template-columns: 1fr;
   }
 
-  .tm-lab-output {
-    position: static;
-  }
-
   .tm-runtime-picker-controls {
     grid-template-columns: 1fr;
   }
@@ -776,19 +773,5 @@
     inline-size: min(calc(100% - var(--ea-space-3) * 2), var(--ea-size-workbench-max));
   }
 
-  .tm-runtime-picker-controls__grid,
-.tm-lab-math-fields,
-.tm-lab-setup-context {
-    grid-template-columns: 1fr;
-  }
-
-  .tm-runtime-picker-control {
-    grid-template-columns: 1fr;
-  }
-
-  .tm-runtime-picker-control__button {
-    inline-size: 100%;
-    min-block-size: 2.75rem;
-  }
 }
 /* tonearm-density-pass-2b:end */
