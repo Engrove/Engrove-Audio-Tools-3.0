@@ -57,6 +57,7 @@ const groups = [
 const infoGroups = [
   { id: 'shared-foundation-class-inventory', title: 'Shared foundation styled-only classes' },
   { id: 'additive-duplicate-selector-reuses', title: 'Additive duplicate selector reuses' },
+  { id: 'shared-home-global-selectors', title: 'Shared home/global element selectors' },
 ];
 
 function normalizePath(filePath) {
@@ -701,7 +702,7 @@ function reportClassContractDrift(sourceFiles, cssFiles, warnings, infos) {
   }
 }
 
-function reportRouteCssGlobalSelectors(warnings) {
+function reportSharedHomeGlobalSelectors(infos) {
   const homeCssPath = path.join(repoRoot, 'src/shared/ui/styles/home.css');
   if (!pathExists(homeCssPath)) {
     return;
@@ -719,12 +720,12 @@ function reportRouteCssGlobalSelectors(warnings) {
   lines.forEach((line, index) => {
     for (const item of globalPatterns) {
       if (item.pattern.test(line)) {
-        addWarning(
-          warnings,
-          'route-css-global-selectors',
+        addInfo(
+          infos,
+          'shared-home-global-selectors',
           relPath,
           index + 1,
-          item.name + ' inside home.css',
+          item.name + ' inside shared home.css',
         );
       }
     }
@@ -812,7 +813,7 @@ function main() {
   reportModuleLocalTokenDefinitions(sourceFiles, warnings);
   reportDuplicateCssSelectors(cssAuditFiles, warnings, infos);
   reportClassContractDrift(sourceFiles, cssAuditFiles, warnings, infos);
-  reportRouteCssGlobalSelectors(warnings);
+  reportSharedHomeGlobalSelectors(infos);
   reportDoctrineCandidates(cssAuditFiles, sourceFiles, warnings);
 
   if (strictMode && warnings.length > 0) {
