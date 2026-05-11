@@ -3,166 +3,143 @@ import packageJson from '../../../package.json';
 const repoVersion = typeof packageJson.version === 'string' ? packageJson.version : '0.0.0';
 
 type ToolCard = {
+  id: string;
+  icon: string;
   title: string;
   summary: string;
-  status: string;
-  href: string;
-  actionLabel: string;
+  href?: string;
+  ariaLabel: string;
 };
 
 const tools: readonly ToolCard[] = [
   {
+    id: 'System matching',
+    icon: '∿',
     title: 'Tonearm Match Lab',
-    summary: 'Estimate cartridge-tonearm resonance from effective mass and compliance.',
-    status: 'Available',
+    summary: 'Compute cantilever-arm resonance from cartridge compliance and tonearm effective mass, with provenance tracking and a closed classification vocabulary.',
     href: '/tonearm-calculator',
-    actionLabel: 'Open Tonearm Match Lab',
+    ariaLabel: 'Open Tonearm Match Lab',
+  },
+  {
+    id: 'Conversion',
+    icon: '⇄',
+    title: 'Compliance Estimator',
+    summary: 'Convert manufacturer 100 Hz dynamic compliance to the 10 Hz quasi-static value used in the resonance equation.',
+    ariaLabel: 'Compliance Estimator is not routed in this build',
+  },
+  {
+    id: 'Geometry',
+    icon: '◎',
+    title: 'Tonearm Geometry Lab',
+    summary: 'Compute ideal alignment for a chosen standard and method, then simulate mounting errors against the math. Print-ready arc protractor.',
+    ariaLabel: 'Tonearm Geometry Lab is not routed in this build',
+  },
+  {
+    id: 'VTA / SRA',
+    icon: '⌞',
+    title: 'VTA & SRA Lab',
+    summary: 'Solve stylus rake angle changes from pillar and mat adjustments. Live SVG side profile; inverse solve for a target SRA delta.',
+    ariaLabel: 'VTA and SRA Lab is not routed in this build',
+  },
+  {
+    id: 'Reference data',
+    icon: '▤',
+    title: 'Data Explorer',
+    summary: 'Browse the cartridge and tonearm reference dataset with provenance flags and dataset-version pinning.',
+    ariaLabel: 'Data Explorer is not routed in this build',
   },
 ];
 
-function formatLastUpdatedHint(): string {
-  const modified = new Date(document.lastModified);
+function renderTopbar(active: 'tools' | 'match' | 'estimator'): string {
+  const nav = [
+    { key: 'tools', label: 'Tools', href: '/' },
+    { key: 'match', label: 'Match Lab', href: '/tonearm-calculator' },
+    { key: 'estimator', label: 'Estimator', href: '#' },
+  ];
 
-  if (Number.isNaN(modified.getTime())) {
-    return 'updated recently';
-  }
-
-  return `updated ${modified.toLocaleDateString('en-GB', {
-    year: 'numeric',
-    month: 'short',
-    day: '2-digit',
-  })}`;
-}
-
-function footerMeta(): string {
   return `
-    <span class="ea-footer__meta" title="Package version and browser-provided document timestamp">
-      <span>v${repoVersion}</span>
-      <span aria-hidden="true">·</span>
-      <span>${formatLastUpdatedHint()}</span>
-    </span>
+    <header class="ea-topbar" aria-label="Primary navigation">
+      <a class="ea-brand" href="/" aria-label="Engrove Audio Tools home">
+        <span class="ea-brand-accent" aria-hidden="true">//</span>
+        <span>Engrove Audio Tools</span>
+      </a>
+      <span class="ea-topbar-divider" aria-hidden="true"></span>
+      <nav class="ea-topnav" aria-label="Tools navigation">
+        ${nav.map((item) => `
+          <a class="ea-topnav-link" href="${item.href}"${active === item.key ? ' aria-current="page"' : ''}>${item.label}</a>
+        `).join('')}
+      </nav>
+      <div class="ea-topbar-meta">
+        <span class="ea-build-status">Build v${repoVersion}</span>
+        <button class="ea-theme-toggle" type="button" data-theme-toggle aria-label="Toggle light and dark theme">☼</button>
+        <img class="ea-maintainer-avatar" src="/images/engrove.webp" alt="" aria-hidden="true" />
+      </div>
+    </header>
   `;
 }
 
-function toolCards(): string {
-  return tools
-    .map(
-      (tool) => `
-        <article class="ea-tool-card">
-          <p class="ea-tool-card__status">${tool.status}</p>
-          <h3>${tool.title}</h3>
-          <p>${tool.summary}</p>
-          <a class="ea-tool-card__link" href="${tool.href}" aria-label="${tool.actionLabel}">
-            ${tool.actionLabel}
-          </a>
-        </article>
-      `,
-    )
-    .join('');
+function renderToolCard(tool: ToolCard): string {
+  const content = `
+    <span class="ea-tool-card-head">
+      <span class="ea-tool-card-icon" aria-hidden="true">${tool.icon}</span>
+      <span class="ea-tool-card-id">${tool.id}</span>
+    </span>
+    <span class="ea-tool-card-title">${tool.title}</span>
+    <span class="ea-tool-card-desc">${tool.summary}</span>
+  `;
+
+  if (tool.href) {
+    return `<a class="ea-tool-card" href="${tool.href}" aria-label="${tool.ariaLabel}">${content}</a>`;
+  }
+
+  return `<article class="ea-tool-card" aria-disabled="true" aria-label="${tool.ariaLabel}">${content}</article>`;
+}
+
+function storedTheme(): 'light' | 'dark' | null {
+  const stored = localStorage.getItem('engrove-theme');
+  return stored === 'light' || stored === 'dark' ? stored : null;
+}
+
+function applyStoredTheme(): void {
+  const theme = storedTheme();
+  if (theme) {
+    document.documentElement.dataset.theme = theme;
+  }
+}
+
+function toggleTheme(): void {
+  const root = document.documentElement;
+  const next = root.dataset.theme === 'light' ? 'dark' : 'light';
+  root.dataset.theme = next;
+  localStorage.setItem('engrove-theme', next);
 }
 
 export function renderHomePage(): string {
   return `
     <div class="ea-site-shell">
-      <div class="ea-scroll-affordance" aria-hidden="true"></div>
+      ${renderTopbar('tools')}
 
-      <header class="ea-topbar" aria-label="Primary navigation">
-        <a class="ea-wordmark" href="/" aria-label="Engrove Audio home">
-          <img class="ea-wordmark__mark" src="/images/engrove.webp" alt="" aria-hidden="true" />
-          <span class="ea-wordmark__text">Engrove Audio</span>
-        </a>
-
-        <nav class="ea-nav" aria-label="Main navigation">
-          <a href="#tools">Tools</a>
-        </nav>
-
-        <button class="ea-theme-toggle" type="button" data-theme-toggle aria-label="Toggle light and dark theme">
-          <span aria-hidden="true">◐</span>
-        </button>
-      </header>
-
-      <main class="ea-home-main">
-        <section class="ea-tool-index-header ea-page" aria-labelledby="home-title">
+      <main class="ea-home-main" aria-labelledby="home-title">
+        <section class="ea-home-header">
           <h1 id="home-title">Engrove Audio Tools</h1>
-          <p>Audio setup calculators and reference tools.</p>
+          <p class="ea-home-header-sub">
+            Precision tools and reference data for analog optimization. Select a tool to begin.
+            Every tool is a workspace, not a page; every result is provenance-tagged and recomputes live.
+          </p>
         </section>
 
-        <section class="ea-page ea-section" id="tools" aria-labelledby="tools-title">
-          <div class="ea-section-heading">
-            <h2 id="tools-title">Tools</h2>
-            <p>Open the available calculator from the index.</p>
-          </div>
-
-          <div class="ea-tool-grid">
-            ${toolCards()}
-          </div>
+        <section class="ea-tool-grid" aria-label="Audio tools">
+          ${tools.map(renderToolCard).join('')}
         </section>
       </main>
-
-      <footer class="ea-footer">
-        <span>Engrove Audio Tools 3.0</span>
-        ${footerMeta()}
-        <span>Workbench index</span>
-      </footer>
     </div>
   `;
 }
 
-function updateScrollAffordance(): void {
-  const scrollElement = document.scrollingElement ?? document.documentElement;
-  const maxScroll = Math.max(0, scrollElement.scrollHeight - window.innerHeight);
-  const isScrollable = maxScroll > 4;
-
-  document.documentElement.toggleAttribute('data-page-scrollable', isScrollable);
-
-  if (!isScrollable) {
-    document.documentElement.style.setProperty('--ea-scroll-progress', '0%');
-    return;
-  }
-
-  const rawProgress = scrollElement.scrollTop / maxScroll;
-  const progress = Math.min(1, Math.max(0, rawProgress));
-  const visibleProgress = Math.max(0.08, progress);
-  document.documentElement.style.setProperty('--ea-scroll-progress', `${visibleProgress * 100}%`);
-}
-
-function bindScrollAffordance(): void {
-  let rafId = 0;
-
-  const scheduleUpdate = (): void => {
-    if (rafId) {
-      return;
-    }
-
-    rafId = window.requestAnimationFrame(() => {
-      rafId = 0;
-      updateScrollAffordance();
-    });
-  };
-
-  updateScrollAffordance();
-
-  window.addEventListener('scroll', scheduleUpdate, { passive: true });
-  window.addEventListener('resize', scheduleUpdate);
-  window.setTimeout(updateScrollAffordance, 250);
-  window.setTimeout(updateScrollAffordance, 1000);
-}
-
 export function enableHomePageInteractions(): void {
-  const button = document.querySelector<HTMLButtonElement>('[data-theme-toggle]');
-  const root = document.documentElement;
-  const stored = localStorage.getItem('engrove-theme');
+  applyStoredTheme();
 
-  if (stored === 'light' || stored === 'dark') {
-    root.dataset.theme = stored;
-  }
-
-  button?.addEventListener('click', () => {
-    const next = root.dataset.theme === 'light' ? 'dark' : 'light';
-    root.dataset.theme = next;
-    localStorage.setItem('engrove-theme', next);
-    updateScrollAffordance();
+  document.querySelector<HTMLButtonElement>('[data-theme-toggle]')?.addEventListener('click', () => {
+    toggleTheme();
   });
-
-  bindScrollAffordance();
 }

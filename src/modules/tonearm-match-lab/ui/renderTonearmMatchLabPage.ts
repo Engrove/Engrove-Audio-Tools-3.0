@@ -84,6 +84,91 @@ const quickMatchFields: readonly QuickMatchField[] = [
     step: '0.1',
   },
 ];
+type TableFieldMeta = {
+  label: string;
+  sublabel: string;
+  statusClass: string;
+  sourceLabel: string;
+  sourceClass: string;
+};
+
+const tableFieldMeta: Record<QuickMatchFieldName, TableFieldMeta> = {
+  tonearmEffectiveMassG: {
+    label: 'Arm mass',
+    sublabel: 'M_ARM · grams',
+    statusClass: 'done',
+    sourceLabel: 'Direct',
+    sourceClass: 'direct',
+  },
+  cartridgeMassG: {
+    label: 'Cart mass',
+    sublabel: 'M_CART · grams',
+    statusClass: 'planned',
+    sourceLabel: 'From dataset',
+    sourceClass: 'manufacturer',
+  },
+  fastenerMassG: {
+    label: 'Fasteners',
+    sublabel: 'Screws · grams',
+    statusClass: 'done',
+    sourceLabel: 'Direct',
+    sourceClass: 'direct',
+  },
+  trackingForceG: {
+    label: 'Applied VTF',
+    sublabel: 'User setting · grams',
+    statusClass: 'planned',
+    sourceLabel: 'Setup',
+    sourceClass: 'setup',
+  },
+  compliance10HzCu: {
+    label: 'Compliance',
+    sublabel: 'C @ 10 Hz · µm/mN',
+    statusClass: 'planned',
+    sourceLabel: 'From dataset',
+    sourceClass: 'manufacturer',
+  },
+};
+
+function fieldMeta(fieldName: QuickMatchFieldName): TableFieldMeta {
+  return tableFieldMeta[fieldName];
+}
+
+function renderTopbar(active: 'tools' | 'match' | 'estimator'): string {
+  const nav = [
+    { key: 'tools', label: 'Tools', href: '/' },
+    { key: 'match', label: 'Match Lab', href: '/tonearm-calculator' },
+    { key: 'estimator', label: 'Estimator', href: '#' },
+  ];
+
+  return `
+    <header class="ea-topbar" aria-label="Primary navigation">
+      <a class="ea-brand" href="/" aria-label="Engrove Audio Tools home">
+        <span class="ea-brand-accent" aria-hidden="true">//</span>
+        <span>Engrove Audio Tools</span>
+      </a>
+      <span class="ea-topbar-divider" aria-hidden="true"></span>
+      <nav class="ea-topnav" aria-label="Tools navigation">
+        ${nav.map((item) => `
+          <a class="ea-topnav-link" href="${item.href}"${active === item.key ? ' aria-current="page"' : ''}>${item.label}</a>
+        `).join('')}
+      </nav>
+      <div class="ea-topbar-meta">
+        <span class="ea-build-status">Build v3.0.0-rc.5</span>
+        <button class="ea-theme-toggle" type="button" data-theme-toggle aria-label="Toggle light and dark theme">☼</button>
+        <img class="ea-maintainer-avatar" src="/images/engrove.webp" alt="" aria-hidden="true" />
+      </div>
+    </header>
+  `;
+}
+
+function statusDotMarkup(statusClass: string): string {
+  return `<span class="ea-dot ea-dot--${escapeAttribute(statusClass)}" aria-hidden="true"></span>`;
+}
+
+function badgeMarkup(label: string, className: string): string {
+  return `<span class="ea-badge ea-badge--${escapeAttribute(className)}">${renderText(label)}</span>`;
+}
 
 function formatNumber(value: number, fractionDigits = 1): string {
   return value.toLocaleString('en-US', {
@@ -247,51 +332,63 @@ function classifyResonance(hz: number): ResonanceClassification {
 
 function fieldMarkup(field: QuickMatchField): string {
   const fieldName = escapeAttribute(field.name);
+  const meta = fieldMeta(field.name);
 
   return `
-    <label class="tm-lab-field" for="tm-${fieldName}">
-      <span class="tm-lab-field__label">${renderText(field.label)}</span>
-      <input
-        id="tm-${fieldName}"
-        class="tm-lab-field__input"
-        name="${fieldName}"
-        type="number"
-        min="0"
-        step="${escapeAttribute(field.step)}"
-        value="${escapeAttribute(defaultInput[field.name])}"
-        inputmode="decimal"
-      />
-      <span class="tm-lab-field__helper">${renderText(field.helper)}</span>
-    </label>
+    <tr>
+      <td class="ea-col-status">${statusDotMarkup(meta.statusClass)}</td>
+      <td class="ea-col-label">
+        <label for="tm-${fieldName}">${renderText(meta.label)}</label>
+        <span class="ea-form-table-sublabel">${renderText(meta.sublabel)}</span>
+      </td>
+      <td class="ea-col-value">
+        <input
+          id="tm-${fieldName}"
+          class="ea-input tm-lab-field__input"
+          name="${fieldName}"
+          type="number"
+          min="0"
+          step="${escapeAttribute(field.step)}"
+          value="${escapeAttribute(defaultInput[field.name])}"
+          inputmode="decimal"
+          aria-label="${escapeAttribute(field.label)}"
+        />
+      </td>
+      <td class="ea-col-meta">${badgeMarkup(meta.sourceLabel, meta.sourceClass)}</td>
+    </tr>
   `;
 }
 
+
 function trackingForceSetupMarkup(): string {
   const fieldName = escapeAttribute('trackingForceG');
+  const meta = fieldMeta('trackingForceG');
 
   return `
-    <section class="tm-lab-setup-context" aria-labelledby="tm-lab-setup-context-title">
-      <div class="tm-lab-setup-context__header">
-        <h3 id="tm-lab-setup-context-title">Setup context</h3>
-        <p>Kept separate from the resonance mass inputs.</p>
-      </div>
-      <label class="tm-lab-field tm-lab-field--setup" for="tm-${fieldName}">
-        <span class="tm-lab-field__label">Tracking force, g</span>
+    <tr>
+      <td class="ea-col-status">${statusDotMarkup(meta.statusClass)}</td>
+      <td class="ea-col-label">
+        <label for="tm-${fieldName}">${renderText(meta.label)}</label>
+        <span class="ea-form-table-sublabel">${renderText(meta.sublabel)}</span>
+      </td>
+      <td class="ea-col-value">
         <input
           id="tm-${fieldName}"
-          class="tm-lab-field__input"
+          class="ea-input tm-lab-field__input"
           name="${fieldName}"
           type="number"
           min="0"
           step="0.1"
           value="${escapeAttribute(defaultInput.trackingForceG)}"
           inputmode="decimal"
+          aria-label="Tracking force, grams"
         />
-        <span class="tm-lab-field__helper">Tracking force is set during turntable setup. It does not affect the resonance calculation.</span>
-      </label>
-    </section>
+      </td>
+      <td class="ea-col-meta">${badgeMarkup(meta.sourceLabel, meta.sourceClass)}</td>
+    </tr>
   `;
 }
+
 
 function resonanceGaugeMarkup(result: ResonanceResult, classification: ResonanceClassification): string {
   const hz = result.resonanceHz;
@@ -350,19 +447,23 @@ export function resultMarkup(result: ResonanceResult, diagnosis: ResonanceDiagno
       class="tm-lab-result tm-lab-result--${escapeAttribute(classification.group)} tm-lab-result--${escapeAttribute(classification.key)}"
       aria-live="polite"
     >
-      <div class="tm-lab-result__summary">
-        <p class="tm-lab-result__label">Estimated resonance</p>
-        <p class="tm-lab-result__frequency">${renderText(formatNumber(result.resonanceHz))} Hz</p>
-        <span class="tm-lab-result__badge" data-result-band="${escapeAttribute(classification.group)}">
-          <span aria-hidden="true">${renderText(classification.icon)}</span>
-          ${renderText(classification.label)}
-        </span>
+      <div class="ea-result-headline">
+        <span class="ea-result-headline-value">${renderText(formatNumber(result.resonanceHz))}</span>
+        <span class="ea-result-headline-unit">Hz</span>
+      </div>
+      <div class="ea-classification" data-class="${escapeAttribute(classification.label)}">
+        ${statusDotMarkup(classification.group === 'ideal' || classification.group === 'good' ? 'done' : 'active')}
+        <span>${renderText(classification.label)}</span>
       </div>
       ${resonanceGaugeMarkup(result, classification)}
       <div class="tm-lab-result__details">
-        <p class="tm-lab-result__label">Target zone: 8–12 Hz · Ideal: 9–11 Hz</p>
-        <h3>${renderText(classification.title)}</h3>
-        <p>${renderText(classification.explanation)}</p>
+        <div class="tm-lab-scoreline">
+          <span class="tm-lab-scoreline__mark">—</span>
+          <span>
+            <strong>Match score</strong>
+            <small>${renderText(classification.title)}</small>
+          </span>
+        </div>
         <p class="tm-lab-result__diagnosis-note">${renderText(diagnosis.title)} ${renderText(diagnosis.explanation)}</p>
         <dl>
           <div>
@@ -371,7 +472,7 @@ export function resultMarkup(result: ResonanceResult, diagnosis: ResonanceDiagno
           </div>
           <div>
             <dt>Tracking force</dt>
-            <dd>Setup only, not included in moving mass</dd>
+            <dd>Setup only</dd>
           </div>
         </dl>
         <ul class="tm-lab-result__suggestions">${suggestionItems}</ul>
@@ -379,6 +480,7 @@ export function resultMarkup(result: ResonanceResult, diagnosis: ResonanceDiagno
     </section>
   `;
 }
+
 
 export function errorMarkup(message: unknown): string {
   return `
@@ -392,29 +494,47 @@ export function errorMarkup(message: unknown): string {
 
 function runtimePickerControlsMarkup(): string {
   return `
-    <section class="tm-runtime-picker-controls" data-tonearm-runtime-pickers aria-labelledby="tm-runtime-pickers-title">
-      <div class="tm-runtime-picker-controls__intro">
-        <h3 id="tm-runtime-pickers-title">Dataset pickers</h3>
-        <p>Use match-ready public runtime data when known values should populate Quick Match.</p>
-      </div>
-      <div class="tm-runtime-picker-controls__grid">
-        <div class="tm-runtime-picker-control" data-runtime-picker-control="cartridge">
-          <button class="tm-runtime-picker-control__button" type="button" data-runtime-picker-open="cartridge" disabled>
-            Select cartridge from dataset
-          </button>
-          <p class="tm-runtime-picker-control__summary" data-runtime-picker-summary="cartridge">No cartridge selected from dataset.</p>
+    <tr class="tm-runtime-picker-row" data-runtime-picker-control="tonearm">
+      <td class="ea-col-status">${statusDotMarkup('done')}</td>
+      <td class="ea-col-label">
+        Tonearm
+        <span class="ea-form-table-sublabel">Selected reference</span>
+      </td>
+      <td class="ea-col-value">
+        <div class="ea-input-row-with-button">
+          <span class="tm-runtime-picker-summary" data-runtime-picker-summary="tonearm">No tonearm selected.</span>
+          <button class="ea-button ea-button--ghost tm-runtime-picker-control__button" type="button" data-runtime-picker-open="tonearm" disabled>Pick</button>
         </div>
-        <div class="tm-runtime-picker-control" data-runtime-picker-control="tonearm">
-          <button class="tm-runtime-picker-control__button" type="button" data-runtime-picker-open="tonearm" disabled>
-            Select tonearm from dataset
-          </button>
-          <p class="tm-runtime-picker-control__summary" data-runtime-picker-summary="tonearm">No tonearm selected from dataset.</p>
+      </td>
+      <td class="ea-col-meta">${badgeMarkup('Manufacturer', 'direct')}</td>
+    </tr>
+    <tr class="tm-runtime-picker-row" data-runtime-picker-control="cartridge">
+      <td class="ea-col-status">${statusDotMarkup('active')}</td>
+      <td class="ea-col-label">
+        Cartridge
+        <span class="ea-form-table-sublabel">Selected reference</span>
+      </td>
+      <td class="ea-col-value">
+        <div class="ea-input-row-with-button">
+          <span class="tm-runtime-picker-summary" data-runtime-picker-summary="cartridge">No cartridge selected.</span>
+          <button class="ea-button ea-button--primary tm-runtime-picker-control__button" type="button" data-runtime-picker-open="cartridge" disabled>Pick</button>
         </div>
-      </div>
-      <p class="tm-runtime-picker-controls__status" data-runtime-picker-status>Loading public runtime data…</p>
-    </section>
+      </td>
+      <td class="ea-col-meta">—</td>
+    </tr>
+    <tr class="tm-runtime-status-row">
+      <td class="ea-col-status">${statusDotMarkup('active')}</td>
+      <td class="ea-col-label">
+        Dataset
+        <span class="ea-form-table-sublabel">Runtime loader</span>
+      </td>
+      <td class="ea-col-value" colspan="2">
+        <span class="tm-runtime-picker-status" data-runtime-picker-status>Loading public runtime data…</span>
+      </td>
+    </tr>
   `;
 }
+
 
 function readNumber(form: HTMLFormElement, name: QuickMatchFieldName): number {
   const element = form.elements.namedItem(name);
@@ -681,58 +801,156 @@ export function renderTonearmMatchLabPage(): string {
   const initialDiagnosis = diagnoseResonance(initialResult.resonanceHz);
 
   return `
-    <main class="tm-lab-shell">
+    <main class="tm-lab-shell ea-tool-shell">
       <a class="tm-lab-skip-link" href="#quick-match">Skip to workbench</a>
-      <header class="tm-lab-header">
-        <a class="tm-lab-wordmark" href="/" aria-label="Engrove Audio home">
-          <img src="/images/engrove.webp" alt="Engrove Audio" />
-        </a>
-        <nav class="tm-lab-nav" aria-label="Tonearm Match Lab">
-          <a href="/">Home</a>
-          <a href="#quick-match">Quick Match</a>
-          <a href="#assumptions">Assumptions</a>
-        </nav>
-        <button class="tm-lab-theme-toggle" type="button" data-theme-toggle aria-label="Toggle theme">◐</button>
-      </header>
+      ${renderTopbar('match')}
 
-      <section class="tm-lab-workbench tm-lab-workbench--density-pass-2b" id="quick-match" aria-labelledby="tm-lab-title">
-        <section class="tm-lab-setup-panel tm-lab-setup-panel--density-pass-2b" aria-labelledby="tm-lab-title">
-          <header class="tm-lab-setup-header">
-            <div class="tm-lab-setup-header__title">
-              <p class="tm-lab-kicker">Tonearm calculator</p>
-              <h1 id="tm-lab-title">Tonearm Match Lab</h1>
+      <section class="ea-contextbar" aria-label="Route context">
+        <div class="ea-contextbar__path">
+          <span class="ea-contextbar__crumbs">
+            <span>Tools</span>
+            <span aria-hidden="true">/</span>
+            <span class="ea-contextbar__current">Tonearm Match Lab</span>
+          </span>
+          <span class="ea-contextbar__divider" aria-hidden="true"></span>
+          <span class="ea-contextbar__description">Estimate low-frequency cantilever-arm resonance. F₀ = 159.15 / √(M·C).</span>
+        </div>
+        <span class="ea-contextbar__meta">Session A4-7F19&nbsp;&nbsp; Dataset v3.0.0-rc.5</span>
+      </section>
+
+      <section class="ea-workbench ea-workbench-three tm-lab-workbench" id="quick-match" aria-labelledby="tm-lab-title">
+        <aside class="ea-panel ea-workflow-rail" aria-label="Workflow">
+          <div class="ea-panel-header">
+            <span class="ea-panel-header-id">01</span>
+            <span>Workflow</span>
+          </div>
+          <ol class="ea-tasklist">
+            <li>
+              <span class="ea-tasklist-num ea-tasklist-num--done">1</span>
+              <span>
+                <span class="ea-tasklist-title">Pick tonearm</span>
+                <span class="ea-tasklist-sub">Effective mass + headshell</span>
+              </span>
+            </li>
+            <li aria-current="step">
+              <span class="ea-tasklist-num ea-tasklist-num--active">2</span>
+              <span>
+                <span class="ea-tasklist-title">Pick cartridge</span>
+                <span class="ea-tasklist-sub">Mass + compliance @ 10 Hz</span>
+              </span>
+            </li>
+            <li>
+              <span class="ea-tasklist-num">3</span>
+              <span>
+                <span class="ea-tasklist-title">Set tracking force</span>
+                <span class="ea-tasklist-sub">Setup, not in F₀</span>
+              </span>
+            </li>
+            <li>
+              <span class="ea-tasklist-num">4</span>
+              <span>
+                <span class="ea-tasklist-title">Read result</span>
+                <span class="ea-tasklist-sub">Classification + score</span>
+              </span>
+            </li>
+            <li>
+              <span class="ea-tasklist-num">5</span>
+              <span>
+                <span class="ea-tasklist-title">Save session</span>
+                <span class="ea-tasklist-sub">Snapshot for export</span>
+              </span>
+            </li>
+          </ol>
+        </aside>
+
+        <div class="ea-workbench-main">
+          <section class="ea-panel tm-lab-setup-panel" aria-labelledby="tm-lab-title">
+            <div class="ea-panel-header">
+              <span class="ea-panel-header-id">02</span>
+              <span>Resonance Inputs</span>
+              <span class="ea-panel-header-spacer"></span>
+              <span class="tm-lab-formula" aria-hidden="true">F₀ = 159.15 / √(M·C)</span>
             </div>
-            <p>Check low-frequency cartridge and tonearm resonance with dataset-assisted setup values.</p>
-          </header>
+            <div class="ea-panel-body--flush">
+              <form class="tm-lab-form" data-tonearm-match-form>
+                <table class="ea-form-table tm-resonance-table" role="table" data-tonearm-runtime-pickers>
+                  <tbody>
+                    ${runtimePickerControlsMarkup()}
+                    ${quickMatchFields.map(fieldMarkup).join('')}
+                  </tbody>
+                </table>
 
-          <form class="tm-lab-form" data-tonearm-match-form>
-            ${runtimePickerControlsMarkup()}
-            <div class="tm-lab-math-fields">
-              ${quickMatchFields.map(fieldMarkup).join('')}
+                <section class="ea-panel tm-lab-setup-context" aria-labelledby="tm-lab-setup-context-title">
+                  <div class="ea-panel-header">
+                    <span class="ea-panel-header-id">03</span>
+                    <span id="tm-lab-setup-context-title">Setup Context</span>
+                    <span class="ea-panel-header-spacer"></span>
+                    <span class="ea-panel-header-action">Not in F₀</span>
+                  </div>
+                  <div class="ea-panel-body--flush">
+                    <table class="ea-form-table" role="table">
+                      <tbody>
+                        ${trackingForceSetupMarkup()}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              </form>
             </div>
-            ${trackingForceSetupMarkup()}
-          </form>
-        </section>
+          </section>
 
-        <aside class="tm-lab-output" data-tonearm-match-result aria-label="Quick Match result">
+          <section class="ea-panel tm-lab-panel--assumptions" id="assumptions" aria-labelledby="assumptions-title">
+            <div class="ea-panel-header">
+              <span class="ea-panel-header-id">05</span>
+              <span id="assumptions-title">Assumptions</span>
+            </div>
+            <div class="ea-panel-body">
+              <ul class="tm-lab-notes">
+                <li>The target zone is 8–12 Hz, with 9–11 Hz shown as ideal.</li>
+                <li>Tracking force is setup context and is not included in total moving mass.</li>
+                <li>Compliance must be a 10 Hz value or a converted estimate.</li>
+              </ul>
+            </div>
+          </section>
+        </div>
+
+        <aside class="ea-panel ea-workbench-result tm-lab-output" data-tonearm-match-result aria-label="Quick Match result">
+          <div class="ea-panel-header">
+            <span class="ea-panel-header-id">04</span>
+            <span>Resonance Result</span>
+            <span class="ea-panel-header-spacer"></span>
+            <span class="ea-panel-header-action">Live</span>
+          </div>
           ${resultMarkup(initialResult, initialDiagnosis)}
         </aside>
       </section>
 
-      <section class="tm-lab-panel--assumptions" id="assumptions" aria-labelledby="assumptions-title">
-        <details class="tm-lab-notes">
-          <summary id="assumptions-title">Assumptions and notes</summary>
-          <ul>
-            <li>The target zone is 8–12 Hz, with 9–11 Hz shown as ideal.</li>
-            <li>Tracking force is setup context and is not included in total moving mass.</li>
-            <li>Compliance must be a 10 Hz value or a converted estimate.</li>
-          </ul>
-        </details>
+      <section class="ea-actionbar" aria-label="Workspace actions">
+        <div class="ea-actionbar__group">
+          <span class="ea-actionbar__status">
+            ${statusDotMarkup('active')}
+            <span>Awaiting input</span>
+          </span>
+        </div>
+        <div class="ea-actionbar__group">
+          <span class="ea-contextbar__meta">F₀ = 159.15 / √(M·C)</span>
+          <button class="ea-button ea-button--secondary" type="button" data-reset-tonearm-defaults>Reset</button>
+          <button class="ea-button ea-button--ghost" type="button" disabled>Export</button>
+          <button class="ea-button ea-button--primary" type="button" disabled>Save session</button>
+        </div>
       </section>
     </main>
   `;
 }
 
+
+function resetFormToDefaults(form: HTMLFormElement, resultElement: HTMLElement): void {
+  for (const field of quickMatchFields) {
+    setNumericInput(form, field.name, defaultInput[field.name]);
+  }
+  setNumericInput(form, 'trackingForceG', defaultInput.trackingForceG);
+  updateResultView(form, resultElement);
+}
 
 export function enableTonearmMatchLabInteractions(): void {
   bindThemeToggle();
@@ -745,6 +963,11 @@ export function enableTonearmMatchLabInteractions(): void {
   }
 
   bindRuntimePickers(form);
+
+  document.querySelector<HTMLButtonElement>('[data-reset-tonearm-defaults]')?.addEventListener('click', () => {
+    resetFormToDefaults(form, resultElement);
+  });
+
   form.addEventListener('input', (event) => {
     const input = event.target;
 

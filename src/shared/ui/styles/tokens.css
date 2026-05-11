@@ -1,30 +1,59 @@
-
+/* Engrove Audio Tools 3.0 — v0.5 showcase-bound tokens. */
 :root,
 [data-theme="dark"] {
   color-scheme: dark;
+
   --ea-font-ui: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --ea-font-data: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 
-  --ea-surface-primary: #121212;
-  --ea-surface-secondary: #1e1e1e;
-  --ea-surface-tertiary: #2a2a2a;
-  --ea-border-primary: #3c3c3c;
-  --ea-border-soft: rgba(255, 255, 255, 0.08);
-  --ea-text-high: rgba(255, 255, 255, 0.92);
-  --ea-text-medium: rgba(255, 255, 255, 0.70);
-  --ea-text-low: rgba(255, 255, 255, 0.50);
-  --ea-interactive-accent: #3391ff;
-  --ea-interactive-accent-hover: #58a6ff;
-  --ea-interactive-accent-soft: rgba(51, 145, 255, 0.16);
-  --ea-brand-gold: #f5c400;
-  --ea-status-success: #35c46a;
-  --ea-status-warning: #ffcb6b;
-  --ea-status-error: #f44336;
+  --ea-bg-app: rgba(14, 16, 20, 0.93);
+  --ea-bg-surface: rgba(22, 26, 31, 0.95);
+  --ea-bg-panel: rgba(26, 30, 36, 0.95);
+  --ea-bg-panel-header: rgba(32, 37, 44, 0.92);
+  --ea-bg-panel-alt: rgba(22, 26, 31, 0.95);
+  --ea-bg-topbar: #0a0c0f;
+  --ea-bg-context-bar: rgba(20, 22, 27, 0.95);
+  --ea-bg-action-bar: rgba(20, 22, 27, 0.95);
+  --ea-bg-input: rgba(31, 35, 41, 0.92);
+  --ea-bg-input-hover: #252a31;
+  --ea-bg-input-focus: #1f2329;
+  --ea-bg-modal-scrim: rgba(0, 0, 0, 0.75);
 
-  --ea-radius-sm: 0.5rem;
-  --ea-radius-md: 0.75rem;
-  --ea-radius-lg: 1rem;
-  --ea-radius-xl: 1.25rem;
+  --ea-surface-primary: #0e1014;
+  --ea-surface-secondary: var(--ea-bg-panel);
+  --ea-surface-tertiary: var(--ea-bg-panel-alt);
+
+  --ea-border-primary: #2a2f37;
+  --ea-border-soft: #20252c;
+  --ea-border-strong: #3a414b;
+  --ea-border-topbar: #20252c;
+
+  --ea-text-high: #e8eaed;
+  --ea-text-medium: #a8aeb8;
+  --ea-text-low: #707782;
+  --ea-text-on-dark: #e8eaed;
+  --ea-text-context-bar: #a8aeb8;
+  --ea-text-link: #6ea8fe;
+
+  --ea-interactive-accent: #f2b837;
+  --ea-interactive-accent-hover: #e8a317;
+  --ea-interactive-accent-soft: rgba(242, 184, 55, 0.14);
+  --ea-brand-gold: var(--ea-interactive-accent);
+
+  --ea-status-success: #4ab86a;
+  --ea-status-good: #5a98e0;
+  --ea-status-warning: #e0a850;
+  --ea-status-marginal: #e07850;
+  --ea-status-error: #d05050;
+  --ea-status-dot-planned: #b9bfc8;
+  --ea-status-dot-active: #f2b837;
+  --ea-status-dot-done: #4ab86a;
+  --ea-status-dot-error: #d05050;
+
+  --ea-radius-sm: 3px;
+  --ea-radius-md: 6px;
+  --ea-radius-lg: 8px;
+  --ea-radius-xl: 8px;
   --ea-radius-pill: 999px;
 
   --ea-space-1: 0.25rem;
@@ -37,40 +66,104 @@
   --ea-space-10: 2.5rem;
   --ea-space-12: 3rem;
 
-  --ea-control-height: 2.75rem;
-  --ea-control-height-sm: 2.25rem;
-  --ea-page-max: 1180px;
-  --ea-page-padding: clamp(1rem, 3vw, 2rem);
-  --ea-panel-padding: clamp(1rem, 2vw, 1.5rem);
-  --ea-grid-gap: clamp(1rem, 2vw, 1.5rem);
+  --ea-control-height: 32px;
+  --ea-control-height-sm: 26px;
+  --ea-shell-topbar-height: 48px;
+  --ea-shell-context-height: 40px;
+  --ea-shell-action-height: 56px;
+  --ea-page-max: 1154px;
+  --ea-page-padding: clamp(1rem, 2.6vw, 1.5rem);
+  --ea-panel-padding: 0.75rem;
+  --ea-grid-gap: 0.75rem;
+  --ea-size-task-rail-width: 280px;
+  --ea-size-result-rail-width: 400px;
+  --ea-size-content-max: 1760px;
+  --ea-size-table-row-min: 32px;
 
-  --ea-shadow-card: 0 16px 40px rgba(0, 0, 0, 0.28);
-  --ea-shadow-focus: 0 0 0 2px rgba(51, 145, 255, 0.3);
-  --ea-motion-base: 180ms;
+  --ea-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.18);
+  --ea-shadow-focus: 0 0 0 2px rgba(242, 184, 55, 0.34);
+  --ea-shadow-none: 0 0 0 0 transparent;
+
+  --ea-panel-blur: blur(8px);
+  --ea-motion-base: 120ms;
   --ea-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  --ea-font-size-micro: 0.6875rem;
+  --ea-font-size-label: 0.75rem;
+  --ea-font-size-small: 0.75rem;
+  --ea-font-size-body: 0.8125rem;
+  --ea-font-size-prose: 0.875rem;
+  --ea-font-size-title: 1.5rem;
+  --ea-font-size-result-large: 2rem;
+  --ea-letter-label: 0.05em;
+
+  --ea-photo-background: url("/images/bg_black.webp");
+  --ea-photo-overlay:
+    linear-gradient(180deg, rgba(5, 7, 9, 0.62), rgba(5, 7, 9, 0.78)),
+    radial-gradient(circle at 76% 4%, rgba(110, 168, 254, 0.08), transparent 28rem);
 }
 
 [data-theme="light"] {
   color-scheme: light;
-  --ea-surface-primary: #ffffff;
-  --ea-surface-secondary: #f5f5f5;
-  --ea-surface-tertiary: #eeeeee;
-  --ea-border-primary: #dcdcdc;
-  --ea-border-soft: rgba(0, 0, 0, 0.08);
-  --ea-text-high: rgba(0, 0, 0, 0.87);
-  --ea-text-medium: rgba(0, 0, 0, 0.64);
-  --ea-text-low: rgba(0, 0, 0, 0.42);
-  --ea-interactive-accent: #007bff;
-  --ea-interactive-accent-hover: #0056b3;
-  --ea-interactive-accent-soft: rgba(0, 123, 255, 0.12);
-  --ea-shadow-card: 0 16px 40px rgba(0, 0, 0, 0.12);
-  --ea-shadow-focus: 0 0 0 2px rgba(0, 123, 255, 0.25);
+
+  --ea-bg-app: rgba(244, 245, 247, 0.92);
+  --ea-bg-surface: rgba(255, 255, 255, 0.95);
+  --ea-bg-panel: rgba(255, 255, 255, 0.95);
+  --ea-bg-panel-header: rgba(238, 240, 243, 0.92);
+  --ea-bg-panel-alt: rgba(248, 249, 251, 0.95);
+  --ea-bg-topbar: #14161a;
+  --ea-bg-context-bar: rgba(28, 31, 36, 0.95);
+  --ea-bg-action-bar: rgba(255, 255, 255, 0.95);
+  --ea-bg-input: rgba(255, 255, 255, 0.92);
+  --ea-bg-input-hover: #f8f9fb;
+  --ea-bg-input-focus: #ffffff;
+  --ea-bg-modal-scrim: rgba(20, 22, 26, 0.65);
+
+  --ea-surface-primary: #f4f5f7;
+  --ea-surface-secondary: var(--ea-bg-panel);
+  --ea-surface-tertiary: var(--ea-bg-panel-alt);
+
+  --ea-border-primary: #d8dce2;
+  --ea-border-soft: #e6e8ec;
+  --ea-border-strong: #b9bfc8;
+  --ea-border-topbar: #2a2e35;
+
+  --ea-text-high: #14161a;
+  --ea-text-medium: #4a505a;
+  --ea-text-low: #7a818c;
+  --ea-text-on-dark: #e8eaed;
+  --ea-text-context-bar: #b9bfc8;
+  --ea-text-link: #2563eb;
+
+  --ea-interactive-accent: #e8a317;
+  --ea-interactive-accent-hover: #d18c00;
+  --ea-interactive-accent-soft: rgba(232, 163, 23, 0.12);
+  --ea-brand-gold: var(--ea-interactive-accent);
+
+  --ea-status-success: #2c9c4a;
+  --ea-status-good: #3a7bc9;
+  --ea-status-warning: #c98a2a;
+  --ea-status-marginal: #d05a2a;
+  --ea-status-error: #b32a2a;
+
+  --ea-photo-background: url("/images/bg_white.webp");
+  --ea-photo-overlay:
+    linear-gradient(180deg, rgba(244, 245, 247, 0.68), rgba(244, 245, 247, 0.82)),
+    radial-gradient(circle at 76% 4%, rgba(37, 99, 235, 0.08), transparent 28rem);
 }
 
 .compact-theme {
-  --ea-control-height: 2.25rem;
-  --ea-control-height-sm: 2rem;
-  --ea-panel-padding: 0.875rem;
-  --ea-grid-gap: 0.75rem;
+  --ea-control-height: 26px;
+  --ea-control-height-sm: 24px;
+  --ea-panel-padding: 0.5rem;
+  --ea-grid-gap: 0.5rem;
   --ea-page-padding: clamp(0.75rem, 1.5vw, 1.25rem);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root,
+  [data-theme="dark"],
+  [data-theme="light"] {
+    --ea-panel-blur: blur(0);
+  }
 }
