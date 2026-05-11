@@ -18,6 +18,9 @@ const CSS_AUDIT_FILES = [
 const DYNAMIC_EA_FALLBACK_ALLOWLIST = new Set(['--ea-scroll-progress']);
 // Tokens intentionally managed by app runtime rather than global tokens.css definitions.
 const RUNTIME_MANAGED_EA_TOKENS = new Set(['--ea-scroll-progress']);
+const MODULE_LOCAL_TOKEN_OWNER_FILES = new Set([
+  'src/modules/tonearm-match-lab/ui/tonearmMatchLab.css',
+]);
 const MAX_CLASS_DRIFT_ITEMS_PER_SIDE = 80;
 const S12A_SHARED_FOUNDATION_STYLED_ONLY_CLASSES = new Map([
   ['compact-theme', 'src/shared/ui/styles/tokens.css'],
@@ -60,6 +63,7 @@ const infoGroups = [
   { id: 'shared-foundation-class-inventory', title: 'Shared foundation styled-only classes' },
   { id: 'additive-duplicate-selector-reuses', title: 'Additive duplicate selector reuses' },
   { id: 'shared-home-global-selectors', title: 'Shared home/global element selectors' },
+  { id: 'module-local-tonearm-tokens', title: 'Module-local tonearm tokens' },
 ];
 
 function normalizePath(filePath) {
@@ -262,6 +266,39 @@ function collectUsedEaTokens(sourceFiles) {
   return used;
 }
 
+function moduleLocalOwnerForDefinitions(locations) {
+  const ownerFiles = new Set(locations.map((location) => location.file));
+
+  if (ownerFiles.size !== 1) {
+    return null;
+  }
+
+  const [ownerFile] = ownerFiles;
+  return MODULE_LOCAL_TOKEN_OWNER_FILES.has(ownerFile) ? ownerFile : null;
+}
+
+function isSameModuleLocalTokenUse(location, ownerFile) {
+  return location.file === ownerFile;
+}
+
+function summarizeModuleLocalTokenUsage(tokenName, definitionLocations, useLocations) {
+  const ownerFile = moduleLocalOwnerForDefinitions(definitionLocations);
+  const sameModuleUses = ownerFile
+    ? useLocations.filter((location) => isSameModuleLocalTokenUse(location, ownerFile)).length
+    : 0;
+  const crossModuleUses = ownerFile
+    ? useLocations.filter((location) => !isSameModuleLocalTokenUse(location, ownerFile)).length
+    : 0;
+
+  return (
+    tokenName +
+    ' module-local definition; same-module uses: ' +
+    sameModuleUses +
+    '; cross-module uses that remain warnings: ' +
+    crossModuleUses
+  );
+}
+
 function extractTypeScriptCssFragments(text) {
   const fragments = [];
   const runtimeCssPattern =
@@ -433,27 +470,52 @@ function reportMissingGlobalTokens(sourceFiles, warnings) {
       continue;
     }
 
-    const firstLocation = locations[0];
     const localDefinitionLocations = localDefinitions.get(tokenName) ?? [];
+    const moduleLocalOwnerFile = moduleLocalOwnerForDefinitions(localDefinitionLocations);
+    const firstReportableLocation = moduleLocalOwnerFile
+      ? locations.find((location) => !isSameModuleLocalTokenUse(location, moduleLocalOwnerFile))
+      : locations[0];
+
+    if (!firstReportableLocation) {
+      continue;
+    }
+
     const localNote =
-      localDefinitionLocations.length > 0
-        ? 'missing from tokens.css; locally defined elsewhere'
-        : 'missing from tokens.css';
+      moduleLocalOwnerFile
+        ? 'missing from tokens.css; defined as module-local in ' + moduleLocalOwnerFile
+        : localDefinitionLocations.length > 0
+          ? 'missing from tokens.css; locally defined elsewhere'
+          : 'missing from tokens.css';
 
     addWarning(
       warnings,
       'missing-global-ea-tokens',
-      firstLocation.file,
-      firstLocation.line,
+      firstReportableLocation.file,
+      firstReportableLocation.line,
       tokenName + ' ' + localNote,
     );
   }
 }
 
-function reportModuleLocalTokenDefinitions(sourceFiles, warnings) {
+function reportModuleLocalTokenDefinitions(sourceFiles, warnings, infos) {
   const localDefinitions = collectTokenDefinitionsOutsideTokens(sourceFiles);
+  const usedTokens = collectUsedEaTokens(sourceFiles);
 
   for (const [tokenName, locations] of [...localDefinitions.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+    const moduleLocalOwnerFile = moduleLocalOwnerForDefinitions(locations);
+
+    if (moduleLocalOwnerFile) {
+      const firstLocation = locations[0];
+      addInfo(
+        infos,
+        'module-local-tonearm-tokens',
+        firstLocation.file,
+        firstLocation.line,
+        summarizeModuleLocalTokenUsage(tokenName, locations, usedTokens.get(tokenName) ?? []),
+      );
+      continue;
+    }
+
     for (const location of locations) {
       addWarning(
         warnings,
@@ -816,7 +878,7 @@ function main() {
   reportLegacyFallbackPatterns(sourceFiles, warnings);
   reportEaFallbackPatterns(sourceFiles, warnings);
   reportMissingGlobalTokens(sourceFiles, warnings);
-  reportModuleLocalTokenDefinitions(sourceFiles, warnings);
+  reportModuleLocalTokenDefinitions(sourceFiles, warnings, infos);
   reportDuplicateCssSelectors(cssAuditFiles, warnings, infos);
   reportClassContractDrift(sourceFiles, cssAuditFiles, warnings, infos);
   reportSharedHomeGlobalSelectors(infos);
