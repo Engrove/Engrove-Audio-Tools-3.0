@@ -1,6 +1,6 @@
 /* Showcase-bound compact tool index. */
 .ea-home-main {
-  width: min(100%, var(--ea-page-max));
+  width: min(100%, var(--ea-size-page-max));
   margin: 0 auto;
   padding: 54px var(--ea-page-padding) var(--ea-space-8);
 }

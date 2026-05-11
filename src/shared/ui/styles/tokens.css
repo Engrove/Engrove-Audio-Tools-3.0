@@ -31,6 +31,7 @@
   --ea-text-high: #e8eaed;
   --ea-text-medium: #a8aeb8;
   --ea-text-low: #707782;
+  --ea-text-tertiary: var(--ea-text-low);
   --ea-text-on-dark: #e8eaed;
   --ea-text-context-bar: #a8aeb8;
   --ea-text-link: #6ea8fe;
@@ -71,7 +72,7 @@
   --ea-shell-topbar-height: 48px;
   --ea-shell-context-height: 40px;
   --ea-shell-action-height: 56px;
-  --ea-page-max: 1154px;
+  --ea-size-page-max: 1154px;
   --ea-page-padding: clamp(1rem, 2.6vw, 1.5rem);
   --ea-panel-padding: 0.75rem;
   --ea-grid-gap: 0.75rem;
@@ -131,6 +132,7 @@
   --ea-text-high: #14161a;
   --ea-text-medium: #4a505a;
   --ea-text-low: #7a818c;
+  --ea-text-tertiary: var(--ea-text-low);
   --ea-text-on-dark: #e8eaed;
   --ea-text-context-bar: #b9bfc8;
   --ea-text-link: #2563eb;

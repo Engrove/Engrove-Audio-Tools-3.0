@@ -190,7 +190,7 @@ body {
   flex: 0 0 auto;
   align-items: center;
   gap: var(--ea-space-2);
-  color: var(--ea-text-tertiary, var(--ea-text-low));
+  color: var(--ea-text-tertiary);
   font-family: var(--ea-font-data);
   font-size: var(--ea-font-size-small);
   font-weight: 600;
@@ -292,7 +292,7 @@ body {
 }
 
 .ea-page {
-  width: min(100%, var(--ea-page-max));
+  width: min(100%, var(--ea-size-page-max));
   margin: 0 auto;
   padding-inline: var(--ea-page-padding);
 }

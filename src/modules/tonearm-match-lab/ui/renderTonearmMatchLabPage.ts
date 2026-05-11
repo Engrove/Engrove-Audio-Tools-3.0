@@ -47,6 +47,13 @@ type ResonanceClassification = {
   suggestions: string[];
 };
 
+/*
+ * Token/layout drift check cannot resolve these template-literal class suffixes.
+ * Keep this static inventory in sync with statusDotMarkup() and badgeMarkup().
+ */
+const tokenLayoutGeneratedClassNames =
+  'ea-badge--direct ea-badge--manufacturer ea-badge--setup ea-dot--planned ea-dot--active ea-dot--done ea-dot--error';
+
 const gaugeMinHz = 5;
 const gaugeMaxHz = 16;
 
@@ -451,7 +458,7 @@ export function resultMarkup(result: ResonanceResult, diagnosis: ResonanceDiagno
         <span class="ea-result-headline-value">${renderText(formatNumber(result.resonanceHz))}</span>
         <span class="ea-result-headline-unit">Hz</span>
       </div>
-      <div class="ea-classification" data-class="${escapeAttribute(classification.label)}">
+      <div class="ea-classification" data-band="${escapeAttribute(classification.group)}" data-key="${escapeAttribute(classification.key)}">
         ${statusDotMarkup(classification.group === 'ideal' || classification.group === 'good' ? 'done' : 'active')}
         <span>${renderText(classification.label)}</span>
       </div>
