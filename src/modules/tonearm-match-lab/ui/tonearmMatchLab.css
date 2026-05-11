@@ -706,12 +706,6 @@
   min-block-size: 2.5rem;
 }
 
-.tm-lab-output {
-  align-self: start;
-  position: sticky;
-  inset-block-start: calc(3.5rem + var(--ea-space-3));
-}
-
 @media (max-width: 1099px) {
   .tm-lab-workbench--density-pass-2b {
     grid-template-columns: 1fr;
