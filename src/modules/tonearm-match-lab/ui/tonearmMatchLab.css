@@ -116,30 +116,13 @@
   align-items: start;
 }
 
-.tm-lab-workbench__main,
-.tm-lab-workbench__setup {
-  display: grid;
-  gap: var(--ea-space-3);
-  min-inline-size: 0;
-}
-
-.tm-lab-tool-header,
-.tm-lab-tool-intro,
 .tm-lab-setup-panel,
-.tm-lab-card,
 .tm-lab-output,
 .tm-lab-panel--assumptions {
   border: 1px solid var(--ea-border-soft);
   border-radius: var(--ea-radius-lg);
   background: var(--ea-surface-secondary);
   box-shadow: var(--ea-shadow-card);
-}
-
-.tm-lab-tool-header,
-.tm-lab-tool-intro {
-  display: grid;
-  gap: var(--ea-space-1);
-  padding: var(--ea-space-3) var(--ea-space-4);
 }
 
 .tm-lab-kicker {
@@ -151,40 +134,12 @@
   text-transform: uppercase;
 }
 
-.tm-lab-tool-header h1,
-.tm-lab-tool-intro h1 {
-  margin: 0;
-  color: var(--ea-text-high);
-  font-size: var(--ea-font-size-tool-title);
-  line-height: 1.1;
-  letter-spacing: -0.01em;
-}
-
-.tm-lab-tool-header p:not(.tm-lab-kicker),
-.tm-lab-tool-intro p:not(.tm-lab-kicker) {
-  margin: 0;
-  max-inline-size: 62ch;
-  color: var(--ea-text-medium);
-  font-size: var(--ea-font-size-helper);
-  line-height: 1.35;
-}
-
-.tm-lab-setup-panel,
-.tm-lab-card {
+.tm-lab-setup-panel {
   display: grid;
   gap: var(--ea-space-3);
   padding: var(--ea-space-4);
 }
 
-.tm-lab-panel__intro,
-.tm-lab-card__header {
-  display: grid;
-  gap: var(--ea-space-1);
-  margin: 0;
-}
-
-.tm-lab-panel__intro h2,
-.tm-lab-card__header h2,
 .tm-runtime-picker-controls__intro h3,
 .tm-lab-setup-context__header h3 {
   margin: 0;
@@ -193,8 +148,6 @@
   line-height: 1.2;
 }
 
-.tm-lab-panel__intro p,
-.tm-lab-card__header p,
 .tm-runtime-picker-controls__intro p,
 .tm-lab-setup-context__header p {
   margin: 0;
@@ -596,15 +549,15 @@
   }
 
   .tm-lab-workbench,
-  .tm-lab-panel--assumptions {
+.tm-lab-panel--assumptions {
     inline-size: min(calc(100% - var(--ea-space-3) * 2), var(--ea-size-workbench-max));
   }
 
   .tm-runtime-picker-controls__grid,
-  .tm-lab-math-fields,
-  .tm-lab-setup-context,
-  .tm-lab-result__summary,
-  .tm-lab-result__details dl {
+.tm-lab-math-fields,
+.tm-lab-setup-context,
+.tm-lab-result__summary,
+.tm-lab-result__details dl {
     grid-template-columns: 1fr;
   }
 
@@ -824,8 +777,8 @@
   }
 
   .tm-runtime-picker-controls__grid,
-  .tm-lab-math-fields,
-  .tm-lab-setup-context {
+.tm-lab-math-fields,
+.tm-lab-setup-context {
     grid-template-columns: 1fr;
   }
 
