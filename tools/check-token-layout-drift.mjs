@@ -16,6 +16,8 @@ const CSS_AUDIT_FILES = [
   'src/modules/tonearm-match-lab/ui/tonearmMatchLab.css',
 ];
 const DYNAMIC_EA_FALLBACK_ALLOWLIST = new Set(['--ea-scroll-progress']);
+// Tokens intentionally managed by app runtime rather than global tokens.css definitions.
+const RUNTIME_MANAGED_EA_TOKENS = new Set(['--ea-scroll-progress']);
 const MAX_CLASS_DRIFT_ITEMS_PER_SIDE = 80;
 const S12A_SHARED_FOUNDATION_STYLED_ONLY_CLASSES = new Map([
   ['compact-theme', 'src/shared/ui/styles/tokens.css'],
@@ -423,6 +425,10 @@ function reportMissingGlobalTokens(sourceFiles, warnings) {
   const usedTokens = collectUsedEaTokens(sourceFiles);
 
   for (const [tokenName, locations] of [...usedTokens.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+    if (RUNTIME_MANAGED_EA_TOKENS.has(tokenName)) {
+      continue;
+    }
+
     if (globalDefinitions.has(tokenName)) {
       continue;
     }
