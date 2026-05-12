@@ -331,7 +331,7 @@ function renderTopbar(active: 'tools' | 'match' | 'estimator'): string {
   const nav = [
     { key: 'tools', label: 'Tools', href: '/' },
     { key: 'match', label: 'Match Lab', href: '/tonearm-calculator' },
-    { key: 'estimator', label: 'Estimator', href: '#' },
+    { key: 'estimator', label: 'Estimator', href: '/compliance' },
   ];
 
   return `

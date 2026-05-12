@@ -1,17 +1,28 @@
 import { enableHomePageInteractions, renderHomePage } from './home/renderHomePage';
 import {
+  enableComplianceEstimatorInteractions,
+  renderComplianceEstimatorPage,
+} from '../modules/compliance-estimator';
+import {
   enableTonearmMatchLabInteractions,
   renderTonearmMatchLabPage,
 } from '../modules/tonearm-match-lab';
 
-export type AppRoute = 'home' | 'tonearm-calculator';
+export type AppRoute = 'home' | 'tonearm-calculator' | 'compliance';
 
 const tonearmCalculatorPath = '/tonearm-calculator';
 const tonearmCalculatorHash = '#/tonearm-calculator';
+const compliancePath = '/compliance';
+const complianceHash = '#/compliance';
+const applicationRouteHashes = new Set([tonearmCalculatorHash, complianceHash]);
 
 function normalizeRoute(pathname: string, hash: string): AppRoute {
   if (hash === tonearmCalculatorHash || pathname === tonearmCalculatorPath) {
     return 'tonearm-calculator';
+  }
+
+  if (hash === complianceHash || pathname === compliancePath) {
+    return 'compliance';
   }
 
   return 'home';
@@ -21,6 +32,12 @@ function renderRoute(app: HTMLElement, route: AppRoute): void {
   if (route === 'tonearm-calculator') {
     app.innerHTML = renderTonearmMatchLabPage();
     enableTonearmMatchLabInteractions();
+    return;
+  }
+
+  if (route === 'compliance') {
+    app.innerHTML = renderComplianceEstimatorPage();
+    enableComplianceEstimatorInteractions();
     return;
   }
 
@@ -42,7 +59,7 @@ function shouldIgnoreModifiedClick(event: MouseEvent, anchor: HTMLAnchorElement)
 
 function shouldLetBrowserHandleAnchor(anchor: HTMLAnchorElement, url: URL): boolean {
   const isSamePage = url.origin === window.location.origin && url.pathname === window.location.pathname;
-  const isHashOnlyNavigation = url.hash.length > 0 && url.hash !== tonearmCalculatorHash;
+  const isHashOnlyNavigation = url.hash.length > 0 && !applicationRouteHashes.has(url.hash);
 
   return isSamePage && isHashOnlyNavigation;
 }
@@ -52,11 +69,11 @@ function isApplicationRoute(url: URL): boolean {
     return false;
   }
 
-  if (url.hash === tonearmCalculatorHash) {
+  if (applicationRouteHashes.has(url.hash)) {
     return true;
   }
 
-  return url.pathname === '/' || url.pathname === tonearmCalculatorPath;
+  return url.pathname === '/' || url.pathname === tonearmCalculatorPath || url.pathname === compliancePath;
 }
 
 export function startRouter(selector = '#app'): void {
@@ -92,7 +109,7 @@ export function startRouter(selector = '#app'): void {
 
   window.addEventListener('popstate', route);
   window.addEventListener('hashchange', () => {
-    if (window.location.hash === tonearmCalculatorHash) {
+    if (applicationRouteHashes.has(window.location.hash)) {
       route();
     }
   });

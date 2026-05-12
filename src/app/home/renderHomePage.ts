@@ -25,7 +25,8 @@ const tools: readonly ToolCard[] = [
     icon: '⇄',
     title: 'Compliance Estimator',
     summary: 'Convert manufacturer 100 Hz dynamic compliance to the 10 Hz quasi-static value used in the resonance equation.',
-    ariaLabel: 'Compliance Estimator is not routed in this build',
+    href: '/compliance',
+    ariaLabel: 'Open Compliance Estimator',
   },
   {
     id: 'Geometry',
@@ -54,7 +55,7 @@ function renderTopbar(active: 'tools' | 'match' | 'estimator'): string {
   const nav = [
     { key: 'tools', label: 'Tools', href: '/' },
     { key: 'match', label: 'Match Lab', href: '/tonearm-calculator' },
-    { key: 'estimator', label: 'Estimator', href: '#' },
+    { key: 'estimator', label: 'Estimator', href: '/compliance' },
   ];
 
   return `

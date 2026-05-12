@@ -603,3 +603,130 @@
     -webkit-backdrop-filter: none;
   }
 }
+
+
+/* Compliance Estimator route-specific layout repair. */
+.ce-estimator-table {
+  table-layout: fixed;
+}
+
+.ce-estimator-table .ea-col-label {
+  width: clamp(9.5rem, 22%, 12rem);
+}
+
+.ce-estimator-table .ea-col-value {
+  min-width: 0;
+  width: auto;
+}
+
+.ce-estimator-table .ea-col-meta {
+  width: 7.25rem;
+  max-width: 7.25rem;
+  padding-inline-end: var(--ea-space-3);
+  text-align: end;
+  white-space: nowrap;
+}
+
+.ce-estimator-table .ea-col-meta .ea-badge,
+.ce-detail-badge .ea-badge {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.ce-picker-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--ea-space-2);
+}
+
+.ce-picker-summary {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  color: var(--ea-text-medium);
+  font-family: var(--ea-font-data);
+  font-size: var(--ea-font-size-small);
+  line-height: 1.25;
+}
+
+.ce-picker-summary strong,
+.ce-picker-summary span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ce-picker-summary strong {
+  color: var(--ea-text-high);
+}
+
+.ce-picker-button {
+  min-width: 6.25rem;
+}
+
+.ce-detail-list {
+  display: grid;
+  gap: var(--ea-space-2);
+  margin-top: var(--ea-space-3);
+}
+
+.ce-detail-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(7rem, 0.75fr) minmax(0, 1fr) minmax(5.75rem, auto);
+  align-items: center;
+  gap: var(--ea-space-2);
+  padding: var(--ea-space-2);
+  border: 1px solid var(--ea-border-soft);
+  border-radius: var(--ea-radius-sm);
+  background: var(--ea-bg-panel-alt);
+}
+
+.ce-detail-label {
+  min-width: 0;
+  color: var(--ea-text-low);
+  font-family: var(--ea-font-data);
+  font-size: var(--ea-font-size-micro);
+  letter-spacing: var(--ea-letter-label);
+  text-transform: uppercase;
+}
+
+.ce-detail-value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--ea-text-high);
+  font-size: var(--ea-font-size-small);
+}
+
+.ce-detail-badge {
+  min-width: 0;
+  justify-self: end;
+  max-width: 100%;
+}
+
+.ce-scoreline {
+  padding-inline-end: var(--ea-space-3);
+}
+
+@media (max-width: 980px) {
+  .ce-estimator-table .ea-col-label {
+    width: 8.5rem;
+  }
+
+  .ce-estimator-table .ea-col-meta {
+    width: 6rem;
+    max-width: 6rem;
+  }
+
+  .ce-detail-row {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: stretch;
+  }
+
+  .ce-detail-badge {
+    justify-self: start;
+  }
+}
