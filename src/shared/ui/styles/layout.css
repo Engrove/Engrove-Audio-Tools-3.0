@@ -31,8 +31,14 @@ body {
 }
 
 .ea-tool-shell {
+  height: 100vh;
   display: grid;
-  grid-template-rows: var(--ea-shell-topbar-height) var(--ea-shell-context-height) minmax(0, 1fr) var(--ea-shell-action-height);
+  grid-template-rows:
+    minmax(var(--ea-shell-topbar-height), auto)
+    minmax(var(--ea-shell-context-height), auto)
+    minmax(0, 1fr)
+    minmax(var(--ea-shell-action-height), auto);
+  overflow: hidden;
 }
 
 .ea-topbar {
@@ -232,6 +238,8 @@ body {
   margin: 0 auto;
   padding: var(--ea-space-4) var(--ea-space-5);
   min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .ea-workbench-three {
@@ -258,7 +266,9 @@ body {
 
 .ea-workbench-result {
   position: sticky;
-  top: calc(var(--ea-shell-topbar-height) + var(--ea-shell-context-height) + var(--ea-space-3));
+  top: 0;
+  max-height: calc(100vh - var(--ea-shell-topbar-height) - var(--ea-shell-context-height) - var(--ea-shell-action-height) - var(--ea-space-8));
+  overflow: auto;
 }
 
 .ea-actionbar {
@@ -312,6 +322,8 @@ body {
 
   .ea-workbench-result {
     position: static;
+    max-height: none;
+    overflow: visible;
   }
 }
 

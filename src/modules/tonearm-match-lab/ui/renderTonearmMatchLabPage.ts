@@ -47,12 +47,70 @@ type ResonanceClassification = {
   suggestions: string[];
 };
 
+type RuntimeSelectionKind = 'tonearm' | 'cartridge';
+type WorkflowStepKey = 'tonearm' | 'cartridge' | 'tracking' | 'result' | 'save';
+type WorkflowStepStatus = 'planned' | 'active' | 'done';
+type WorkbenchLastAction = 'input' | 'reset' | 'saved' | 'exported';
+
+type WorkbenchState = {
+  selectedCartridge: RuntimePickerItem | null;
+  selectedTonearm: RuntimePickerItem | null;
+  lastAction: WorkbenchLastAction;
+};
+
+type EvaluatedResult =
+  | {
+      ok: true;
+      result: ResonanceResult;
+      diagnosis: ResonanceDiagnosis;
+      classification: ResonanceClassification;
+    }
+  | {
+      ok: false;
+      message: string;
+    };
+
+type RuntimeItemSnapshot = { id: string; name: string } | null;
+
+type TonearmSessionSnapshot = {
+  generatedAt: string;
+  selectedTonearm: RuntimeItemSnapshot;
+  selectedCartridge: RuntimeItemSnapshot;
+  inputs: ResonanceInput;
+  result: {
+    totalMovingMassG: number;
+    resonanceHz: number;
+    matchScore: number;
+    classification: {
+      key: ResonanceBandKey;
+      group: ResonanceBandGroup;
+      label: string;
+    };
+  };
+  sourceLabels: {
+    tonearm: string;
+    cartridge: string;
+    trackingForce: string;
+  };
+};
+
+const tonearmSessionStorageKey = 'engrove-tonearm-match-session';
+const workflowStepOrder: readonly WorkflowStepKey[] = ['tonearm', 'cartridge', 'tracking', 'result', 'save'];
+
+function createInitialWorkbenchState(): WorkbenchState {
+  return {
+    selectedCartridge: null,
+    selectedTonearm: null,
+    lastAction: 'input',
+  };
+}
+
 /*
  * Token/layout drift check cannot resolve these template-literal class suffixes.
  * Keep this static inventory in sync with statusDotMarkup() and badgeMarkup().
  */
 const tokenLayoutGeneratedClassNames =
-  'ea-badge--direct ea-badge--manufacturer ea-badge--setup ea-dot--planned ea-dot--active ea-dot--done ea-dot--error';
+  'ea-badge--direct ea-badge--manufacturer ea-badge--setup ea-dot--planned ea-dot--active ea-dot--done ea-dot--error ea-tasklist-num--done';
 
 const gaugeMinHz = 5;
 const gaugeMaxHz = 16;
@@ -397,6 +455,23 @@ function trackingForceSetupMarkup(): string {
 }
 
 
+
+function matchScoreForClassification(classification: ResonanceClassification, resonanceHz: number): number {
+  const bandBaseScore: Record<ResonanceBandGroup, number> = {
+    ideal: 96,
+    good: 86,
+    acceptable: 70,
+    marginal: 50,
+    poor: 25,
+  };
+  const idealCenterHz = 10;
+  const distancePenalty = classification.group === 'ideal' || classification.group === 'good'
+    ? Math.min(6, Math.abs(resonanceHz - idealCenterHz) * 2)
+    : 0;
+
+  return Math.round(clamp(bandBaseScore[classification.group] - distancePenalty, 0, 100));
+}
+
 function resonanceGaugeMarkup(result: ResonanceResult, classification: ResonanceClassification): string {
   const hz = result.resonanceHz;
   const uncertaintyHz = estimateUncertaintyHz(hz);
@@ -464,11 +539,11 @@ export function resultMarkup(result: ResonanceResult, diagnosis: ResonanceDiagno
       </div>
       ${resonanceGaugeMarkup(result, classification)}
       <div class="tm-lab-result__details">
-        <div class="tm-lab-scoreline">
-          <span class="tm-lab-scoreline__mark">—</span>
+        <div class="tm-lab-scoreline" title="UI match score derived from the existing resonance classification band. It does not change the resonance calculation.">
+          <span class="tm-lab-scoreline__mark" data-match-score="${escapeAttribute(String(matchScoreForClassification(classification, result.resonanceHz)))}">${renderText(String(matchScoreForClassification(classification, result.resonanceHz)))}</span>
           <span>
             <strong>Match score</strong>
-            <small>${renderText(classification.title)}</small>
+            <small>${renderText(`${classification.label} · UI score from resonance band`)}</small>
           </span>
         </div>
         <p class="tm-lab-result__diagnosis-note">${renderText(diagnosis.title)} ${renderText(diagnosis.explanation)}</p>
@@ -502,7 +577,7 @@ export function errorMarkup(message: unknown): string {
 function runtimePickerControlsMarkup(): string {
   return `
     <tr class="tm-runtime-picker-row" data-runtime-picker-control="tonearm">
-      <td class="ea-col-status">${statusDotMarkup('done')}</td>
+      <td class="ea-col-status" data-runtime-picker-status-dot="tonearm">${statusDotMarkup('planned')}</td>
       <td class="ea-col-label">
         Tonearm
         <span class="ea-form-table-sublabel">Selected reference</span>
@@ -513,10 +588,10 @@ function runtimePickerControlsMarkup(): string {
           <button class="ea-button ea-button--ghost tm-runtime-picker-control__button" type="button" data-runtime-picker-open="tonearm" disabled>Pick</button>
         </div>
       </td>
-      <td class="ea-col-meta">${badgeMarkup('Manufacturer', 'direct')}</td>
+      <td class="ea-col-meta" data-runtime-picker-source="tonearm">—</td>
     </tr>
     <tr class="tm-runtime-picker-row" data-runtime-picker-control="cartridge">
-      <td class="ea-col-status">${statusDotMarkup('active')}</td>
+      <td class="ea-col-status" data-runtime-picker-status-dot="cartridge">${statusDotMarkup('planned')}</td>
       <td class="ea-col-label">
         Cartridge
         <span class="ea-form-table-sublabel">Selected reference</span>
@@ -524,10 +599,10 @@ function runtimePickerControlsMarkup(): string {
       <td class="ea-col-value">
         <div class="ea-input-row-with-button">
           <span class="tm-runtime-picker-summary" data-runtime-picker-summary="cartridge">No cartridge selected.</span>
-          <button class="ea-button ea-button--primary tm-runtime-picker-control__button" type="button" data-runtime-picker-open="cartridge" disabled>Pick</button>
+          <button class="ea-button ea-button--ghost tm-runtime-picker-control__button" type="button" data-runtime-picker-open="cartridge" disabled>Pick</button>
         </div>
       </td>
-      <td class="ea-col-meta">—</td>
+      <td class="ea-col-meta" data-runtime-picker-source="cartridge">—</td>
     </tr>
     <tr class="tm-runtime-status-row">
       <td class="ea-col-status">${statusDotMarkup('active')}</td>
@@ -626,25 +701,45 @@ function restoreFocusedNumberInput(snapshot: FocusedNumberInputSnapshot | null):
   }
 }
 
-function updateResultView(form: HTMLFormElement, resultElement: HTMLElement): void {
-  const focusedInput = captureFocusedNumberInput(form);
-
+function evaluateCurrentResult(form: HTMLFormElement): EvaluatedResult {
   try {
     const result = calculateResonanceResult(readFormInput(form));
     const diagnosis = diagnoseResonance(result.resonanceHz);
     const classification = classifyResonance(result.resonanceHz);
-    resultElement.dataset.diagnosisLevel = classification.group;
-    resultElement.dataset.resonanceBand = classification.key;
-    resultElement.innerHTML = resultMarkup(result, diagnosis);
+
+    return {
+      ok: true,
+      result,
+      diagnosis,
+      classification,
+    };
   } catch (error) {
-    resultElement.dataset.diagnosisLevel = 'poor';
-    resultElement.dataset.resonanceBand = 'error';
-    resultElement.innerHTML = errorMarkup(
-      error instanceof Error ? error.message : 'Check the input values.',
-    );
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : 'Check the input values.',
+    };
+  }
+}
+
+function updateResultView(form: HTMLFormElement, resultElement: HTMLElement): EvaluatedResult {
+  const focusedInput = captureFocusedNumberInput(form);
+  const evaluated = evaluateCurrentResult(form);
+
+  try {
+    if (evaluated.ok) {
+      resultElement.dataset.diagnosisLevel = evaluated.classification.group;
+      resultElement.dataset.resonanceBand = evaluated.classification.key;
+      resultElement.innerHTML = resultMarkup(evaluated.result, evaluated.diagnosis);
+    } else {
+      resultElement.dataset.diagnosisLevel = 'poor';
+      resultElement.dataset.resonanceBand = 'error';
+      resultElement.innerHTML = errorMarkup(evaluated.message);
+    }
   } finally {
     restoreFocusedNumberInput(focusedInput);
   }
+
+  return evaluated;
 }
 
 function renderResult(form: HTMLFormElement, resultElement: HTMLElement): void {
@@ -694,12 +789,11 @@ function applyRuntimePickerItem(form: HTMLFormElement, item: RuntimePickerItem):
   return changed;
 }
 
-function writePickerSummary(item: RuntimePickerItem): void {
-  const summary = document.querySelector<HTMLElement>(`[data-runtime-picker-summary="${item.kind}"]`);
-  if (!summary) {
-    return;
-  }
+function runtimeSelectionLabel(kind: RuntimeSelectionKind): string {
+  return kind === 'cartridge' ? 'No cartridge selected.' : 'No tonearm selected.';
+}
 
+function selectionSummaryDetails(item: RuntimePickerItem): string {
   const details = item.kind === 'cartridge'
     ? [
         typeof item.massG === 'number' ? `${item.massG} g` : undefined,
@@ -709,14 +803,99 @@ function writePickerSummary(item: RuntimePickerItem): void {
         typeof item.effectiveMassG === 'number' ? `${item.effectiveMassG} g effective mass` : undefined,
       ].filter(Boolean);
 
-  summary.innerHTML = `
-    <strong>${renderText(item.kind === 'cartridge' ? 'Selected cartridge:' : 'Selected tonearm:')}</strong>
-    <span>${renderText(item.displayName)}</span>
-    <small>${renderText(details.length > 0 ? details.join(' · ') : 'No match values copied')}</small>
-  `;
+  return details.length > 0 ? details.join(' · ') : 'No match values copied';
 }
 
-function bindRuntimePickers(form: HTMLFormElement): void {
+function runtimePickerButton(kind: RuntimeSelectionKind): HTMLButtonElement | null {
+  return document.querySelector<HTMLButtonElement>(`[data-runtime-picker-open="${kind}"]`);
+}
+
+function setRuntimePickerButtonMode(kind: RuntimeSelectionKind, mode: 'next' | 'selected' | 'idle'): void {
+  const button = runtimePickerButton(kind);
+  if (!button) {
+    return;
+  }
+
+  button.classList.toggle('ea-button--primary', mode === 'next');
+  button.classList.toggle('ea-button--secondary', mode === 'selected');
+  button.classList.toggle('ea-button--ghost', mode === 'idle');
+}
+
+function setRuntimePickerRowState(kind: RuntimeSelectionKind, selected: boolean): void {
+  const row = document.querySelector<HTMLElement>(`[data-runtime-picker-control="${kind}"]`);
+  const button = runtimePickerButton(kind);
+  const dot = document.querySelector<HTMLElement>(`[data-runtime-picker-status-dot="${kind}"]`);
+  const source = document.querySelector<HTMLElement>(`[data-runtime-picker-source="${kind}"]`);
+
+  row?.toggleAttribute('data-runtime-selected', selected);
+
+  if (button) {
+    button.textContent = selected ? 'Change' : 'Pick';
+    button.setAttribute(
+      'aria-label',
+      selected
+        ? `Change selected ${kind}`
+        : `Pick ${kind} from dataset`,
+    );
+  }
+
+  if (dot) {
+    dot.innerHTML = statusDotMarkup(selected ? 'done' : 'planned');
+  }
+
+  if (source) {
+    source.innerHTML = selected ? badgeMarkup('Dataset', 'manufacturer') : '—';
+  }
+}
+
+function syncRuntimePickerButtonStates(state: WorkbenchState): void {
+  const nextKind: RuntimeSelectionKind | null = !state.selectedTonearm
+    ? 'tonearm'
+    : !state.selectedCartridge
+      ? 'cartridge'
+      : null;
+
+  for (const kind of ['tonearm', 'cartridge'] as const) {
+    const isSelected = kind === 'tonearm' ? Boolean(state.selectedTonearm) : Boolean(state.selectedCartridge);
+    setRuntimePickerButtonMode(kind, isSelected ? 'selected' : nextKind === kind ? 'next' : 'idle');
+  }
+}
+
+function clearPickerSummary(kind: RuntimeSelectionKind): void {
+  const summary = document.querySelector<HTMLElement>(`[data-runtime-picker-summary="${kind}"]`);
+  if (!summary) {
+    return;
+  }
+
+  summary.textContent = runtimeSelectionLabel(kind);
+}
+
+function writePickerSummary(item: RuntimePickerItem): void {
+  const summary = document.querySelector<HTMLElement>(`[data-runtime-picker-summary="${item.kind}"]`);
+  if (!summary) {
+    return;
+  }
+
+  summary.innerHTML = `
+    <strong>${renderText(item.kind === 'cartridge' ? 'Selected cartridge' : 'Selected tonearm')}</strong>
+    <span title="${escapeAttribute(item.displayName)}">${renderText(item.displayName)}</span>
+    <small>${renderText(selectionSummaryDetails(item))}</small>
+  `;
+
+  setRuntimePickerRowState(item.kind, true);
+}
+
+function resetRuntimePickerState(state: WorkbenchState): void {
+  state.selectedCartridge = null;
+  state.selectedTonearm = null;
+
+  clearPickerSummary('cartridge');
+  clearPickerSummary('tonearm');
+  setRuntimePickerRowState('cartridge', false);
+  setRuntimePickerRowState('tonearm', false);
+}
+
+function bindRuntimePickers(form: HTMLFormElement, resultElement: HTMLElement, state: WorkbenchState): void {
   const root = document.querySelector<HTMLElement>('[data-tonearm-runtime-pickers]');
   if (!root) {
     return;
@@ -725,8 +904,6 @@ function bindRuntimePickers(form: HTMLFormElement): void {
   const status = root.querySelector<HTMLElement>('[data-runtime-picker-status]');
   const cartridgeButton = root.querySelector<HTMLButtonElement>('[data-runtime-picker-open="cartridge"]');
   const tonearmButton = root.querySelector<HTMLButtonElement>('[data-runtime-picker-open="tonearm"]');
-  let appliedCartridgeId: string | null = null;
-  let appliedTonearmId: string | null = null;
 
   loadTonearmRuntimeData()
     .then((data) => {
@@ -743,12 +920,16 @@ function bindRuntimePickers(form: HTMLFormElement): void {
             kind: 'cartridge',
             title: 'Select cartridge from dataset',
             items: cartridgeItems,
-            appliedItemId: appliedCartridgeId,
+            appliedItemId: state.selectedCartridge?.id ?? null,
             onApply: (item: RuntimePickerItem) => {
-              appliedCartridgeId = item.id;
+              state.selectedCartridge = item;
+              state.lastAction = 'input';
               writePickerSummary(item);
               if (applyRuntimePickerItem(form, item)) {
-                form.dispatchEvent(new Event('input', { bubbles: true }));
+                const evaluated = updateResultView(form, resultElement);
+                syncWorkbenchState(form, state, evaluated);
+              } else {
+                syncWorkbenchState(form, state);
               }
             },
           });
@@ -761,17 +942,23 @@ function bindRuntimePickers(form: HTMLFormElement): void {
             kind: 'tonearm',
             title: 'Select tonearm from dataset',
             items: tonearmItems,
-            appliedItemId: appliedTonearmId,
+            appliedItemId: state.selectedTonearm?.id ?? null,
             onApply: (item: RuntimePickerItem) => {
-              appliedTonearmId = item.id;
+              state.selectedTonearm = item;
+              state.lastAction = 'input';
               writePickerSummary(item);
               if (applyRuntimePickerItem(form, item)) {
-                form.dispatchEvent(new Event('input', { bubbles: true }));
+                const evaluated = updateResultView(form, resultElement);
+                syncWorkbenchState(form, state, evaluated);
+              } else {
+                syncWorkbenchState(form, state);
               }
             },
           });
         });
       }
+
+      syncWorkbenchState(form, state);
     })
     .catch((error: unknown) => {
       const message = error instanceof Error ? error.message : 'Unable to load runtime picker data.';
@@ -786,6 +973,234 @@ function bindRuntimePickers(form: HTMLFormElement): void {
       }
     });
 }
+
+
+function selectedSnapshot(item: RuntimePickerItem | null): RuntimeItemSnapshot {
+  if (!item) {
+    return null;
+  }
+
+  return {
+    id: item.id,
+    name: item.displayName,
+  };
+}
+
+function createSessionSnapshot(form: HTMLFormElement, state: WorkbenchState): TonearmSessionSnapshot {
+  const input = readFormInput(form);
+  const result = calculateResonanceResult(input);
+  const classification = classifyResonance(result.resonanceHz);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    selectedTonearm: selectedSnapshot(state.selectedTonearm),
+    selectedCartridge: selectedSnapshot(state.selectedCartridge),
+    inputs: {
+      tonearmEffectiveMassG: input.tonearmEffectiveMassG,
+      cartridgeMassG: input.cartridgeMassG,
+      fastenerMassG: input.fastenerMassG,
+      compliance10HzCu: input.compliance10HzCu,
+      trackingForceG: input.trackingForceG,
+    },
+    result: {
+      totalMovingMassG: result.totalMovingMassG,
+      resonanceHz: result.resonanceHz,
+      matchScore: matchScoreForClassification(classification, result.resonanceHz),
+      classification: {
+        key: classification.key,
+        group: classification.group,
+        label: classification.label,
+      },
+    },
+    sourceLabels: {
+      tonearm: state.selectedTonearm ? 'manufacturer dataset' : 'manual/default',
+      cartridge: state.selectedCartridge ? 'cartridge dataset' : 'manual/default',
+      trackingForce: 'setup only; not used in resonance math',
+    },
+  };
+}
+
+function reportLine(label: string, value: string | number | null | undefined, unit = ''): string {
+  const printableValue = value === null || typeof value === 'undefined' || value === '' ? '—' : String(value);
+  return `- ${label}: ${printableValue}${unit}`;
+}
+
+function createSessionReport(snapshot: TonearmSessionSnapshot): string {
+  return [
+    'Engrove Audio Tools — Tonearm Match Lab',
+    '========================================',
+    '',
+    reportLine('Generated', snapshot.generatedAt),
+    reportLine('Selected tonearm', snapshot.selectedTonearm?.name),
+    reportLine('Selected cartridge', snapshot.selectedCartridge?.name),
+    '',
+    'Inputs',
+    '------',
+    reportLine('Tonearm effective mass', formatNumber(snapshot.inputs.tonearmEffectiveMassG), ' g'),
+    reportLine('Cartridge mass', formatNumber(snapshot.inputs.cartridgeMassG), ' g'),
+    reportLine('Fasteners / mounting mass', formatNumber(snapshot.inputs.fastenerMassG), ' g'),
+    reportLine('Compliance @ 10 Hz', formatNumber(snapshot.inputs.compliance10HzCu), ' µm/mN'),
+    reportLine('Tracking force', formatNumber(snapshot.inputs.trackingForceG), ' g'),
+    '',
+    'Result',
+    '------',
+    reportLine('Total moving mass', formatNumber(snapshot.result.totalMovingMassG), ' g'),
+    reportLine('Resonance frequency', formatNumber(snapshot.result.resonanceHz), ' Hz'),
+    reportLine('Classification', snapshot.result.classification.label),
+    reportLine('Match score', snapshot.result.matchScore, ' / 100'),
+    '',
+    'Sources',
+    '-------',
+    reportLine('Tonearm source', snapshot.sourceLabels.tonearm),
+    reportLine('Cartridge source', snapshot.sourceLabels.cartridge),
+    reportLine('Tracking force', snapshot.sourceLabels.trackingForce),
+    '',
+    'Notes',
+    '-----',
+    '- Match score is a UI score derived from the existing resonance classification band.',
+    '- Tracking force is recorded as setup context only and is not used in the resonance calculation.',
+    '- Formula: F₀ = 159.15 / √(M · C).',
+    '',
+  ].join('\n');
+}
+
+function setActionbarStatus(text: string, statusClass: string): void {
+  const status = document.querySelector<HTMLElement>('[data-tonearm-action-status]');
+  if (!status) {
+    return;
+  }
+
+  status.innerHTML = `${statusDotMarkup(statusClass)}<span>${renderText(text)}</span>`;
+}
+
+function workflowActiveStep(form: HTMLFormElement, state: WorkbenchState, evaluated: EvaluatedResult): WorkflowStepKey {
+  if (!state.selectedTonearm) {
+    return 'tonearm';
+  }
+
+  if (!state.selectedCartridge) {
+    return 'cartridge';
+  }
+
+  const trackingForce = readNumber(form, 'trackingForceG');
+  if (!Number.isFinite(trackingForce) || trackingForce < 0) {
+    return 'tracking';
+  }
+
+  if (!evaluated.ok) {
+    return 'result';
+  }
+
+  return 'save';
+}
+
+function setWorkflowStepState(step: WorkflowStepKey, status: WorkflowStepStatus): void {
+  const item = document.querySelector<HTMLElement>(`[data-workflow-step="${step}"]`);
+  const marker = item?.querySelector<HTMLElement>('.ea-tasklist-num');
+  if (!item || !marker) {
+    return;
+  }
+
+  item.dataset.stepState = status;
+  if (status === 'active') {
+    item.setAttribute('aria-current', 'step');
+  } else {
+    item.removeAttribute('aria-current');
+  }
+
+  marker.classList.toggle('ea-tasklist-num--active', status === 'active');
+  marker.classList.toggle('ea-tasklist-num--done', status === 'done');
+}
+
+function syncWorkflowState(form: HTMLFormElement, state: WorkbenchState, evaluated: EvaluatedResult): void {
+  const activeStep = workflowActiveStep(form, state, evaluated);
+  const activeIndex = workflowStepOrder.indexOf(activeStep);
+
+  for (const [index, step] of workflowStepOrder.entries()) {
+    const status: WorkflowStepStatus =
+      index < activeIndex ? 'done' : step === activeStep ? 'active' : 'planned';
+    setWorkflowStepState(step, status);
+  }
+}
+
+function actionbarStatusText(state: WorkbenchState, evaluated: EvaluatedResult): { text: string; status: string } {
+  if (state.lastAction === 'saved') {
+    return { text: 'Saved locally', status: 'done' };
+  }
+
+  if (state.lastAction === 'exported') {
+    return { text: 'Exported report', status: 'done' };
+  }
+
+  if (state.lastAction === 'reset') {
+    return { text: 'Reset to manual defaults', status: 'active' };
+  }
+
+  if (!evaluated.ok) {
+    return { text: 'Input needs attention', status: 'error' };
+  }
+
+  if (state.selectedTonearm && !state.selectedCartridge) {
+    return { text: 'Awaiting cartridge', status: 'active' };
+  }
+
+  if (!state.selectedTonearm && state.selectedCartridge) {
+    return { text: 'Awaiting tonearm', status: 'active' };
+  }
+
+  if (state.selectedTonearm && state.selectedCartridge) {
+    return { text: `${evaluated.classification.label} result ready`, status: evaluated.classification.group === 'ideal' || evaluated.classification.group === 'good' ? 'done' : 'active' };
+  }
+
+  return { text: 'Manual setup ready', status: 'active' };
+}
+
+function syncWorkbenchState(form: HTMLFormElement, state: WorkbenchState, evaluated = evaluateCurrentResult(form)): void {
+  syncWorkflowState(form, state, evaluated);
+  syncRuntimePickerButtonStates(state);
+  const actionStatus = actionbarStatusText(state, evaluated);
+  setActionbarStatus(actionStatus.text, actionStatus.status);
+}
+
+function exportCurrentSession(form: HTMLFormElement, state: WorkbenchState): boolean {
+  try {
+    const snapshot = createSessionSnapshot(form, state);
+    const report = createSessionReport(snapshot);
+    const blob = new Blob([report], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'engrove-tonearm-match-report.txt';
+    link.rel = 'noopener';
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    state.lastAction = 'exported';
+    syncWorkbenchState(form, state);
+    return true;
+  } catch {
+    state.lastAction = 'input';
+    setActionbarStatus('Export unavailable', 'error');
+    return false;
+  }
+}
+
+function saveCurrentSession(form: HTMLFormElement, state: WorkbenchState): boolean {
+  try {
+    const snapshot = createSessionSnapshot(form, state);
+    localStorage.setItem(tonearmSessionStorageKey, JSON.stringify(snapshot));
+    state.lastAction = 'saved';
+    syncWorkbenchState(form, state);
+    return true;
+  } catch {
+    state.lastAction = 'input';
+    setActionbarStatus('Local save unavailable', 'error');
+    return false;
+  }
+}
+
+
 
 function bindThemeToggle(): void {
   const button = document.querySelector<HTMLButtonElement>('[data-theme-toggle]');
@@ -822,7 +1237,6 @@ export function renderTonearmMatchLabPage(): string {
           <span class="ea-contextbar__divider" aria-hidden="true"></span>
           <span class="ea-contextbar__description">Estimate low-frequency cantilever-arm resonance. F₀ = 159.15 / √(M·C).</span>
         </div>
-        <span class="ea-contextbar__meta">Session A4-7F19&nbsp;&nbsp; Dataset v3.0.0-rc.5</span>
       </section>
 
       <section class="ea-workbench ea-workbench-three tm-lab-workbench" id="quick-match" aria-labelledby="tm-lab-title">
@@ -831,40 +1245,40 @@ export function renderTonearmMatchLabPage(): string {
             <span class="ea-panel-header-id">01</span>
             <span>Workflow</span>
           </div>
-          <ol class="ea-tasklist">
-            <li>
-              <span class="ea-tasklist-num ea-tasklist-num--done">1</span>
+          <ol class="ea-tasklist" data-tonearm-workflow>
+            <li data-workflow-step="tonearm" data-step-state="active" aria-current="step">
+              <span class="ea-tasklist-num ea-tasklist-num--active">1</span>
               <span>
                 <span class="ea-tasklist-title">Pick tonearm</span>
-                <span class="ea-tasklist-sub">Effective mass + headshell</span>
+                <span class="ea-tasklist-sub">Effective mass reference</span>
               </span>
             </li>
-            <li aria-current="step">
-              <span class="ea-tasklist-num ea-tasklist-num--active">2</span>
+            <li data-workflow-step="cartridge" data-step-state="planned">
+              <span class="ea-tasklist-num">2</span>
               <span>
                 <span class="ea-tasklist-title">Pick cartridge</span>
                 <span class="ea-tasklist-sub">Mass + compliance @ 10 Hz</span>
               </span>
             </li>
-            <li>
+            <li data-workflow-step="tracking" data-step-state="planned">
               <span class="ea-tasklist-num">3</span>
               <span>
                 <span class="ea-tasklist-title">Set tracking force</span>
-                <span class="ea-tasklist-sub">Setup, not in F₀</span>
+                <span class="ea-tasklist-sub">Setup only · not in F₀</span>
               </span>
             </li>
-            <li>
+            <li data-workflow-step="result" data-step-state="planned">
               <span class="ea-tasklist-num">4</span>
               <span>
                 <span class="ea-tasklist-title">Read result</span>
                 <span class="ea-tasklist-sub">Classification + score</span>
               </span>
             </li>
-            <li>
+            <li data-workflow-step="save" data-step-state="planned">
               <span class="ea-tasklist-num">5</span>
               <span>
-                <span class="ea-tasklist-title">Save session</span>
-                <span class="ea-tasklist-sub">Snapshot for export</span>
+                <span class="ea-tasklist-title">Save/export optional</span>
+                <span class="ea-tasklist-sub">Local report / snapshot</span>
               </span>
             </li>
           </ol>
@@ -934,16 +1348,16 @@ export function renderTonearmMatchLabPage(): string {
 
       <section class="ea-actionbar" aria-label="Workspace actions">
         <div class="ea-actionbar__group">
-          <span class="ea-actionbar__status">
+          <span class="ea-actionbar__status" data-tonearm-action-status>
             ${statusDotMarkup('active')}
-            <span>Awaiting input</span>
+            <span>Manual setup ready</span>
           </span>
         </div>
         <div class="ea-actionbar__group">
           <span class="ea-contextbar__meta">F₀ = 159.15 / √(M·C)</span>
           <button class="ea-button ea-button--secondary" type="button" data-reset-tonearm-defaults>Reset</button>
-          <button class="ea-button ea-button--ghost" type="button" disabled>Export</button>
-          <button class="ea-button ea-button--primary" type="button" disabled>Save session</button>
+          <button class="ea-button ea-button--ghost" type="button" data-export-tonearm-session title="Download a human-readable local report">Export report</button>
+          <button class="ea-button ea-button--primary" type="button" data-save-tonearm-session title="Save a local snapshot in this browser">Save local</button>
         </div>
       </section>
     </main>
@@ -951,12 +1365,15 @@ export function renderTonearmMatchLabPage(): string {
 }
 
 
-function resetFormToDefaults(form: HTMLFormElement, resultElement: HTMLElement): void {
+function resetFormToDefaults(form: HTMLFormElement, resultElement: HTMLElement, state: WorkbenchState): void {
   for (const field of quickMatchFields) {
     setNumericInput(form, field.name, defaultInput[field.name]);
   }
   setNumericInput(form, 'trackingForceG', defaultInput.trackingForceG);
-  updateResultView(form, resultElement);
+  resetRuntimePickerState(state);
+  state.lastAction = 'reset';
+  const evaluated = updateResultView(form, resultElement);
+  syncWorkbenchState(form, state, evaluated);
 }
 
 export function enableTonearmMatchLabInteractions(): void {
@@ -964,25 +1381,39 @@ export function enableTonearmMatchLabInteractions(): void {
 
   const form = document.querySelector<HTMLFormElement>('[data-tonearm-match-form]');
   const resultElement = document.querySelector<HTMLElement>('[data-tonearm-match-result]');
+  const state = createInitialWorkbenchState();
 
   if (!form || !resultElement) {
     return;
   }
 
-  bindRuntimePickers(form);
+  bindRuntimePickers(form, resultElement, state);
 
   document.querySelector<HTMLButtonElement>('[data-reset-tonearm-defaults]')?.addEventListener('click', () => {
-    resetFormToDefaults(form, resultElement);
+    resetFormToDefaults(form, resultElement, state);
+  });
+
+  document.querySelector<HTMLButtonElement>('[data-export-tonearm-session]')?.addEventListener('click', () => {
+    exportCurrentSession(form, state);
+  });
+
+  document.querySelector<HTMLButtonElement>('[data-save-tonearm-session]')?.addEventListener('click', () => {
+    saveCurrentSession(form, state);
   });
 
   form.addEventListener('input', (event) => {
     const input = event.target;
+    state.lastAction = 'input';
 
     if (input instanceof HTMLInputElement && input.name === 'trackingForceG') {
+      syncWorkbenchState(form, state);
       return;
     }
 
-    updateResultView(form, resultElement);
+    const evaluated = updateResultView(form, resultElement);
+    syncWorkbenchState(form, state, evaluated);
   });
-  updateResultView(form, resultElement);
+
+  const evaluated = updateResultView(form, resultElement);
+  syncWorkbenchState(form, state, evaluated);
 }

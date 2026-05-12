@@ -43,8 +43,13 @@
   border-bottom: 0;
 }
 
-.ea-tasklist li[aria-current="step"] {
+.ea-tasklist li[aria-current="step"],
+.ea-tasklist li[data-step-state="active"] {
   background: var(--ea-interactive-accent-soft);
+}
+
+.ea-tasklist li[data-step-state="done"] {
+  background: color-mix(in srgb, var(--ea-status-success) 7%, transparent);
 }
 
 .ea-tasklist-num {
@@ -110,8 +115,44 @@
 .tm-lab-setup-panel,
 .tm-lab-workbench,
 .tm-resonance-table,
+.tm-runtime-picker-row,
 .tm-runtime-status-row {
   min-width: 0;
+}
+
+.tm-resonance-table {
+  table-layout: fixed;
+}
+
+.tm-resonance-table .ea-col-status {
+  width: 24px;
+}
+
+.tm-resonance-table .ea-col-label {
+  width: 28%;
+}
+
+.tm-resonance-table .ea-col-value {
+  width: auto;
+  min-width: 0;
+}
+
+.tm-resonance-table .ea-col-meta {
+  width: 7rem;
+  max-width: 7rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tm-runtime-picker-row .ea-input-row-with-button {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.tm-runtime-picker-row[data-runtime-selected] {
+  background: color-mix(in srgb, var(--ea-interactive-accent) 8%, transparent);
 }
 
 .tm-runtime-picker-summary,
@@ -122,34 +163,49 @@
   font-family: var(--ea-font-data);
   font-size: var(--ea-font-size-small);
   text-overflow: ellipsis;
+}
+
+.tm-runtime-picker-summary {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 1px;
+  max-width: 100%;
+}
+
+.tm-runtime-picker-summary strong,
+.tm-runtime-picker-summary span,
+.tm-runtime-picker-summary small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .tm-runtime-picker-summary strong {
-  display: inline;
-  margin-right: var(--ea-space-2);
   color: var(--ea-text-high);
   font-size: var(--ea-font-size-small);
 }
 
 .tm-runtime-picker-summary span {
-  display: inline;
-  margin-right: var(--ea-space-2);
   color: var(--ea-text-medium);
   font-size: var(--ea-font-size-small);
 }
 
 .tm-runtime-picker-summary small {
-  display: inline;
-  margin-right: var(--ea-space-2);
   color: var(--ea-text-low);
-  font-size: var(--ea-font-size-small);
+  font-size: var(--ea-font-size-micro);
+}
+
+.tm-runtime-picker-status {
+  white-space: nowrap;
 }
 
 .tm-runtime-picker-control__button {
   flex: 0 0 auto;
-  min-width: 54px;
-  padding-inline: var(--ea-space-3);
+  min-width: 5.8rem;
+  padding-inline: var(--ea-space-2);
+  white-space: nowrap;
 }
 
 .tm-lab-setup-context {
@@ -361,6 +417,8 @@
   color: var(--ea-text-high);
   font-family: var(--ea-font-data);
   font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .tm-lab-scoreline strong,
