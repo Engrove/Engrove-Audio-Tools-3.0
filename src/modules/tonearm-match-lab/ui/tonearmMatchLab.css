@@ -339,17 +339,18 @@
   overflow: visible;
   border: 1px solid var(--ea-border-primary);
   border-radius: 6px;
+  /* Stops mirror classifyResonance(): 6/7/8/9/11/12/13/14 Hz on a 5–16 Hz gauge. */
   background: linear-gradient(
     90deg,
-    var(--ea-status-error) 0% 12%,
-    var(--ea-status-marginal) 12% 24%,
-    var(--ea-status-warning) 24% 38%,
-    var(--ea-status-good) 38% 50%,
-    var(--ea-status-success) 50% 62%,
-    var(--ea-status-good) 62% 74%,
-    var(--ea-status-warning) 74% 86%,
-    var(--ea-status-marginal) 86% 94%,
-    var(--ea-status-error) 94% 100%
+    var(--ea-status-error) 0% 9.09%,
+    var(--ea-status-marginal) 9.09% 18.18%,
+    var(--ea-status-warning) 18.18% 27.27%,
+    var(--ea-status-good) 27.27% 36.36%,
+    var(--ea-status-success) 36.36% 54.55%,
+    var(--ea-status-good) 54.55% 63.64%,
+    var(--ea-status-warning) 63.64% 72.73%,
+    var(--ea-status-marginal) 72.73% 81.82%,
+    var(--ea-status-error) 81.82% 100%
   );
 }
 
@@ -376,11 +377,32 @@
   height: 22px;
   border: 2px solid var(--ea-bg-panel);
   border-radius: var(--ea-radius-pill);
+  --tm-marker-band-color: var(--ea-interactive-accent);
   background: var(--ea-text-high);
   box-shadow:
-    0 0 0 2px var(--ea-interactive-accent),
-    0 0 12px color-mix(in srgb, var(--ea-interactive-accent) 55%, transparent);
+    0 0 0 2px var(--tm-marker-band-color),
+    0 0 12px color-mix(in srgb, var(--tm-marker-band-color) 55%, transparent);
   transform: translateX(-50%);
+}
+
+.tm-lab-gauge__marker[data-band="ideal"] {
+  --tm-marker-band-color: var(--ea-status-success);
+}
+
+.tm-lab-gauge__marker[data-band="good"] {
+  --tm-marker-band-color: var(--ea-status-good);
+}
+
+.tm-lab-gauge__marker[data-band="acceptable"] {
+  --tm-marker-band-color: var(--ea-status-warning);
+}
+
+.tm-lab-gauge__marker[data-band="marginal"] {
+  --tm-marker-band-color: var(--ea-status-marginal);
+}
+
+.tm-lab-gauge__marker[data-band="poor"] {
+  --tm-marker-band-color: var(--ea-status-error);
 }
 
 .tm-lab-gauge__marker[data-outside-scale="true"] {

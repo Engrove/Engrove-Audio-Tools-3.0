@@ -657,7 +657,11 @@ function resonanceGaugeMarkup(result: ResonanceResult, classification: Resonance
       <div class="tm-lab-gauge__track" aria-hidden="true">
         <span class="tm-lab-gauge__ideal-zone"></span>
         <span class="tm-lab-gauge__confidence"></span>
-        <span class="tm-lab-gauge__marker" data-outside-scale="${escapeAttribute(outsideScale ? 'true' : 'false')}">
+        <span
+          class="tm-lab-gauge__marker"
+          data-band="${escapeAttribute(classification.group)}"
+          data-outside-scale="${escapeAttribute(outsideScale ? 'true' : 'false')}"
+        >
           <span class="tm-lab-gauge__marker-label">${renderText(formatNumber(hz))} Hz</span>
         </span>
       </div>
