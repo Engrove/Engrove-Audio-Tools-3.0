@@ -49,6 +49,8 @@ type ResonanceClassification = {
 
 type RuntimeSelectionKind = 'tonearm' | 'cartridge';
 type TrackingForceSource = 'setup' | 'manual' | 'dataset' | 'unavailable';
+type FieldSource = 'default' | 'dataset' | 'manual' | 'restored-local' | 'unavailable' | 'setup';
+type FieldSourceState = Record<QuickMatchFieldName, FieldSource>;
 type WorkflowStepKey = 'tonearm' | 'cartridge' | 'tracking' | 'result' | 'save';
 type WorkflowStepStatus = 'planned' | 'active' | 'done';
 type WorkbenchLastAction = 'input' | 'reset' | 'saved' | 'exported' | 'loaded';
@@ -57,6 +59,7 @@ type WorkbenchState = {
   selectedCartridge: RuntimePickerItem | null;
   selectedTonearm: RuntimePickerItem | null;
   trackingForceSource: TrackingForceSource;
+  fieldSources: FieldSourceState;
   lastAction: WorkbenchLastAction;
 };
 
@@ -75,10 +78,13 @@ type EvaluatedResult =
 type RuntimeItemSnapshot = { id: string; name: string } | null;
 
 type TonearmSessionSnapshot = {
+  schemaVersion: 2;
   generatedAt: string;
   selectedTonearm: RuntimeItemSnapshot;
   selectedCartridge: RuntimeItemSnapshot;
   inputs: ResonanceInput;
+  trackingForceInputText?: string;
+  fieldSources: FieldSourceState;
   result: {
     totalMovingMassG: number;
     resonanceHz: number;
@@ -107,6 +113,7 @@ function createInitialWorkbenchState(): WorkbenchState {
     selectedCartridge: null,
     selectedTonearm: null,
     trackingForceSource: 'setup',
+    fieldSources: createInitialFieldSources(),
     lastAction: 'input',
   };
 }
@@ -128,6 +135,26 @@ const defaultInput: ResonanceInput = {
   trackingForceG: 1.8,
   compliance10HzCu: 18,
 };
+
+const initialFieldSources: FieldSourceState = {
+  tonearmEffectiveMassG: 'default',
+  cartridgeMassG: 'default',
+  fastenerMassG: 'default',
+  trackingForceG: 'setup',
+  compliance10HzCu: 'default',
+};
+
+function createInitialFieldSources(): FieldSourceState {
+  return { ...initialFieldSources };
+}
+
+function isQuickMatchFieldName(value: string): value is QuickMatchFieldName {
+  return value === 'tonearmEffectiveMassG'
+    || value === 'cartridgeMassG'
+    || value === 'fastenerMassG'
+    || value === 'trackingForceG'
+    || value === 'compliance10HzCu';
+}
 
 const quickMatchFields: readonly QuickMatchField[] = [
   {
@@ -203,6 +230,101 @@ const tableFieldMeta: Record<QuickMatchFieldName, TableFieldMeta> = {
 
 function fieldMeta(fieldName: QuickMatchFieldName): TableFieldMeta {
   return tableFieldMeta[fieldName];
+}
+
+function fieldSourceDescriptor(source: FieldSource): { label: string; className: string; report: string } {
+  switch (source) {
+    case 'dataset':
+      return {
+        label: 'From dataset',
+        className: 'manufacturer',
+        report: 'dataset value',
+      };
+    case 'manual':
+      return {
+        label: 'Manual',
+        className: 'direct',
+        report: 'manual override',
+      };
+    case 'restored-local':
+      return {
+        label: 'Local',
+        className: 'setup',
+        report: 'restored from local browser snapshot',
+      };
+    case 'unavailable':
+      return {
+        label: 'Unavailable',
+        className: 'setup',
+        report: 'not available in current runtime data',
+      };
+    case 'setup':
+      return {
+        label: 'Setup',
+        className: 'setup',
+        report: 'setup-only value',
+      };
+    case 'default':
+    default:
+      return {
+        label: 'Direct',
+        className: 'direct',
+        report: 'manual/default value',
+      };
+  }
+}
+
+function setFieldSourceState(state: WorkbenchState, fieldName: QuickMatchFieldName, source: FieldSource): void {
+  state.fieldSources[fieldName] = source;
+  const descriptor = fieldSourceDescriptor(source);
+  const sourceCell = document.querySelector<HTMLElement>(`[data-field-source="${fieldName}"]`);
+  const row = document.querySelector<HTMLElement>(`[data-resonance-field="${fieldName}"]`);
+  const statusCell = row?.querySelector<HTMLElement>('.ea-col-status');
+
+  if (sourceCell) {
+    sourceCell.innerHTML = badgeMarkup(descriptor.label, descriptor.className);
+  }
+
+  if (row) {
+    row.dataset.fieldSource = source;
+  }
+
+  if (statusCell) {
+    const statusClass = source === 'unavailable' ? 'planned' : 'done';
+    statusCell.innerHTML = statusDotMarkup(statusClass);
+  }
+}
+
+function applyFieldSourceStates(state: WorkbenchState): void {
+  for (const fieldName of Object.keys(state.fieldSources) as QuickMatchFieldName[]) {
+    setFieldSourceState(state, fieldName, state.fieldSources[fieldName]);
+  }
+}
+
+function markFieldSourceManual(state: WorkbenchState, fieldName: QuickMatchFieldName): void {
+  setFieldSourceState(state, fieldName, fieldName === 'trackingForceG' ? 'manual' : 'manual');
+}
+
+function normalizedSnapshotFieldSource(value: unknown, fallback: FieldSource): FieldSource {
+  return value === 'default'
+    || value === 'dataset'
+    || value === 'manual'
+    || value === 'restored-local'
+    || value === 'unavailable'
+    || value === 'setup'
+    ? value
+    : fallback;
+}
+
+function normalizedSnapshotFieldSources(value: unknown): FieldSourceState {
+  const record = typeof value === 'object' && value !== null ? value as Partial<Record<QuickMatchFieldName, unknown>> : {};
+  return {
+    tonearmEffectiveMassG: normalizedSnapshotFieldSource(record.tonearmEffectiveMassG, 'restored-local'),
+    cartridgeMassG: normalizedSnapshotFieldSource(record.cartridgeMassG, 'restored-local'),
+    fastenerMassG: normalizedSnapshotFieldSource(record.fastenerMassG, 'restored-local'),
+    trackingForceG: normalizedSnapshotFieldSource(record.trackingForceG, 'restored-local'),
+    compliance10HzCu: normalizedSnapshotFieldSource(record.compliance10HzCu, 'restored-local'),
+  };
 }
 
 function renderTopbar(active: 'tools' | 'match' | 'estimator'): string {
@@ -404,9 +526,11 @@ function classifyResonance(hz: number): ResonanceClassification {
 function fieldMarkup(field: QuickMatchField): string {
   const fieldName = escapeAttribute(field.name);
   const meta = fieldMeta(field.name);
+  const initialSource = initialFieldSources[field.name];
+  const descriptor = fieldSourceDescriptor(initialSource);
 
   return `
-    <tr>
+    <tr data-resonance-field="${fieldName}" data-field-source="${escapeAttribute(initialSource)}">
       <td class="ea-col-status">${statusDotMarkup(meta.statusClass)}</td>
       <td class="ea-col-label">
         <label for="tm-${fieldName}">${renderText(meta.label)}</label>
@@ -425,7 +549,7 @@ function fieldMarkup(field: QuickMatchField): string {
           aria-label="${escapeAttribute(field.label)}"
         />
       </td>
-      <td class="ea-col-meta">${badgeMarkup(meta.sourceLabel, meta.sourceClass)}</td>
+      <td class="ea-col-meta" data-field-source="${fieldName}">${badgeMarkup(descriptor.label, descriptor.className)}</td>
     </tr>
   `;
 }
@@ -470,7 +594,7 @@ function trackingForceSetupMarkup(): string {
   const meta = fieldMeta('trackingForceG');
 
   return `
-    <tr class="tm-tracking-force-row" data-tracking-force-row data-vtf-source="setup">
+    <tr class="tm-tracking-force-row" data-tracking-force-row data-resonance-field="${fieldName}" data-field-source="setup" data-vtf-source="setup">
       <td class="ea-col-status">${statusDotMarkup(meta.statusClass)}</td>
       <td class="ea-col-label">
         <label for="tm-${fieldName}">${renderText(meta.label)}</label>
@@ -489,7 +613,7 @@ function trackingForceSetupMarkup(): string {
           aria-label="Applied tracking force in grams"
         />
       </td>
-      <td class="ea-col-meta" data-tracking-force-source>${badgeMarkup(meta.sourceLabel, meta.sourceClass)}</td>
+      <td class="ea-col-meta" data-field-source="${fieldName}" data-tracking-force-source>${badgeMarkup(meta.sourceLabel, meta.sourceClass)}</td>
     </tr>
   `;
 }
@@ -662,21 +786,107 @@ function runtimePickerControlsMarkup(): string {
 }
 
 
-function readNumber(form: HTMLFormElement, name: QuickMatchFieldName): number {
+function fieldInputLabel(name: QuickMatchFieldName): string {
+  return fieldMeta(name).label;
+}
+
+function normalizeNumberInputText(value: string): string {
+  return value.trim().replace(',', '.');
+}
+
+function setInputValidity(element: HTMLInputElement, valid: boolean): void {
+  if (valid) {
+    element.removeAttribute('aria-invalid');
+  } else {
+    element.setAttribute('aria-invalid', 'true');
+  }
+}
+
+function readNumberInput(form: HTMLFormElement, name: QuickMatchFieldName): { ok: true; value: number } | { ok: false; reason: 'blank' | 'invalid' } {
   const element = form.elements.namedItem(name);
   if (!(element instanceof HTMLInputElement)) {
     throw new Error(`Missing input: ${name}`);
   }
-  return Number(element.value);
+
+  const rawValue = normalizeNumberInputText(element.value);
+  if (rawValue === '') {
+    setInputValidity(element, false);
+    return { ok: false, reason: 'blank' };
+  }
+
+  const value = Number(rawValue);
+  if (!Number.isFinite(value)) {
+    setInputValidity(element, false);
+    return { ok: false, reason: 'invalid' };
+  }
+
+  setInputValidity(element, true);
+  return { ok: true, value };
+}
+
+function readRequiredNumber(form: HTMLFormElement, name: QuickMatchFieldName): number {
+  const parsed = readNumberInput(form, name);
+  const label = fieldInputLabel(name);
+
+  if (!parsed.ok) {
+    throw new Error(parsed.reason === 'blank' ? `${label} is required.` : `${label} must be a valid number.`);
+  }
+
+  if (parsed.value < 0) {
+    const element = form.elements.namedItem(name);
+    if (element instanceof HTMLInputElement) {
+      setInputValidity(element, false);
+    }
+    throw new Error(`${label} must be zero or greater.`);
+  }
+
+  if (name === 'compliance10HzCu' && parsed.value <= 0) {
+    const element = form.elements.namedItem(name);
+    if (element instanceof HTMLInputElement) {
+      setInputValidity(element, false);
+    }
+    throw new Error('Compliance must be greater than zero.');
+  }
+
+  return parsed.value;
+}
+
+function readTrackingForceNumber(form: HTMLFormElement): { ok: true; value: number; blank: boolean } | { ok: false } {
+  const parsed = readNumberInput(form, 'trackingForceG');
+
+  if (!parsed.ok) {
+    const element = form.elements.namedItem('trackingForceG');
+    if (element instanceof HTMLInputElement && element.value.trim() === '') {
+      setInputValidity(element, true);
+      return { ok: true, value: 0, blank: true };
+    }
+    return { ok: false };
+  }
+
+  if (parsed.value < 0) {
+    const element = form.elements.namedItem('trackingForceG');
+    if (element instanceof HTMLInputElement) {
+      setInputValidity(element, false);
+    }
+    return { ok: false };
+  }
+
+  return { ok: true, value: parsed.value, blank: false };
 }
 
 function readFormInput(form: HTMLFormElement): ResonanceInput {
+  const trackingForce = readTrackingForceNumber(form);
+
+  if (!trackingForce.ok) {
+    throw new Error('Applied VTF must be blank or a valid non-negative number.');
+  }
+
   return {
-    tonearmEffectiveMassG: readNumber(form, 'tonearmEffectiveMassG'),
-    cartridgeMassG: readNumber(form, 'cartridgeMassG'),
-    fastenerMassG: readNumber(form, 'fastenerMassG'),
-    trackingForceG: readNumber(form, 'trackingForceG'),
-    compliance10HzCu: readNumber(form, 'compliance10HzCu'),
+    tonearmEffectiveMassG: readRequiredNumber(form, 'tonearmEffectiveMassG'),
+    cartridgeMassG: readRequiredNumber(form, 'cartridgeMassG'),
+    fastenerMassG: readRequiredNumber(form, 'fastenerMassG'),
+    trackingForceG: trackingForce.value,
+    compliance10HzCu: readRequiredNumber(form, 'compliance10HzCu'),
   };
 }
 
@@ -864,6 +1074,22 @@ function normalizedSnapshotTrackingForceSource(value: unknown): TrackingForceSou
   return isTrackingForceSource(value) ? value : 'manual';
 }
 
+function trackingForceSourceFromFieldSource(source: FieldSource): TrackingForceSource {
+  if (source === 'dataset') {
+    return 'dataset';
+  }
+
+  if (source === 'unavailable') {
+    return 'unavailable';
+  }
+
+  if (source === 'setup') {
+    return 'setup';
+  }
+
+  return 'manual';
+}
+
 function toCartridgePickerItem(record: CartridgeRuntimeRecord): RuntimePickerItem {
   if (record.tracking_force_g) {
     runtimeTrackingForceByCartridgeId.set(record.id, record.tracking_force_g);
@@ -906,17 +1132,28 @@ function applyRuntimePickerItem(form: HTMLFormElement, item: RuntimePickerItem, 
   const updates = runtimePickerFieldUpdates(item.kind, item);
   let changed = false;
 
-  changed = setNumericInput(form, 'cartridgeMassG', updates.cartridgeMassG) || changed;
-  changed = setNumericInput(form, 'compliance10HzCu', updates.compliance10HzCu) || changed;
-  changed = setNumericInput(form, 'tonearmEffectiveMassG', updates.tonearmEffectiveMassG) || changed;
+  if (setNumericInput(form, 'cartridgeMassG', updates.cartridgeMassG)) {
+    setFieldSourceState(state, 'cartridgeMassG', 'dataset');
+    changed = true;
+  }
+  if (setNumericInput(form, 'compliance10HzCu', updates.compliance10HzCu)) {
+    setFieldSourceState(state, 'compliance10HzCu', 'dataset');
+    changed = true;
+  }
+  if (setNumericInput(form, 'tonearmEffectiveMassG', updates.tonearmEffectiveMassG)) {
+    setFieldSourceState(state, 'tonearmEffectiveMassG', 'dataset');
+    changed = true;
+  }
 
   if (item.kind === 'cartridge') {
     const trackingForce = trackingForceValueFromRange(runtimeTrackingForceByCartridgeId.get(item.id));
     if (typeof trackingForce === 'number') {
       changed = setNumericInput(form, 'trackingForceG', trackingForce) || changed;
       state.trackingForceSource = 'dataset';
+      setFieldSourceState(state, 'trackingForceG', 'dataset');
     } else {
       state.trackingForceSource = 'unavailable';
+      setFieldSourceState(state, 'trackingForceG', 'unavailable');
     }
     setTrackingForceSourceState(state.trackingForceSource);
   }
@@ -981,6 +1218,13 @@ function setRuntimePickerRowState(kind: RuntimeSelectionKind, selected: boolean)
 
   if (source) {
     source.innerHTML = selected ? badgeMarkup('Dataset', 'manufacturer') : '—';
+  }
+}
+
+function setRuntimePickerSource(kind: RuntimeSelectionKind, label: string, className: string): void {
+  const source = document.querySelector<HTMLElement>(`[data-runtime-picker-source="${kind}"]`);
+  if (source) {
+    source.innerHTML = badgeMarkup(label, className);
   }
 }
 
@@ -1122,12 +1366,18 @@ function selectedSnapshot(item: RuntimePickerItem | null): RuntimeItemSnapshot {
   };
 }
 
+function inputValueText(form: HTMLFormElement, name: QuickMatchFieldName): string {
+  const element = form.elements.namedItem(name);
+  return element instanceof HTMLInputElement ? element.value.trim() : '';
+}
+
 function createSessionSnapshot(form: HTMLFormElement, state: WorkbenchState): TonearmSessionSnapshot {
   const input = readFormInput(form);
   const result = calculateResonanceResult(input);
   const classification = classifyResonance(result.resonanceHz);
 
   return {
+    schemaVersion: 2,
     generatedAt: new Date().toISOString(),
     selectedTonearm: selectedSnapshot(state.selectedTonearm),
     selectedCartridge: selectedSnapshot(state.selectedCartridge),
@@ -1138,6 +1388,8 @@ function createSessionSnapshot(form: HTMLFormElement, state: WorkbenchState): To
       compliance10HzCu: input.compliance10HzCu,
       trackingForceG: input.trackingForceG,
     },
+    trackingForceInputText: inputValueText(form, 'trackingForceG'),
+    fieldSources: { ...state.fieldSources },
     trackingForceSource: state.trackingForceSource,
     result: {
       totalMovingMassG: result.totalMovingMassG,
@@ -1150,8 +1402,8 @@ function createSessionSnapshot(form: HTMLFormElement, state: WorkbenchState): To
       },
     },
     sourceLabels: {
-      tonearm: state.selectedTonearm ? 'manufacturer dataset' : 'manual/default',
-      cartridge: state.selectedCartridge ? 'cartridge dataset' : 'manual/default',
+      tonearm: state.selectedTonearm ? 'selected from dataset' : 'not selected',
+      cartridge: state.selectedCartridge ? 'selected from dataset' : 'not selected',
       trackingForce: trackingForceSourceDescriptor(state.trackingForceSource).report,
     },
   };
@@ -1174,11 +1426,15 @@ function createSessionReport(snapshot: TonearmSessionSnapshot): string {
     'Inputs',
     '------',
     reportLine('Tonearm effective mass', formatNumber(snapshot.inputs.tonearmEffectiveMassG), ' g'),
+    reportLine('Tonearm effective mass source', fieldSourceDescriptor(snapshot.fieldSources.tonearmEffectiveMassG).report),
     reportLine('Cartridge mass', formatNumber(snapshot.inputs.cartridgeMassG), ' g'),
+    reportLine('Cartridge mass source', fieldSourceDescriptor(snapshot.fieldSources.cartridgeMassG).report),
     reportLine('Fasteners / mounting mass', formatNumber(snapshot.inputs.fastenerMassG), ' g'),
+    reportLine('Fasteners source', fieldSourceDescriptor(snapshot.fieldSources.fastenerMassG).report),
     reportLine('Compliance @ 10 Hz', formatNumber(snapshot.inputs.compliance10HzCu), ' µm/mN'),
-    reportLine('Tracking force', formatNumber(snapshot.inputs.trackingForceG), ' g'),
-    reportLine('Tracking force source', trackingForceSourceDescriptor(snapshot.trackingForceSource ?? 'manual').label),
+    reportLine('Compliance source', fieldSourceDescriptor(snapshot.fieldSources.compliance10HzCu).report),
+    reportLine('Tracking force', snapshot.trackingForceInputText === '' ? null : formatNumber(snapshot.inputs.trackingForceG), snapshot.trackingForceInputText === '' ? '' : ' g'),
+    reportLine('Tracking force source', fieldSourceDescriptor(snapshot.fieldSources.trackingForceG).report),
     '',
     'Result',
     '------',
@@ -1189,9 +1445,9 @@ function createSessionReport(snapshot: TonearmSessionSnapshot): string {
     '',
     'Sources',
     '-------',
-    reportLine('Tonearm source', snapshot.sourceLabels.tonearm),
-    reportLine('Cartridge source', snapshot.sourceLabels.cartridge),
-    reportLine('Tracking force', snapshot.sourceLabels.trackingForce),
+    reportLine('Tonearm selection', snapshot.sourceLabels.tonearm),
+    reportLine('Cartridge selection', snapshot.sourceLabels.cartridge),
+    reportLine('Tracking force note', snapshot.sourceLabels.trackingForce),
     '',
     'Notes',
     '-----',
@@ -1220,8 +1476,8 @@ function workflowActiveStep(form: HTMLFormElement, state: WorkbenchState, evalua
     return 'cartridge';
   }
 
-  const trackingForce = readNumber(form, 'trackingForceG');
-  if (!Number.isFinite(trackingForce) || trackingForce < 0) {
+  const trackingForce = readTrackingForceNumber(form);
+  if (!trackingForce.ok || trackingForce.blank) {
     return 'tracking';
   }
 
@@ -1383,6 +1639,7 @@ function writeRestoredPickerSummary(kind: RuntimeSelectionKind, snapshot: Runtim
     <small>Local browser snapshot</small>
   `;
   setRuntimePickerRowState(kind, true);
+  setRuntimePickerSource(kind, 'Local', 'setup');
 }
 
 function restoreCurrentSession(form: HTMLFormElement, resultElement: HTMLElement, state: WorkbenchState): boolean {
@@ -1401,8 +1658,19 @@ function restoreCurrentSession(form: HTMLFormElement, resultElement: HTMLElement
     for (const field of quickMatchFields) {
       setNumericInput(form, field.name, snapshot.inputs[field.name]);
     }
-    setNumericInput(form, 'trackingForceG', snapshot.inputs.trackingForceG);
-    state.trackingForceSource = normalizedSnapshotTrackingForceSource(snapshot.trackingForceSource);
+    if (typeof snapshot.trackingForceInputText === 'string' && snapshot.trackingForceInputText.trim() === '') {
+      const trackingForceInput = form.elements.namedItem('trackingForceG');
+      if (trackingForceInput instanceof HTMLInputElement) {
+        trackingForceInput.value = '';
+      }
+    } else {
+      setNumericInput(form, 'trackingForceG', snapshot.inputs.trackingForceG);
+    }
+    state.fieldSources = normalizedSnapshotFieldSources(snapshot.fieldSources);
+    applyFieldSourceStates(state);
+    state.trackingForceSource = isTrackingForceSource(snapshot.trackingForceSource)
+      ? snapshot.trackingForceSource
+      : trackingForceSourceFromFieldSource(state.fieldSources.trackingForceG);
     setTrackingForceSourceState(state.trackingForceSource);
 
     state.selectedTonearm = snapshotToRuntimePickerItem(snapshot.selectedTonearm ?? null, 'tonearm');
@@ -1576,6 +1844,8 @@ function resetFormToDefaults(form: HTMLFormElement, resultElement: HTMLElement, 
     setNumericInput(form, field.name, defaultInput[field.name]);
   }
   setNumericInput(form, 'trackingForceG', defaultInput.trackingForceG);
+  state.fieldSources = createInitialFieldSources();
+  applyFieldSourceStates(state);
   state.trackingForceSource = 'setup';
   setTrackingForceSourceState(state.trackingForceSource);
   resetRuntimePickerState(state);
@@ -1617,11 +1887,14 @@ export function enableTonearmMatchLabInteractions(): void {
     const input = event.target;
     state.lastAction = 'input';
 
-    if (input instanceof HTMLInputElement && input.name === 'trackingForceG') {
-      state.trackingForceSource = 'manual';
-      setTrackingForceSourceState(state.trackingForceSource);
-      syncWorkbenchState(form, state);
-      return;
+    if (input instanceof HTMLInputElement && isQuickMatchFieldName(input.name)) {
+      const fieldName = input.name;
+      markFieldSourceManual(state, fieldName);
+
+      if (fieldName === 'trackingForceG') {
+        state.trackingForceSource = 'manual';
+        setTrackingForceSourceState(state.trackingForceSource);
+      }
     }
 
     const evaluated = updateResultView(form, resultElement);

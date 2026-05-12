@@ -157,6 +157,11 @@
   justify-content: center;
 }
 
+.tm-lab-field__input[aria-invalid="true"] {
+  border-color: color-mix(in srgb, var(--ea-status-error) 70%, var(--ea-border-primary));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ea-status-error) 24%, transparent);
+}
+
 .tm-runtime-picker-row .ea-input-row-with-button {
   width: 100%;
   min-width: 0;
