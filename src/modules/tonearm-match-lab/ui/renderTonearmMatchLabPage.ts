@@ -50,7 +50,7 @@ type ResonanceClassification = {
 type RuntimeSelectionKind = 'tonearm' | 'cartridge';
 type WorkflowStepKey = 'tonearm' | 'cartridge' | 'tracking' | 'result' | 'save';
 type WorkflowStepStatus = 'planned' | 'active' | 'done';
-type WorkbenchLastAction = 'input' | 'reset' | 'saved' | 'exported';
+type WorkbenchLastAction = 'input' | 'reset' | 'saved' | 'exported' | 'loaded';
 
 type WorkbenchState = {
   selectedCartridge: RuntimePickerItem | null;
@@ -181,7 +181,7 @@ const tableFieldMeta: Record<QuickMatchFieldName, TableFieldMeta> = {
   },
   trackingForceG: {
     label: 'Applied VTF',
-    sublabel: 'User setting · grams',
+    sublabel: 'Manual setup · grams',
     statusClass: 'planned',
     sourceLabel: 'Setup',
     sourceClass: 'setup',
@@ -540,7 +540,12 @@ export function resultMarkup(result: ResonanceResult, diagnosis: ResonanceDiagno
       ${resonanceGaugeMarkup(result, classification)}
       <div class="tm-lab-result__details">
         <div class="tm-lab-scoreline" title="UI match score derived from the existing resonance classification band. It does not change the resonance calculation.">
-          <span class="tm-lab-scoreline__mark" data-match-score="${escapeAttribute(String(matchScoreForClassification(classification, result.resonanceHz)))}">${renderText(String(matchScoreForClassification(classification, result.resonanceHz)))}</span>
+          <span
+            class="tm-lab-scoreline__mark"
+            data-match-score="${escapeAttribute(String(matchScoreForClassification(classification, result.resonanceHz)))}"
+            data-band="${escapeAttribute(classification.group)}"
+            style="--tm-score-value: ${escapeAttribute(String(matchScoreForClassification(classification, result.resonanceHz)))};"
+          >${renderText(String(matchScoreForClassification(classification, result.resonanceHz)))}</span>
           <span>
             <strong>Match score</strong>
             <small>${renderText(`${classification.label} · UI score from resonance band`)}</small>
@@ -1015,7 +1020,7 @@ function createSessionSnapshot(form: HTMLFormElement, state: WorkbenchState): To
     sourceLabels: {
       tonearm: state.selectedTonearm ? 'manufacturer dataset' : 'manual/default',
       cartridge: state.selectedCartridge ? 'cartridge dataset' : 'manual/default',
-      trackingForce: 'setup only; not used in resonance math',
+      trackingForce: 'manual setup value; not mapped from current UI runtime data; not used in resonance math',
     },
   };
 }
@@ -1132,6 +1137,10 @@ function actionbarStatusText(state: WorkbenchState, evaluated: EvaluatedResult):
     return { text: 'Exported report', status: 'done' };
   }
 
+  if (state.lastAction === 'loaded') {
+    return { text: 'Restored local snapshot', status: 'done' };
+  }
+
   if (state.lastAction === 'reset') {
     return { text: 'Reset to manual defaults', status: 'active' };
   }
@@ -1196,6 +1205,83 @@ function saveCurrentSession(form: HTMLFormElement, state: WorkbenchState): boole
   } catch {
     state.lastAction = 'input';
     setActionbarStatus('Local save unavailable', 'error');
+    return false;
+  }
+}
+
+function isSnapshotInput(value: unknown): value is ResonanceInput {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  return quickMatchFields.every((field) => typeof record[field.name] === 'number' && Number.isFinite(record[field.name]))
+    && typeof record.trackingForceG === 'number'
+    && Number.isFinite(record.trackingForceG);
+}
+
+function snapshotToRuntimePickerItem(snapshot: RuntimeItemSnapshot, kind: RuntimeSelectionKind): RuntimePickerItem | null {
+  if (!snapshot) {
+    return null;
+  }
+
+  return {
+    id: snapshot.id,
+    kind,
+    displayName: snapshot.name,
+  };
+}
+
+function writeRestoredPickerSummary(kind: RuntimeSelectionKind, snapshot: RuntimeItemSnapshot): void {
+  if (!snapshot) {
+    clearPickerSummary(kind);
+    setRuntimePickerRowState(kind, false);
+    return;
+  }
+
+  const summary = document.querySelector<HTMLElement>(`[data-runtime-picker-summary="${kind}"]`);
+  if (!summary) {
+    return;
+  }
+
+  summary.innerHTML = `
+    <strong>${renderText(kind === 'cartridge' ? 'Restored cartridge' : 'Restored tonearm')}</strong>
+    <span title="${escapeAttribute(snapshot.name)}">${renderText(snapshot.name)}</span>
+    <small>Local browser snapshot</small>
+  `;
+  setRuntimePickerRowState(kind, true);
+}
+
+function restoreCurrentSession(form: HTMLFormElement, resultElement: HTMLElement, state: WorkbenchState): boolean {
+  try {
+    const rawSnapshot = localStorage.getItem(tonearmSessionStorageKey);
+    if (!rawSnapshot) {
+      setActionbarStatus('No local snapshot found', 'active');
+      return false;
+    }
+
+    const snapshot = JSON.parse(rawSnapshot) as Partial<TonearmSessionSnapshot>;
+    if (!isSnapshotInput(snapshot.inputs)) {
+      throw new Error('Local snapshot input values are invalid.');
+    }
+
+    for (const field of quickMatchFields) {
+      setNumericInput(form, field.name, snapshot.inputs[field.name]);
+    }
+    setNumericInput(form, 'trackingForceG', snapshot.inputs.trackingForceG);
+
+    state.selectedTonearm = snapshotToRuntimePickerItem(snapshot.selectedTonearm ?? null, 'tonearm');
+    state.selectedCartridge = snapshotToRuntimePickerItem(snapshot.selectedCartridge ?? null, 'cartridge');
+    writeRestoredPickerSummary('tonearm', snapshot.selectedTonearm ?? null);
+    writeRestoredPickerSummary('cartridge', snapshot.selectedCartridge ?? null);
+
+    state.lastAction = 'loaded';
+    const evaluated = updateResultView(form, resultElement);
+    syncWorkbenchState(form, state, evaluated);
+    return true;
+  } catch {
+    state.lastAction = 'input';
+    setActionbarStatus('Local snapshot could not be loaded', 'error');
     return false;
   }
 }
@@ -1285,40 +1371,41 @@ export function renderTonearmMatchLabPage(): string {
         </aside>
 
         <div class="ea-workbench-main">
-          <section class="ea-panel tm-lab-setup-panel" aria-labelledby="tm-lab-title">
-            <div class="ea-panel-header">
-              <span class="ea-panel-header-id">02</span>
-              <span>Resonance Inputs</span>
-              <span class="ea-panel-header-spacer"></span>
-              <span class="tm-lab-formula" aria-hidden="true">F₀ = 159.15 / √(M·C)</span>
-            </div>
-            <div class="ea-panel-body--flush">
-              <form class="tm-lab-form" data-tonearm-match-form>
+          <form class="tm-lab-form" data-tonearm-match-form>
+            <section class="ea-panel tm-lab-setup-panel" aria-labelledby="tm-lab-title">
+              <div class="ea-panel-header">
+                <span class="ea-panel-header-id">02</span>
+                <span>Resonance Inputs</span>
+                <span class="ea-panel-header-spacer"></span>
+                <span class="tm-lab-formula" aria-hidden="true">F₀ = 159.15 / √(M·C)</span>
+              </div>
+              <div class="ea-panel-body--flush">
                 <table class="ea-form-table tm-resonance-table" role="table" data-tonearm-runtime-pickers>
                   <tbody>
                     ${runtimePickerControlsMarkup()}
                     ${quickMatchFields.map(fieldMarkup).join('')}
                   </tbody>
                 </table>
+              </div>
+            </section>
 
-                <section class="ea-panel tm-lab-setup-context" aria-labelledby="tm-lab-setup-context-title">
-                  <div class="ea-panel-header">
-                    <span class="ea-panel-header-id">03</span>
-                    <span id="tm-lab-setup-context-title">Setup Context</span>
-                    <span class="ea-panel-header-spacer"></span>
-                    <span class="ea-panel-header-action">Not in F₀</span>
-                  </div>
-                  <div class="ea-panel-body--flush">
-                    <table class="ea-form-table" role="table">
-                      <tbody>
-                        ${trackingForceSetupMarkup()}
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
-              </form>
-            </div>
-          </section>
+            <section class="ea-panel tm-lab-setup-context" aria-labelledby="tm-lab-setup-context-title">
+              <div class="ea-panel-header">
+                <span class="ea-panel-header-id">03</span>
+                <span id="tm-lab-setup-context-title">Setup Context</span>
+                <span class="ea-panel-header-spacer"></span>
+                <span class="ea-panel-header-action">Manual only · not in F₀</span>
+              </div>
+              <div class="ea-panel-body--flush">
+                <table class="ea-form-table" role="table">
+                  <tbody>
+                    ${trackingForceSetupMarkup()}
+                  </tbody>
+                </table>
+                <p class="tm-lab-vtf-note">Manual setup value. Cartridge runtime data contains tracking-force fields, but this build does not map them into VTF; tracking force remains outside resonance math.</p>
+              </div>
+            </section>
+          </form>
 
           <section class="ea-panel tm-lab-panel--assumptions" id="assumptions" aria-labelledby="assumptions-title">
             <div class="ea-panel-header">
@@ -1358,6 +1445,7 @@ export function renderTonearmMatchLabPage(): string {
           <button class="ea-button ea-button--secondary" type="button" data-reset-tonearm-defaults>Reset</button>
           <button class="ea-button ea-button--ghost" type="button" data-export-tonearm-session title="Download a human-readable local report">Export report</button>
           <button class="ea-button ea-button--primary" type="button" data-save-tonearm-session title="Save a local snapshot in this browser">Save local</button>
+          <button class="ea-button ea-button--secondary" type="button" data-load-tonearm-session title="Restore the latest local browser snapshot">Load local</button>
         </div>
       </section>
     </main>
@@ -1399,6 +1487,10 @@ export function enableTonearmMatchLabInteractions(): void {
 
   document.querySelector<HTMLButtonElement>('[data-save-tonearm-session]')?.addEventListener('click', () => {
     saveCurrentSession(form, state);
+  });
+
+  document.querySelector<HTMLButtonElement>('[data-load-tonearm-session]')?.addEventListener('click', () => {
+    restoreCurrentSession(form, resultElement, state);
   });
 
   form.addEventListener('input', (event) => {

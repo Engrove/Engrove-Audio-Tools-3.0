@@ -240,6 +240,7 @@ body {
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .ea-workbench-three {
@@ -265,10 +266,9 @@ body {
 }
 
 .ea-workbench-result {
-  position: sticky;
-  top: 0;
-  max-height: calc(100vh - var(--ea-shell-topbar-height) - var(--ea-shell-context-height) - var(--ea-shell-action-height) - var(--ea-space-8));
-  overflow: auto;
+  position: static;
+  max-height: none;
+  overflow: visible;
 }
 
 .ea-actionbar {
