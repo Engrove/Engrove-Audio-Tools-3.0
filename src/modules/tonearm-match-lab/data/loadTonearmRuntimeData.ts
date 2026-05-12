@@ -1,3 +1,9 @@
+export type RuntimeTrackingForceRange = {
+  readonly min?: number;
+  readonly max?: number;
+  readonly recommended?: number;
+};
+
 export const AUDIO_RUNTIME_MANIFEST_PATH = '/data/audio/v3/runtime/audio-index.manifest.json';
 export const CARTRIDGES_RUNTIME_INDEX_PATH = '/data/audio/v3/runtime/cartridges.index.json';
 export const TONEARMS_RUNTIME_INDEX_PATH = '/data/audio/v3/runtime/tonearms.index.json';
@@ -9,6 +15,7 @@ export type CartridgeRuntimeRecord = {
   type?: string;
   mass_g?: number;
   compliance_10hz_cu?: number;
+  tracking_force_g?: RuntimeTrackingForceRange;
 };
 
 export type TonearmRuntimeRecord = {
@@ -67,6 +74,32 @@ function readOptionalNumber(record: RuntimeObject, fieldName: string, label: str
   return value;
 }
 
+function readOptionalTrackingForceRange(record: RuntimeObject, fieldName: string, label: string): RuntimeTrackingForceRange | undefined {
+  const value = record[fieldName];
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (!isRuntimeObject(value)) {
+    throw new Error(`${label} has invalid ${fieldName}; expected an object when present.`);
+  }
+
+  const range: RuntimeTrackingForceRange = {
+    min: readOptionalNumber(value, 'min', `${label}.${fieldName}`),
+    max: readOptionalNumber(value, 'max', `${label}.${fieldName}`),
+    recommended: readOptionalNumber(value, 'recommended', `${label}.${fieldName}`),
+  };
+
+  if (
+    typeof range.min === 'undefined'
+    && typeof range.max === 'undefined'
+    && typeof range.recommended === 'undefined'
+  ) {
+    return undefined;
+  }
+
+  return range;
+}
+
 function parseCartridgeRecord(value: unknown, index: number): CartridgeRuntimeRecord {
   const label = `cartridges.index.json record ${index + 1}`;
   if (!isRuntimeObject(value)) {
@@ -80,6 +113,7 @@ function parseCartridgeRecord(value: unknown, index: number): CartridgeRuntimeRe
     type: readOptionalString(value, 'type', label),
     mass_g: readOptionalNumber(value, 'mass_g', label),
     compliance_10hz_cu: readOptionalNumber(value, 'compliance_10hz_cu', label),
+    tracking_force_g: readOptionalTrackingForceRange(value, 'tracking_force_g', label),
   };
 }
 

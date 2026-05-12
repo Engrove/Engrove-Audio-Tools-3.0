@@ -138,9 +138,10 @@
 }
 
 .tm-resonance-table .ea-col-meta {
-  width: 7rem;
-  max-width: 7rem;
+  width: 8rem;
+  max-width: 8rem;
   overflow: hidden;
+  padding-right: var(--ea-space-4);
   text-align: right;
   text-overflow: ellipsis;
   vertical-align: middle;
@@ -148,7 +149,7 @@
 }
 
 .tm-resonance-table .ea-col-meta .ea-badge {
-  min-width: 6.75rem;
+  min-width: 7.25rem;
   justify-content: center;
 }
 
@@ -215,17 +216,16 @@
   white-space: nowrap;
 }
 
-.tm-lab-setup-context {
-  overflow: hidden;
+.tm-tracking-force-row {
+  min-width: 0;
 }
 
-.tm-lab-vtf-note {
-  margin: 0;
-  padding: var(--ea-space-2) var(--ea-space-3);
-  border-top: 1px solid var(--ea-border-soft);
-  color: var(--ea-text-low);
-  font-size: var(--ea-font-size-small);
-  line-height: 1.35;
+.tm-tracking-force-row[data-vtf-source="dataset"] {
+  background: color-mix(in srgb, var(--ea-status-good) 7%, transparent);
+}
+
+.tm-tracking-force-row[data-vtf-source="unavailable"] {
+  background: color-mix(in srgb, var(--ea-status-warning) 6%, transparent);
 }
 
 .tm-lab-panel--assumptions {

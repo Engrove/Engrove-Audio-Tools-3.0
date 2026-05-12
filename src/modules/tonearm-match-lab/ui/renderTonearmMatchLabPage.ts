@@ -48,6 +48,7 @@ type ResonanceClassification = {
 };
 
 type RuntimeSelectionKind = 'tonearm' | 'cartridge';
+type TrackingForceSource = 'setup' | 'manual' | 'dataset' | 'unavailable';
 type WorkflowStepKey = 'tonearm' | 'cartridge' | 'tracking' | 'result' | 'save';
 type WorkflowStepStatus = 'planned' | 'active' | 'done';
 type WorkbenchLastAction = 'input' | 'reset' | 'saved' | 'exported' | 'loaded';
@@ -55,6 +56,7 @@ type WorkbenchLastAction = 'input' | 'reset' | 'saved' | 'exported' | 'loaded';
 type WorkbenchState = {
   selectedCartridge: RuntimePickerItem | null;
   selectedTonearm: RuntimePickerItem | null;
+  trackingForceSource: TrackingForceSource;
   lastAction: WorkbenchLastAction;
 };
 
@@ -87,6 +89,7 @@ type TonearmSessionSnapshot = {
       label: string;
     };
   };
+  trackingForceSource?: TrackingForceSource;
   sourceLabels: {
     tonearm: string;
     cartridge: string;
@@ -95,12 +98,15 @@ type TonearmSessionSnapshot = {
 };
 
 const tonearmSessionStorageKey = 'engrove-tonearm-match-session';
+type RuntimeTrackingForceRange = NonNullable<CartridgeRuntimeRecord['tracking_force_g']>;
+const runtimeTrackingForceByCartridgeId = new Map<string, RuntimeTrackingForceRange>();
 const workflowStepOrder: readonly WorkflowStepKey[] = ['tonearm', 'cartridge', 'tracking', 'result', 'save'];
 
 function createInitialWorkbenchState(): WorkbenchState {
   return {
     selectedCartridge: null,
     selectedTonearm: null,
+    trackingForceSource: 'setup',
     lastAction: 'input',
   };
 }
@@ -181,7 +187,7 @@ const tableFieldMeta: Record<QuickMatchFieldName, TableFieldMeta> = {
   },
   trackingForceG: {
     label: 'Applied VTF',
-    sublabel: 'Manual setup · grams',
+    sublabel: 'Setup only · not in F₀',
     statusClass: 'planned',
     sourceLabel: 'Setup',
     sourceClass: 'setup',
@@ -425,16 +431,50 @@ function fieldMarkup(field: QuickMatchField): string {
 }
 
 
+function trackingForceSourceDescriptor(source: TrackingForceSource): { label: string; className: string; sublabel: string; report: string } {
+  switch (source) {
+    case 'dataset':
+      return {
+        label: 'From dataset',
+        className: 'manufacturer',
+        sublabel: 'Runtime VTF · setup only · not in F₀',
+        report: 'runtime cartridge dataset; setup only; not used in resonance math',
+      };
+    case 'manual':
+      return {
+        label: 'Manual',
+        className: 'direct',
+        sublabel: 'Manual setup · not in F₀',
+        report: 'manual setup value; not used in resonance math',
+      };
+    case 'unavailable':
+      return {
+        label: 'Unavailable',
+        className: 'setup',
+        sublabel: 'No runtime VTF for selected cartridge',
+        report: 'runtime VTF unavailable for selected cartridge; current value is manual/setup context only',
+      };
+    case 'setup':
+    default:
+      return {
+        label: 'Setup',
+        className: 'setup',
+        sublabel: 'Setup only · not in F₀',
+        report: 'manual setup default; not used in resonance math',
+      };
+  }
+}
+
 function trackingForceSetupMarkup(): string {
   const fieldName = escapeAttribute('trackingForceG');
   const meta = fieldMeta('trackingForceG');
 
   return `
-    <tr>
+    <tr class="tm-tracking-force-row" data-tracking-force-row data-vtf-source="setup">
       <td class="ea-col-status">${statusDotMarkup(meta.statusClass)}</td>
       <td class="ea-col-label">
         <label for="tm-${fieldName}">${renderText(meta.label)}</label>
-        <span class="ea-form-table-sublabel">${renderText(meta.sublabel)}</span>
+        <span class="ea-form-table-sublabel" data-tracking-force-sublabel>${renderText(meta.sublabel)}</span>
       </td>
       <td class="ea-col-value">
         <input
@@ -443,17 +483,16 @@ function trackingForceSetupMarkup(): string {
           name="${fieldName}"
           type="number"
           min="0"
-          step="0.1"
+          step="0.01"
           value="${escapeAttribute(defaultInput.trackingForceG)}"
           inputmode="decimal"
-          aria-label="Tracking force, grams"
+          aria-label="Applied tracking force in grams"
         />
       </td>
-      <td class="ea-col-meta">${badgeMarkup(meta.sourceLabel, meta.sourceClass)}</td>
+      <td class="ea-col-meta" data-tracking-force-source>${badgeMarkup(meta.sourceLabel, meta.sourceClass)}</td>
     </tr>
   `;
 }
-
 
 
 function matchScoreForClassification(classification: ResonanceClassification, resonanceHz: number): number {
@@ -751,7 +790,87 @@ function renderResult(form: HTMLFormElement, resultElement: HTMLElement): void {
   updateResultView(form, resultElement);
 }
 
+function finiteRuntimeNumber(value: number | undefined): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+function trackingForceValueFromRange(range: RuntimeTrackingForceRange | undefined): number | undefined {
+  if (!range) {
+    return undefined;
+  }
+
+  const recommended = finiteRuntimeNumber(range.recommended);
+  if (typeof recommended === 'number') {
+    return recommended;
+  }
+
+  const minimum = finiteRuntimeNumber(range.min);
+  const maximum = finiteRuntimeNumber(range.max);
+  if (typeof minimum === 'number' && typeof maximum === 'number') {
+    return (minimum + maximum) / 2;
+  }
+
+  return minimum ?? maximum;
+}
+
+function trackingForceRangeSummary(range: RuntimeTrackingForceRange | undefined): string | undefined {
+  if (!range) {
+    return undefined;
+  }
+
+  const value = trackingForceValueFromRange(range);
+  if (typeof value !== 'number') {
+    return undefined;
+  }
+
+  const recommended = finiteRuntimeNumber(range.recommended);
+  if (typeof recommended === 'number') {
+    return `${formatNumber(recommended, 2)} g VTF`;
+  }
+
+  const minimum = finiteRuntimeNumber(range.min);
+  const maximum = finiteRuntimeNumber(range.max);
+  if (typeof minimum === 'number' && typeof maximum === 'number') {
+    return `${formatNumber(minimum, 2)}–${formatNumber(maximum, 2)} g VTF`;
+  }
+
+  return `${formatNumber(value, 2)} g VTF`;
+}
+
+function setTrackingForceSourceState(source: TrackingForceSource): void {
+  const descriptor = trackingForceSourceDescriptor(source);
+  const sourceCell = document.querySelector<HTMLElement>('[data-tracking-force-source]');
+  const row = document.querySelector<HTMLElement>('[data-tracking-force-row]');
+  const sublabel = document.querySelector<HTMLElement>('[data-tracking-force-sublabel]');
+
+  if (sourceCell) {
+    sourceCell.innerHTML = badgeMarkup(descriptor.label, descriptor.className);
+  }
+
+  if (row) {
+    row.dataset.vtfSource = source;
+  }
+
+  if (sublabel) {
+    sublabel.textContent = descriptor.sublabel;
+  }
+}
+
+function isTrackingForceSource(value: unknown): value is TrackingForceSource {
+  return value === 'setup' || value === 'manual' || value === 'dataset' || value === 'unavailable';
+}
+
+function normalizedSnapshotTrackingForceSource(value: unknown): TrackingForceSource {
+  return isTrackingForceSource(value) ? value : 'manual';
+}
+
 function toCartridgePickerItem(record: CartridgeRuntimeRecord): RuntimePickerItem {
+  if (record.tracking_force_g) {
+    runtimeTrackingForceByCartridgeId.set(record.id, record.tracking_force_g);
+  } else {
+    runtimeTrackingForceByCartridgeId.delete(record.id);
+  }
+
   return {
     id: record.id,
     kind: 'cartridge',
@@ -783,13 +902,24 @@ function setNumericInput(form: HTMLFormElement, name: QuickMatchFieldName, value
   return true;
 }
 
-function applyRuntimePickerItem(form: HTMLFormElement, item: RuntimePickerItem): boolean {
+function applyRuntimePickerItem(form: HTMLFormElement, item: RuntimePickerItem, state: WorkbenchState): boolean {
   const updates = runtimePickerFieldUpdates(item.kind, item);
   let changed = false;
 
   changed = setNumericInput(form, 'cartridgeMassG', updates.cartridgeMassG) || changed;
   changed = setNumericInput(form, 'compliance10HzCu', updates.compliance10HzCu) || changed;
   changed = setNumericInput(form, 'tonearmEffectiveMassG', updates.tonearmEffectiveMassG) || changed;
+
+  if (item.kind === 'cartridge') {
+    const trackingForce = trackingForceValueFromRange(runtimeTrackingForceByCartridgeId.get(item.id));
+    if (typeof trackingForce === 'number') {
+      changed = setNumericInput(form, 'trackingForceG', trackingForce) || changed;
+      state.trackingForceSource = 'dataset';
+    } else {
+      state.trackingForceSource = 'unavailable';
+    }
+    setTrackingForceSourceState(state.trackingForceSource);
+  }
 
   return changed;
 }
@@ -803,6 +933,7 @@ function selectionSummaryDetails(item: RuntimePickerItem): string {
     ? [
         typeof item.massG === 'number' ? `${item.massG} g` : undefined,
         typeof item.compliance10HzCu === 'number' ? `${item.compliance10HzCu} µm/mN @10 Hz` : undefined,
+        trackingForceRangeSummary(runtimeTrackingForceByCartridgeId.get(item.id)),
       ].filter(Boolean)
     : [
         typeof item.effectiveMassG === 'number' ? `${item.effectiveMassG} g effective mass` : undefined,
@@ -930,7 +1061,7 @@ function bindRuntimePickers(form: HTMLFormElement, resultElement: HTMLElement, s
               state.selectedCartridge = item;
               state.lastAction = 'input';
               writePickerSummary(item);
-              if (applyRuntimePickerItem(form, item)) {
+              if (applyRuntimePickerItem(form, item, state)) {
                 const evaluated = updateResultView(form, resultElement);
                 syncWorkbenchState(form, state, evaluated);
               } else {
@@ -952,7 +1083,7 @@ function bindRuntimePickers(form: HTMLFormElement, resultElement: HTMLElement, s
               state.selectedTonearm = item;
               state.lastAction = 'input';
               writePickerSummary(item);
-              if (applyRuntimePickerItem(form, item)) {
+              if (applyRuntimePickerItem(form, item, state)) {
                 const evaluated = updateResultView(form, resultElement);
                 syncWorkbenchState(form, state, evaluated);
               } else {
@@ -1007,6 +1138,7 @@ function createSessionSnapshot(form: HTMLFormElement, state: WorkbenchState): To
       compliance10HzCu: input.compliance10HzCu,
       trackingForceG: input.trackingForceG,
     },
+    trackingForceSource: state.trackingForceSource,
     result: {
       totalMovingMassG: result.totalMovingMassG,
       resonanceHz: result.resonanceHz,
@@ -1020,7 +1152,7 @@ function createSessionSnapshot(form: HTMLFormElement, state: WorkbenchState): To
     sourceLabels: {
       tonearm: state.selectedTonearm ? 'manufacturer dataset' : 'manual/default',
       cartridge: state.selectedCartridge ? 'cartridge dataset' : 'manual/default',
-      trackingForce: 'manual setup value; not mapped from current UI runtime data; not used in resonance math',
+      trackingForce: trackingForceSourceDescriptor(state.trackingForceSource).report,
     },
   };
 }
@@ -1046,6 +1178,7 @@ function createSessionReport(snapshot: TonearmSessionSnapshot): string {
     reportLine('Fasteners / mounting mass', formatNumber(snapshot.inputs.fastenerMassG), ' g'),
     reportLine('Compliance @ 10 Hz', formatNumber(snapshot.inputs.compliance10HzCu), ' µm/mN'),
     reportLine('Tracking force', formatNumber(snapshot.inputs.trackingForceG), ' g'),
+    reportLine('Tracking force source', trackingForceSourceDescriptor(snapshot.trackingForceSource ?? 'manual').label),
     '',
     'Result',
     '------',
@@ -1269,6 +1402,8 @@ function restoreCurrentSession(form: HTMLFormElement, resultElement: HTMLElement
       setNumericInput(form, field.name, snapshot.inputs[field.name]);
     }
     setNumericInput(form, 'trackingForceG', snapshot.inputs.trackingForceG);
+    state.trackingForceSource = normalizedSnapshotTrackingForceSource(snapshot.trackingForceSource);
+    setTrackingForceSourceState(state.trackingForceSource);
 
     state.selectedTonearm = snapshotToRuntimePickerItem(snapshot.selectedTonearm ?? null, 'tonearm');
     state.selectedCartridge = snapshotToRuntimePickerItem(snapshot.selectedCartridge ?? null, 'cartridge');
@@ -1285,7 +1420,6 @@ function restoreCurrentSession(form: HTMLFormElement, resultElement: HTMLElement
     return false;
   }
 }
-
 
 
 function bindThemeToggle(): void {
@@ -1384,25 +1518,9 @@ export function renderTonearmMatchLabPage(): string {
                   <tbody>
                     ${runtimePickerControlsMarkup()}
                     ${quickMatchFields.map(fieldMarkup).join('')}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-
-            <section class="ea-panel tm-lab-setup-context" aria-labelledby="tm-lab-setup-context-title">
-              <div class="ea-panel-header">
-                <span class="ea-panel-header-id">03</span>
-                <span id="tm-lab-setup-context-title">Setup Context</span>
-                <span class="ea-panel-header-spacer"></span>
-                <span class="ea-panel-header-action">Manual only · not in F₀</span>
-              </div>
-              <div class="ea-panel-body--flush">
-                <table class="ea-form-table" role="table">
-                  <tbody>
                     ${trackingForceSetupMarkup()}
                   </tbody>
                 </table>
-                <p class="tm-lab-vtf-note">Manual setup value. Cartridge runtime data contains tracking-force fields, but this build does not map them into VTF; tracking force remains outside resonance math.</p>
               </div>
             </section>
           </form>
@@ -1458,6 +1576,8 @@ function resetFormToDefaults(form: HTMLFormElement, resultElement: HTMLElement, 
     setNumericInput(form, field.name, defaultInput[field.name]);
   }
   setNumericInput(form, 'trackingForceG', defaultInput.trackingForceG);
+  state.trackingForceSource = 'setup';
+  setTrackingForceSourceState(state.trackingForceSource);
   resetRuntimePickerState(state);
   state.lastAction = 'reset';
   const evaluated = updateResultView(form, resultElement);
@@ -1498,6 +1618,8 @@ export function enableTonearmMatchLabInteractions(): void {
     state.lastAction = 'input';
 
     if (input instanceof HTMLInputElement && input.name === 'trackingForceG') {
+      state.trackingForceSource = 'manual';
+      setTrackingForceSourceState(state.trackingForceSource);
       syncWorkbenchState(form, state);
       return;
     }
