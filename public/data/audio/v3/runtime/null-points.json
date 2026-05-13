@@ -1,0 +1,21 @@
+{
+  "version": "1.0.0",
+  "table": {
+    "IEC": {
+      "Baerwald":  { "n1_mm": 66.000, "n2_mm": 120.900, "source": "IEC 98:1958" },
+      "LofgrenA":  { "n1_mm": 66.000, "n2_mm": 120.900, "source": "Loefgren 1938; equivalent to Baerwald under IEC" },
+      "LofgrenB":  { "n1_mm": 70.300, "n2_mm": 116.600, "source": "Loefgren 1938 minimum-distortion" },
+      "Stevenson": { "n1_mm": 60.325, "n2_mm": 117.420, "source": "Stevenson 1966 inner-groove minimization" }
+    },
+    "DIN": {
+      "Baerwald":  { "n1_mm": 63.100, "n2_mm": 119.300, "source": "Baerwald-equivalent under DIN 45 500 inner radius" },
+      "LofgrenA":  { "n1_mm": 63.100, "n2_mm": 119.300, "source": "equivalent to Baerwald under DIN" },
+      "LofgrenB":  { "n1_mm": 67.400, "n2_mm": 114.600, "source": "Loefgren B under DIN 45 500" },
+      "Stevenson": { "n1_mm": 57.500, "n2_mm": 115.600, "source": "Stevenson under DIN 45 500" }
+    }
+  },
+  "radii": {
+    "IEC": { "inner_mm": 60.325, "outer_mm": 146.050, "source": "IEC 98:1958" },
+    "DIN": { "inner_mm": 57.500, "outer_mm": 146.050, "source": "DIN 45 500" }
+  }
+}

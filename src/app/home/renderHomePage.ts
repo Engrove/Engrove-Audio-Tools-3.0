@@ -33,14 +33,16 @@ const tools: readonly ToolCard[] = [
     icon: '◎',
     title: 'Tonearm Geometry Lab',
     summary: 'Compute ideal alignment for a chosen standard and method, then simulate mounting errors against the math. Print-ready arc protractor.',
-    ariaLabel: 'Tonearm Geometry Lab is not routed in this build',
+    href: '/geometry-lab',
+    ariaLabel: 'Open Tonearm Geometry Lab',
   },
   {
     id: 'VTA / SRA',
     icon: '⌞',
     title: 'VTA & SRA Lab',
     summary: 'Solve stylus rake angle changes from pillar and mat adjustments. Live SVG side profile; inverse solve for a target SRA delta.',
-    ariaLabel: 'VTA and SRA Lab is not routed in this build',
+    href: '/vta-sra-lab',
+    ariaLabel: 'Open VTA and SRA Lab',
   },
   {
     id: 'Reference data',

@@ -7,14 +7,38 @@ import {
   enableTonearmMatchLabInteractions,
   renderTonearmMatchLabPage,
 } from '../modules/tonearm-match-lab';
+import {
+  enableTonearmGeometryLabInteractions,
+  renderTonearmGeometryLabPage,
+} from '../modules/tonearm-geometry-lab';
+import {
+  enableVtaSraLabInteractions,
+  renderVtaSraLabPage,
+} from '../modules/vta-sra-lab';
 
-export type AppRoute = 'home' | 'tonearm-calculator' | 'compliance';
+export type AppRoute = 'home' | 'tonearm-calculator' | 'compliance' | 'geometry-lab' | 'vta-sra-lab';
 
 const tonearmCalculatorPath = '/tonearm-calculator';
 const tonearmCalculatorHash = '#/tonearm-calculator';
 const compliancePath = '/compliance';
 const complianceHash = '#/compliance';
-const applicationRouteHashes = new Set([tonearmCalculatorHash, complianceHash]);
+const geometryLabPath = '/geometry-lab';
+const geometryLabHash = '#/geometry-lab';
+const vtaSraLabPath = '/vta-sra-lab';
+const vtaSraLabHash = '#/vta-sra-lab';
+const applicationRouteHashes = new Set([
+  tonearmCalculatorHash,
+  complianceHash,
+  geometryLabHash,
+  vtaSraLabHash,
+]);
+const applicationRoutePaths = new Set([
+  '/',
+  tonearmCalculatorPath,
+  compliancePath,
+  geometryLabPath,
+  vtaSraLabPath,
+]);
 
 function normalizeRoute(pathname: string, hash: string): AppRoute {
   if (hash === tonearmCalculatorHash || pathname === tonearmCalculatorPath) {
@@ -23,6 +47,14 @@ function normalizeRoute(pathname: string, hash: string): AppRoute {
 
   if (hash === complianceHash || pathname === compliancePath) {
     return 'compliance';
+  }
+
+  if (hash === geometryLabHash || pathname === geometryLabPath) {
+    return 'geometry-lab';
+  }
+
+  if (hash === vtaSraLabHash || pathname === vtaSraLabPath) {
+    return 'vta-sra-lab';
   }
 
   return 'home';
@@ -38,6 +70,18 @@ function renderRoute(app: HTMLElement, route: AppRoute): void {
   if (route === 'compliance') {
     app.innerHTML = renderComplianceEstimatorPage();
     enableComplianceEstimatorInteractions();
+    return;
+  }
+
+  if (route === 'geometry-lab') {
+    app.innerHTML = renderTonearmGeometryLabPage();
+    enableTonearmGeometryLabInteractions();
+    return;
+  }
+
+  if (route === 'vta-sra-lab') {
+    app.innerHTML = renderVtaSraLabPage();
+    enableVtaSraLabInteractions();
     return;
   }
 
@@ -73,7 +117,7 @@ function isApplicationRoute(url: URL): boolean {
     return true;
   }
 
-  return url.pathname === '/' || url.pathname === tonearmCalculatorPath || url.pathname === compliancePath;
+  return applicationRoutePaths.has(url.pathname);
 }
 
 export function startRouter(selector = '#app'): void {
