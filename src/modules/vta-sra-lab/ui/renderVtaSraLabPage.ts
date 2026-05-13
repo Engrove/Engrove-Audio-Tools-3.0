@@ -114,7 +114,7 @@ function physicalConstantsMarkup(): string {
               <td class="ea-col-value">
                 <div class="vta-picker-row">
                   <span class="vta-picker-summary" data-vta-tonearm-summary>No tonearm selected.</span>
-                  <button class="ea-button ea-button--secondary vta-picker-button" type="button" data-vta-tonearm-pick aria-label="Pick tonearm from dataset">Pick</button>
+                  <button class="ea-button ea-button--primary vta-picker-button" type="button" data-vta-tonearm-pick aria-label="Pick tonearm from dataset">Pick</button>
                 </div>
               </td>
               <td class="ea-col-meta" data-vta-tonearm-meta><span class="ea-badge">Optional</span></td>
@@ -287,6 +287,7 @@ function profileSvgMarkup(): string {
         <line x1="320" y1="500" x2="320" y2="560" stroke-width="0.6"></line>
         <text x="555" y="535" font-family="JetBrains Mono" font-size="12" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.5">PLATTER</text>
       </g>
+      <rect data-vta-svg-mat x="380" y="500" width="410" height="0" fill="var(--ea-bg-panel-alt)" stroke="currentColor" stroke-width="0.4" opacity="0.92"></rect>
       <g data-vta-svg-record>
         <rect x="380" y="485" width="410" height="15" fill="currentColor" opacity="0.78"></rect>
         <line x1="380" y1="485" x2="790" y2="485" stroke-width="0.8"></line>
@@ -296,6 +297,7 @@ function profileSvgMarkup(): string {
         <text x="700" y="475" font-family="JetBrains Mono" font-size="12" text-anchor="end" fill="currentColor" stroke="none" opacity="0.7">GROOVE</text>
         <line x1="703" y1="471" x2="743" y2="481" stroke-width="0.4" opacity="0.5"></line>
       </g>
+      <text data-vta-svg-clamp x="50" y="156" font-family="JetBrains Mono" font-size="13" fill="var(--ea-status-error)" stroke="none" opacity="0" pointer-events="none">VIEW CLAMPED</text>
       <g>
         <path d="M 184 560 L 184 538 L 198 518 L 222 518 L 236 538 L 236 560 Z" fill="var(--ea-bg-panel)"></path>
         <line x1="184" y1="560" x2="236" y2="560" stroke-width="0.5"></line>
@@ -424,6 +426,8 @@ function elements(root: ParentNode) {
     svgSra: root.querySelector<SVGTextElement>('[data-vta-svg-sra]'),
     svgDelta: root.querySelector<SVGTextElement>('[data-vta-svg-delta]'),
     svgRecord: root.querySelector<SVGGElement>('[data-vta-svg-record]'),
+    svgMat: root.querySelector<SVGRectElement>('[data-vta-svg-mat]'),
+    svgClamp: root.querySelector<SVGTextElement>('[data-vta-svg-clamp]'),
     svgArmVertical: root.querySelector<SVGGElement>('[data-vta-svg-arm-vertical]'),
     svgArmRotate: root.querySelector<SVGGElement>('[data-vta-svg-arm-rotate]'),
     svgPillar: root.querySelector<SVGRectElement>('[data-vta-svg-pillar]'),
@@ -457,6 +461,8 @@ function renderTonearmSelectionState(els: Elements): void {
   if (els.tonearmPick) {
     els.tonearmPick.textContent = tonearm ? 'Change' : 'Pick';
     els.tonearmPick.setAttribute('aria-label', tonearm ? 'Change selected tonearm' : 'Pick tonearm from dataset');
+    els.tonearmPick.classList.toggle('ea-button--primary', !tonearm);
+    els.tonearmPick.classList.toggle('ea-button--secondary', Boolean(tonearm));
   }
   if (els.tonearmDot) {
     els.tonearmDot.className = `ea-dot ea-dot--${tonearm ? 'done' : 'planned'}`;
@@ -580,38 +586,92 @@ function updateView(els: Elements): void {
   }
 }
 
+/*
+ * Side-profile anchoring constants. Plinth top = y=560, platter top = y=500,
+ * record nominal top = y=485, arm pivot = (210, 420), bearing block bottom =
+ * pillar top = y=445, base puck top = y=518. The mat band is drawn between
+ * platter top and record bottom; its bottom edge is fixed.
+ */
+const platterTopY = 500;
+const matMaxLiftPx = 200;
+const matMaxSinkPx = 12;
+const pillarUpMaxPx = 245;
+const pillarDownMaxPx = pillarNominalHeight - minPillarHeight;
+
+function clamp(value: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, value));
+}
+
 function updateSvg(els: Elements, result: VtaSraResult | null): void {
   const l = state.effectiveLengthMm > 0 ? state.effectiveLengthMm : 237;
   const visualScale = visualSpan / l;
-  const matVisualY = -state.matDeltaMm * visualScale;
-  const pillarVisualY = -state.pillarDeltaMm * visualScale;
+  // Up is positive in these helpers; SVG y decreases upward.
+  const rawMatUpPx = state.matDeltaMm * visualScale;
+  const rawPillarUpPx = state.pillarDeltaMm * visualScale;
+  const matVisualUpPx = clamp(rawMatUpPx, -matMaxSinkPx, matMaxLiftPx);
+  const pillarVisualUpPx = clamp(rawPillarUpPx, -pillarDownMaxPx, pillarUpMaxPx);
+  const clamped = rawMatUpPx !== matVisualUpPx || rawPillarUpPx !== pillarVisualUpPx;
 
   if (els.svgL) els.svgL.textContent = `L: ${formatNumber(l, 1)} mm`;
   if (els.svgSra) {
     if (result) {
-      els.svgSra.textContent = `SRA: ${formatNumber(result.sraActualDeg, 2)} deg (ref ${formatNumber(state.referenceSraDeg, 1)}, Δ ${signedNumber(result.sraDeltaDeg, 2)})`;
+      els.svgSra.textContent = `SRA: ${formatNumber(result.sraActualDeg, 2)} deg (ref ${formatNumber(state.referenceSraDeg, 1)}, delta ${signedNumber(result.sraDeltaDeg, 2)})`;
     } else {
       els.svgSra.textContent = 'SRA: —';
     }
   }
   if (els.svgDelta) {
-    els.svgDelta.textContent = `Δ pillar: ${formatNumber(state.pillarDeltaMm, 2)} mm · Δ mat: ${formatNumber(state.matDeltaMm, 2)} mm`;
+    els.svgDelta.textContent = `Pillar delta: ${formatNumber(state.pillarDeltaMm, 2)} mm · Mat delta: ${formatNumber(state.matDeltaMm, 2)} mm`;
   }
 
-  if (els.svgRecord) els.svgRecord.setAttribute('transform', `translate(0 ${matVisualY})`);
-  if (els.svgArmVertical) els.svgArmVertical.setAttribute('transform', `translate(0 ${pillarVisualY})`);
+  /*
+   * Mat band: bottom anchored at platter top y=500; height grows upward as
+   * mat thickness increases. Negative mat deltas clamp the band to zero so
+   * the record never visually sinks into the platter.
+   */
+  if (els.svgMat) {
+    const matBandHeight = Math.max(0, matVisualUpPx);
+    els.svgMat.setAttribute('y', String(platterTopY - matBandHeight));
+    els.svgMat.setAttribute('height', String(matBandHeight));
+  }
 
+  /*
+   * Record group rises above the mat. The record bottom always sits exactly
+   * at the mat top, which is the platter-top reference minus the mat band
+   * height. SVG y axis is inverted so we translate by the negative.
+   */
+  if (els.svgRecord) {
+    const recordLiftPx = Math.max(0, matVisualUpPx);
+    els.svgRecord.setAttribute('transform', `translate(0 ${-recordLiftPx})`);
+  }
+
+  /*
+   * Arm vertical group translates with pillar height; arm-rotate inside it
+   * rotates around the pivot in the translated frame so the rotation axis
+   * tracks the pivot exactly.
+   */
+  if (els.svgArmVertical) {
+    els.svgArmVertical.setAttribute('transform', `translate(0 ${-pillarVisualUpPx})`);
+  }
+
+  /*
+   * Pillar rect: bottom anchored at the base puck top (y = 518). Top moves
+   * up with pillar height delta; height grows or shrinks accordingly down
+   * to the minimum stub height so the column stays connected to the base.
+   */
   if (els.svgPillar) {
-    const newY = pillarNominalY + pillarVisualY;
-    const newH = Math.max(minPillarHeight, pillarNominalHeight - pillarVisualY);
-    els.svgPillar.setAttribute('y', String(newY));
-    els.svgPillar.setAttribute('height', String(newH));
+    els.svgPillar.setAttribute('y', String(pillarNominalY - pillarVisualUpPx));
+    els.svgPillar.setAttribute('height', String(Math.max(minPillarHeight, pillarNominalHeight + pillarVisualUpPx)));
   }
 
   if (els.svgArmRotate && result) {
     els.svgArmRotate.setAttribute('transform', `rotate(${result.sraDeltaDeg} ${pivotX} ${pivotY})`);
   } else if (els.svgArmRotate) {
     els.svgArmRotate.setAttribute('transform', `rotate(0 ${pivotX} ${pivotY})`);
+  }
+
+  if (els.svgClamp) {
+    els.svgClamp.setAttribute('opacity', clamped ? '1' : '0');
   }
 }
 

@@ -64,7 +64,7 @@ const defaultState = (): GeometryState => ({
   simulatedPivotMm: 222,
   simulatedOverhangMm: 17.3,
   simulatedOffsetAngleDeg: 22.99,
-  tab: 'prot-ideal',
+  tab: 'graph',
   nullPoints: null,
   loadError: null,
   reference: null,
@@ -196,7 +196,7 @@ function setupTableMarkup(): string {
               <td class="ea-col-value">
                 <div class="geo-picker-row">
                   <span class="geo-picker-summary" data-geo-tonearm-summary>No tonearm selected.</span>
-                  <button class="ea-button ea-button--secondary geo-picker-button" type="button" data-geo-tonearm-pick aria-label="Pick tonearm from dataset">Pick</button>
+                  <button class="ea-button ea-button--primary geo-picker-button" type="button" data-geo-tonearm-pick aria-label="Pick tonearm from dataset">Pick</button>
                 </div>
               </td>
               <td class="ea-col-meta" data-geo-tonearm-meta><span class="ea-badge">Optional</span></td>
@@ -320,16 +320,16 @@ function visualizationMarkup(): string {
         <span id="geo-viz-title">Visualization</span>
         <span class="ea-panel-header-spacer"></span>
         <div class="ea-tabs" role="tablist" aria-label="Visualization tabs" data-geo-tabs>
-          <button class="ea-tab" role="tab" type="button" data-geo-tab="graph" aria-selected="false" tabindex="-1">Tracking error</button>
-          <button class="ea-tab" role="tab" type="button" data-geo-tab="prot-ideal" aria-selected="true" tabindex="0">Ideal protractor</button>
+          <button class="ea-tab" role="tab" type="button" data-geo-tab="graph" aria-selected="true" tabindex="0">Tracking error</button>
+          <button class="ea-tab" role="tab" type="button" data-geo-tab="prot-ideal" aria-selected="false" tabindex="-1">Ideal protractor</button>
           <button class="ea-tab" role="tab" type="button" data-geo-tab="prot-sim" aria-selected="false" tabindex="-1">Simulated protractor</button>
         </div>
       </div>
       <div class="ea-panel-body geo-viz-body">
-        <div class="geo-viz-container" data-geo-view="graph" hidden>
+        <div class="geo-viz-container" data-geo-view="graph">
           <canvas data-geo-canvas="graph" role="img" aria-label="Tracking error and estimated weighted distortion vs groove radius"></canvas>
         </div>
-        <div class="geo-viz-container geo-viz-container--print" data-geo-view="prot">
+        <div class="geo-viz-container geo-viz-container--print" data-geo-view="prot" hidden>
           <canvas data-geo-canvas="prot" role="img" aria-label="Arc protractor preview"></canvas>
         </div>
         <p class="geo-viz-status ea-muted" data-geo-viz-status></p>
@@ -437,6 +437,8 @@ function renderTonearmSelectionState(els: Elements): void {
   if (els.tonearmPick) {
     els.tonearmPick.textContent = tonearm ? 'Change' : 'Pick';
     els.tonearmPick.setAttribute('aria-label', tonearm ? 'Change selected tonearm' : 'Pick tonearm from dataset');
+    els.tonearmPick.classList.toggle('ea-button--primary', !tonearm);
+    els.tonearmPick.classList.toggle('ea-button--secondary', Boolean(tonearm));
   }
   if (els.tonearmDot) {
     els.tonearmDot.className = `ea-dot ea-dot--${tonearm ? 'done' : 'planned'}`;
