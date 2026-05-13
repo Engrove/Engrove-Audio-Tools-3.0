@@ -12,6 +12,12 @@
       "records": 1588,
       "size_bytes": 387709,
       "sha256": "d3139aa8aebf59448263e919eef0eb89d51495d78e10d1556f8f039630c46a5a"
+    },
+    {
+      "path": "/data/audio/v3/runtime/null-points.json",
+      "records": 8,
+      "size_bytes": 1098,
+      "sha256": "0c1b73d1939f46613a45249e4390a885e8d918f49735d30fbb2ce5ad79e46aae"
     }
   ]
 }

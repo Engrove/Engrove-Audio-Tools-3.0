@@ -4,6 +4,7 @@ import {
   type VtaSraInput,
   type VtaSraResult,
 } from '../engine/vtaSra';
+import { buildVersionLabel } from '../../../shared/app/buildVersion';
 
 type VtaState = {
   effectiveLengthMm: number;
@@ -69,7 +70,7 @@ function renderTopbar(): string {
         <a class="ea-topnav-link" href="/vta-sra-lab" aria-current="page">VTA Lab</a>
       </nav>
       <div class="ea-topbar-meta">
-        <span class="ea-build-status">Build v3.0.0-rc.5</span>
+        <span class="ea-build-status">${buildVersionLabel()}</span>
         <button class="ea-theme-toggle" type="button" data-theme-toggle aria-label="Toggle light and dark theme">&#9788;</button>
         <img class="ea-maintainer-avatar" src="/images/engrove.webp" alt="" aria-hidden="true" />
       </div>

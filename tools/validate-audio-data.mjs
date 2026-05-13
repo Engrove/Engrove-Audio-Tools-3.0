@@ -12,13 +12,18 @@ const files = {
   summary: 'src/data/audio/v3/audio-data-v3-summary.json',
   publicCartridges: 'public/data/audio/v3/runtime/cartridges.index.json',
   publicTonearms: 'public/data/audio/v3/runtime/tonearms.index.json',
+  publicNullPoints: 'public/data/audio/v3/runtime/null-points.json',
   publicManifest: 'public/data/audio/v3/runtime/audio-index.manifest.json',
 };
 
 const publicFetchPaths = {
   cartridges: '/data/audio/v3/runtime/cartridges.index.json',
   tonearms: '/data/audio/v3/runtime/tonearms.index.json',
+  nullPoints: '/data/audio/v3/runtime/null-points.json',
 };
+
+const supportedAlignmentStandards = ['IEC', 'DIN'];
+const supportedAlignmentMethods = ['Baerwald', 'LofgrenA', 'LofgrenB', 'Stevenson'];
 
 const limits = {
   minCartridgeRecords: 1000,
@@ -212,6 +217,78 @@ function validateTonearm(record, index) {
   }
 }
 
+function validateNullPoints(data) {
+  if (!isObject(data)) {
+    add('error', 'null_points.invalid', files.publicNullPoints, 'Null-points dataset must be an object.');
+    return 0;
+  }
+
+  if (typeof data.version !== 'string' || data.version.trim() === '') {
+    add('error', 'null_points.version_missing', `${files.publicNullPoints}:version`, 'Null-points dataset must declare a version string.');
+  }
+
+  if (!isObject(data.table)) {
+    add('error', 'null_points.table_missing', `${files.publicNullPoints}:table`, 'Null-points dataset must include a table object.');
+    return 0;
+  }
+
+  if (!isObject(data.radii)) {
+    add('error', 'null_points.radii_missing', `${files.publicNullPoints}:radii`, 'Null-points dataset must include a radii object.');
+  }
+
+  let recordCount = 0;
+  for (const standard of supportedAlignmentStandards) {
+    const methods = data.table[standard];
+    if (!isObject(methods)) {
+      add('error', 'null_points.standard_missing', `${files.publicNullPoints}:table.${standard}`, `Missing methods for alignment standard ${standard}.`);
+      continue;
+    }
+    for (const method of supportedAlignmentMethods) {
+      const entry = methods[method];
+      const location = `${files.publicNullPoints}:table.${standard}.${method}`;
+      if (!isObject(entry)) {
+        add('error', 'null_points.method_missing', location, `Missing null-point entry for ${standard}/${method}.`);
+        continue;
+      }
+      if (!isNumber(entry.n1_mm) || entry.n1_mm <= 0) {
+        add('error', 'null_points.n1_invalid', `${location}.n1_mm`, 'n1_mm must be a positive finite number.');
+      }
+      if (!isNumber(entry.n2_mm) || entry.n2_mm <= 0) {
+        add('error', 'null_points.n2_invalid', `${location}.n2_mm`, 'n2_mm must be a positive finite number.');
+      }
+      if (isNumber(entry.n1_mm) && isNumber(entry.n2_mm) && entry.n1_mm >= entry.n2_mm) {
+        add('error', 'null_points.order_invalid', location, 'n1_mm (inner) must be strictly less than n2_mm (outer).');
+      }
+      if (typeof entry.source !== 'string' || entry.source.trim() === '') {
+        add('error', 'null_points.source_missing', `${location}.source`, 'Each null-point entry must declare a non-empty source string.');
+      }
+      recordCount += 1;
+    }
+  }
+
+  if (isObject(data.radii)) {
+    for (const standard of supportedAlignmentStandards) {
+      const radii = data.radii[standard];
+      const location = `${files.publicNullPoints}:radii.${standard}`;
+      if (!isObject(radii)) {
+        add('error', 'null_points.radii_standard_missing', location, `Missing radii entry for ${standard}.`);
+        continue;
+      }
+      if (!isNumber(radii.inner_mm) || radii.inner_mm <= 0) {
+        add('error', 'null_points.radii_inner_invalid', `${location}.inner_mm`, 'inner_mm must be a positive finite number.');
+      }
+      if (!isNumber(radii.outer_mm) || radii.outer_mm <= 0) {
+        add('error', 'null_points.radii_outer_invalid', `${location}.outer_mm`, 'outer_mm must be a positive finite number.');
+      }
+      if (isNumber(radii.inner_mm) && isNumber(radii.outer_mm) && radii.inner_mm >= radii.outer_mm) {
+        add('error', 'null_points.radii_order_invalid', location, 'inner_mm must be strictly less than outer_mm.');
+      }
+    }
+  }
+
+  return recordCount;
+}
+
 function assertSummary(summary, cartridges, tonearms) {
   if (summary?.inspected_structure?.cartridges_shape !== 'row_array') {
     add('warning', 'summary.cartridges_shape', 'summary.inspected_structure.cartridges_shape', 'Expected cartridges source shape row_array.');
@@ -307,6 +384,7 @@ const [
   summary,
   publicCartridges,
   publicTonearms,
+  publicNullPoints,
   publicManifest,
 ] = await Promise.all([
   readJsonFile(files.sourceCartridges, { requireNoBom: true, requireLf: true }),
@@ -314,6 +392,7 @@ const [
   readJsonFile(files.summary),
   readJsonFile(files.publicCartridges, { requireNoBom: true, requireLf: true }),
   readJsonFile(files.publicTonearms, { requireNoBom: true, requireLf: true }),
+  readJsonFile(files.publicNullPoints, { requireNoBom: true, requireLf: true }),
   readJsonFile(files.publicManifest, { requireNoBom: true, requireLf: true }),
 ]);
 
@@ -359,9 +438,12 @@ if (cartridgesAreArray && tonearmsAreArray) {
   assertSummary(summary.data, publicCartridges.data, publicTonearms.data);
 }
 
+const nullPointsRecordCount = validateNullPoints(publicNullPoints.data);
+
 const outputs = manifestOutputs(publicManifest.data);
 assertManifestEntry(outputs, publicFetchPaths.cartridges, publicCartridges, cartridgesAreArray ? publicCartridges.data.length : null);
 assertManifestEntry(outputs, publicFetchPaths.tonearms, publicTonearms, tonearmsAreArray ? publicTonearms.data.length : null);
+assertManifestEntry(outputs, publicFetchPaths.nullPoints, publicNullPoints, nullPointsRecordCount);
 
 for (const output of outputs) {
   if (typeof output?.path === 'string' && output.path.includes('src/data/')) {
@@ -375,6 +457,7 @@ const warningCount = issues.filter((item) => item.severity === 'warning').length
 console.log('Engrove Audio Tools 3.0 audio data validation');
 console.log(`- cartridges: ${cartridgesAreArray ? publicCartridges.data.length : 'invalid'}`);
 console.log(`- tonearms: ${tonearmsAreArray ? publicTonearms.data.length : 'invalid'}`);
+console.log(`- null-points: ${nullPointsRecordCount} entries`);
 console.log(`- public manifest: ${files.publicManifest}`);
 console.log(`- errors: ${errorCount}`);
 console.log(`- warnings: ${warningCount}`);

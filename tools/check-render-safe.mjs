@@ -33,6 +33,7 @@ function patchTempUiImports() {
   source = source.replace("from '../data/loadTonearmRuntimeData';", "from '../data/loadTonearmRuntimeData.js';");
   source = source.replace("from '../../../shared/ui/runtimePickerModal';", "from '../../../shared/ui/runtimePickerModal.js';");
   source = source.replace("from '../../../shared/ui/renderSafe';", "from '../../../shared/ui/renderSafe.js';");
+  source = source.replace("from '../../../shared/app/buildVersion';", "from '../../../shared/app/buildVersion.js';");
   writeFileSync(absolutePath, source, 'utf8');
 }
 
@@ -145,6 +146,17 @@ async function runChecks() {
       '    compliance10HzCu: input.compliance10HzCu,',
       '  };',
       '}',
+      '',
+    ].join('\n'),
+  );
+
+  writeTempSource(
+    'src/shared/app/buildVersion.ts',
+    [
+      "export const buildVersion: string = '0.0.0';",
+      "export function buildVersionLabel(): string {",
+      "  return 'Build v' + buildVersion;",
+      "}",
       '',
     ].join('\n'),
   );

@@ -5,6 +5,6 @@ export default defineConfig({
   appType: 'spa',
   build: {
     outDir: 'dist',
-    sourcemap: 'hidden',
+    sourcemap: false,
   },
 });

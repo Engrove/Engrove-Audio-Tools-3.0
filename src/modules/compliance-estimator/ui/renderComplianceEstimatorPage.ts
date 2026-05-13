@@ -17,6 +17,7 @@ import {
   type RuntimePickerItem,
 } from '../../../shared/ui/runtimePickerModal';
 import { escapeAttribute, renderText } from '../../../shared/ui/renderSafe';
+import { buildVersionLabel } from '../../../shared/app/buildVersion';
 
 type EvaluatedCompliance =
   | {
@@ -69,7 +70,7 @@ function renderTopbar(active: 'tools' | 'match' | 'estimator'): string {
         `).join('')}
       </nav>
       <div class="ea-topbar-meta">
-        <span class="ea-build-status">Build v3.0.0-rc.5</span>
+        <span class="ea-build-status">${buildVersionLabel()}</span>
         <button class="ea-theme-toggle" type="button" data-theme-toggle aria-label="Toggle light and dark theme">☼</button>
         <img class="ea-maintainer-avatar" src="/images/engrove.webp" alt="" aria-hidden="true" />
       </div>

@@ -1,6 +1,6 @@
-import packageJson from '../../../package.json';
+import { buildVersion } from '../../shared/app/buildVersion';
 
-const repoVersion = typeof packageJson.version === 'string' ? packageJson.version : '0.0.0';
+const repoVersion = buildVersion;
 
 type ToolCard = {
   id: string;
