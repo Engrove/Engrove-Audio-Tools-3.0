@@ -10,6 +10,7 @@ export type RuntimePickerItem = {
   massG?: number;
   compliance10HzCu?: number;
   effectiveMassG?: number;
+  effectiveLengthMm?: number;
 };
 
 export type RuntimePickerFilters = {
@@ -372,7 +373,11 @@ function detailText(item: RuntimePickerItem): string {
     ].filter(Boolean).join(' · ') || 'No match values available';
   }
 
-  return formatNumber(item.effectiveMassG, ' g effective mass') ?? 'No match values available';
+  const parts = [
+    formatNumber(item.effectiveMassG, ' g effective mass'),
+    formatNumber(item.effectiveLengthMm, ' mm effective length'),
+  ].filter(Boolean);
+  return parts.join(' · ') || 'No match values available';
 }
 
 function withinNumberRange(value: number | undefined, min?: number, max?: number): boolean {
@@ -528,6 +533,7 @@ function previewMarkup(item: RuntimePickerItem | undefined): string {
     : [
         ['Name', item.displayName],
         ['Effective mass', formatNumber(item.effectiveMassG, ' g') ?? 'Not available'],
+        ['Effective length', formatNumber(item.effectiveLengthMm, ' mm') ?? 'Not available'],
       ];
 
   return `

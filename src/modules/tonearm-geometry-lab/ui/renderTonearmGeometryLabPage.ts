@@ -20,20 +20,31 @@ import {
   readNumberFromInput,
   type ParseNumberResult,
 } from '../../../shared/util/parseNumberInput';
+import {
+  loadTonearmsWithEffectiveLength,
+  type TonearmRuntimeRecord,
+} from '../../tonearm-match-lab/data/loadTonearmRuntimeData';
+import {
+  openRuntimePickerModal,
+  type RuntimePickerItem,
+} from '../../../shared/ui/runtimePickerModal';
 
 type GeometryTab = 'graph' | 'prot-ideal' | 'prot-sim';
+type PivotSource = 'manual' | 'dataset-derived' | 'default';
 
-type TonearmOption = {
+type SelectedTonearm = {
   id: string;
-  label: string;
-  pivotToSpindleMm: number | null;
+  displayName: string;
+  effectiveLengthMm: number;
+  effectiveMassG?: number;
 };
 
 type GeometryState = {
   standard: AlignmentStandard;
   method: AlignmentMethod;
-  tonearmId: string;
   pivotToSpindleMm: number;
+  pivotSource: PivotSource;
+  selectedTonearm: SelectedTonearm | null;
   simulatedPivotMm: number;
   simulatedOverhangMm: number;
   simulatedOffsetAngleDeg: number;
@@ -44,18 +55,12 @@ type GeometryState = {
   simulated: SimulatedGeometry | null;
 };
 
-const tonearmOptions: readonly TonearmOption[] = [
-  { id: 'rega-rb300', label: 'Rega RB300 / RB303 — 222.0 mm', pivotToSpindleMm: 222 },
-  { id: 'sme-3009', label: 'SME 3009 Series II — 215.4 mm', pivotToSpindleMm: 215.4 },
-  { id: 'technics-1200', label: 'Technics SL-1200 — 215.0 mm', pivotToSpindleMm: 215 },
-  { id: 'custom', label: 'Custom mounting distance', pivotToSpindleMm: null },
-];
-
 const defaultState = (): GeometryState => ({
   standard: 'IEC',
   method: 'Baerwald',
-  tonearmId: 'rega-rb300',
   pivotToSpindleMm: 222,
+  pivotSource: 'default',
+  selectedTonearm: null,
   simulatedPivotMm: 222,
   simulatedOverhangMm: 17.3,
   simulatedOffsetAngleDeg: 22.99,
@@ -68,8 +73,39 @@ const defaultState = (): GeometryState => ({
 
 const state: GeometryState = defaultState();
 
-function findTonearm(id: string): TonearmOption {
-  return tonearmOptions.find((option) => option.id === id) ?? tonearmOptions[0];
+let tonearmPickerItemsPromise: Promise<RuntimePickerItem[]> | null = null;
+
+function tonearmRecordToPickerItem(record: TonearmRuntimeRecord): RuntimePickerItem {
+  return {
+    id: record.id,
+    kind: 'tonearm',
+    displayName: record.display_name,
+    effectiveMassG: record.effective_mass_g,
+    effectiveLengthMm: record.effective_length_mm,
+  };
+}
+
+function loadTonearmPickerItems(): Promise<RuntimePickerItem[]> {
+  if (!tonearmPickerItemsPromise) {
+    tonearmPickerItemsPromise = loadTonearmsWithEffectiveLength()
+      .then((records) => records.map(tonearmRecordToPickerItem))
+      .catch((error: unknown) => {
+        tonearmPickerItemsPromise = null;
+        throw error;
+      });
+  }
+  return tonearmPickerItemsPromise;
+}
+
+function derivePivotFromEffectiveLength(
+  effectiveLengthMm: number,
+  nullPoints: NullPointPair,
+): number | null {
+  const squared = effectiveLengthMm * effectiveLengthMm - nullPoints.n1Mm * nullPoints.n2Mm;
+  if (!Number.isFinite(squared) || squared <= 0) {
+    return null;
+  }
+  return Math.sqrt(squared);
 }
 
 function nullPointsFor(
@@ -92,12 +128,6 @@ function formatNumber(value: number, fractionDigits: number): string {
     maximumFractionDigits: fractionDigits,
     minimumFractionDigits: fractionDigits,
   });
-}
-
-function tonearmOptionsMarkup(): string {
-  return tonearmOptions
-    .map((option) => `<option value="${option.id}">${renderText(option.label)}</option>`)
-    .join('');
 }
 
 function statusDot(kind: 'planned' | 'active' | 'done' | 'error'): string {
@@ -137,8 +167,8 @@ function setupTableMarkup(): string {
               </td>
               <td class="ea-col-value">
                 <select class="ea-input" data-geo-standard aria-label="Alignment standard">
-                  <option value="IEC">IEC 98:1958 — inner 60.325 mm</option>
-                  <option value="DIN">DIN 45 500 — inner 57.500 mm</option>
+                  <option value="IEC">IEC</option>
+                  <option value="DIN">DIN</option>
                 </select>
               </td>
               <td class="ea-col-meta"><span class="ea-badge ea-badge--manufacturer">Spec</span></td>
@@ -150,25 +180,26 @@ function setupTableMarkup(): string {
               </td>
               <td class="ea-col-value">
                 <select class="ea-input" data-geo-method aria-label="Alignment method">
-                  <option value="Baerwald">Baerwald (Loefgren A)</option>
-                  <option value="LofgrenA">Loefgren A</option>
-                  <option value="LofgrenB">Loefgren B</option>
+                  <option value="Baerwald">Baerwald</option>
+                  <option value="LofgrenA">Löfgren A</option>
+                  <option value="LofgrenB">Löfgren B</option>
                   <option value="Stevenson">Stevenson</option>
                 </select>
               </td>
               <td class="ea-col-meta"><span class="ea-badge ea-badge--manufacturer">Method</span></td>
             </tr>
-            <tr>
-              <td class="ea-col-status">${statusDot('done')}</td>
+            <tr data-geo-tonearm-row>
+              <td class="ea-col-status"><span class="ea-dot ea-dot--planned" data-geo-tonearm-dot aria-hidden="true"></span></td>
               <td class="ea-col-label">Tonearm
-                <span class="ea-form-table-sublabel">Pivot-to-spindle source</span>
+                <span class="ea-form-table-sublabel">Pick from dataset</span>
               </td>
               <td class="ea-col-value">
-                <select class="ea-input" data-geo-tonearm aria-label="Tonearm reference">
-                  ${tonearmOptionsMarkup()}
-                </select>
+                <div class="geo-picker-row">
+                  <span class="geo-picker-summary" data-geo-tonearm-summary>No tonearm selected.</span>
+                  <button class="ea-button ea-button--secondary geo-picker-button" type="button" data-geo-tonearm-pick aria-label="Pick tonearm from dataset">Pick</button>
+                </div>
               </td>
-              <td class="ea-col-meta"><span class="ea-badge ea-badge--manufacturer">Manufacturer</span></td>
+              <td class="ea-col-meta" data-geo-tonearm-meta><span class="ea-badge">Optional</span></td>
             </tr>
             <tr data-geo-pivot-row>
               <td class="ea-col-status">${statusDot('done')}</td>
@@ -178,7 +209,7 @@ function setupTableMarkup(): string {
               <td class="ea-col-value">
                 <input class="ea-input geo-input" type="number" inputmode="decimal" step="0.5" value="222.0" data-geo-pivot aria-label="Pivot-to-spindle distance in millimetres" />
               </td>
-              <td class="ea-col-meta"><span class="ea-badge">mm</span></td>
+              <td class="ea-col-meta" data-geo-pivot-meta><span class="ea-badge">mm</span></td>
             </tr>
           </tbody>
         </table>
@@ -349,9 +380,13 @@ function elements(root: ParentNode) {
   return {
     standard: root.querySelector<HTMLSelectElement>('[data-geo-standard]'),
     method: root.querySelector<HTMLSelectElement>('[data-geo-method]'),
-    tonearm: root.querySelector<HTMLSelectElement>('[data-geo-tonearm]'),
+    tonearmPick: root.querySelector<HTMLButtonElement>('[data-geo-tonearm-pick]'),
+    tonearmSummary: root.querySelector<HTMLElement>('[data-geo-tonearm-summary]'),
+    tonearmMeta: root.querySelector<HTMLElement>('[data-geo-tonearm-meta]'),
+    tonearmDot: root.querySelector<HTMLElement>('[data-geo-tonearm-dot]'),
     pivot: root.querySelector<HTMLInputElement>('[data-geo-pivot]'),
     pivotRow: root.querySelector<HTMLElement>('[data-geo-pivot-row]'),
+    pivotMeta: root.querySelector<HTMLElement>('[data-geo-pivot-meta]'),
     simP: root.querySelector<HTMLInputElement>('[data-geo-sim-p]'),
     simOh: root.querySelector<HTMLInputElement>('[data-geo-sim-oh]'),
     simOa: root.querySelector<HTMLInputElement>('[data-geo-sim-oa]'),
@@ -383,17 +418,61 @@ function elements(root: ParentNode) {
 
 type Elements = ReturnType<typeof elements>;
 
-function applyTonearmSelection(els: Elements): void {
-  const option = findTonearm(state.tonearmId);
-  if (option.pivotToSpindleMm !== null) {
-    state.pivotToSpindleMm = option.pivotToSpindleMm;
-    if (els.pivot) {
-      els.pivot.value = option.pivotToSpindleMm.toFixed(1);
-      els.pivot.disabled = false;
+function renderTonearmSelectionState(els: Elements): void {
+  const tonearm = state.selectedTonearm;
+  if (els.tonearmSummary) {
+    if (!tonearm) {
+      els.tonearmSummary.textContent = 'No tonearm selected.';
+    } else {
+      const detail = [
+        `${formatNumber(tonearm.effectiveLengthMm, 1)} mm effective length`,
+        typeof tonearm.effectiveMassG === 'number' ? `${formatNumber(tonearm.effectiveMassG, 1)} g effective mass` : null,
+      ].filter(Boolean).join(' · ');
+      els.tonearmSummary.innerHTML = `
+        <strong>${renderText(tonearm.displayName)}</strong>
+        <span>${renderText(detail || 'No match values copied.')}</span>
+      `;
     }
-  } else if (els.pivot) {
-    els.pivot.disabled = false;
   }
+  if (els.tonearmPick) {
+    els.tonearmPick.textContent = tonearm ? 'Change' : 'Pick';
+    els.tonearmPick.setAttribute('aria-label', tonearm ? 'Change selected tonearm' : 'Pick tonearm from dataset');
+  }
+  if (els.tonearmDot) {
+    els.tonearmDot.className = `ea-dot ea-dot--${tonearm ? 'done' : 'planned'}`;
+  }
+  if (els.tonearmMeta) {
+    els.tonearmMeta.innerHTML = tonearm
+      ? '<span class="ea-badge ea-badge--manufacturer">Dataset</span>'
+      : '<span class="ea-badge">Optional</span>';
+  }
+  if (els.pivotMeta) {
+    if (state.pivotSource === 'dataset-derived') {
+      els.pivotMeta.innerHTML = '<span class="ea-badge ea-badge--manufacturer">Derived</span>';
+    } else if (state.pivotSource === 'manual') {
+      els.pivotMeta.innerHTML = '<span class="ea-badge ea-badge--setup">Manual</span>';
+    } else {
+      els.pivotMeta.innerHTML = '<span class="ea-badge">mm</span>';
+    }
+  }
+}
+
+function applySelectedTonearm(els: Elements): void {
+  if (!state.selectedTonearm || !state.nullPoints) {
+    renderTonearmSelectionState(els);
+    return;
+  }
+  const np = nullPointsFor(state.nullPoints, state.standard, state.method);
+  const derived = derivePivotFromEffectiveLength(state.selectedTonearm.effectiveLengthMm, np);
+  if (derived !== null) {
+    state.pivotToSpindleMm = derived;
+    state.pivotSource = 'dataset-derived';
+    if (els.pivot) {
+      els.pivot.value = derived.toFixed(1);
+      els.pivot.removeAttribute('aria-invalid');
+    }
+  }
+  renderTonearmSelectionState(els);
 }
 
 function describeParseProblem(label: string, result: ParseNumberResult): string | null {
@@ -874,8 +953,16 @@ function downloadJsonExport(): void {
     inputs: {
       standard: state.standard,
       method: state.method,
-      tonearm_id: state.tonearmId,
+      tonearm: state.selectedTonearm
+        ? {
+            id: state.selectedTonearm.id,
+            display_name: state.selectedTonearm.displayName,
+            effective_length_mm: state.selectedTonearm.effectiveLengthMm,
+            effective_mass_g: state.selectedTonearm.effectiveMassG ?? null,
+          }
+        : null,
       pivot_to_spindle_mm: state.pivotToSpindleMm,
+      pivot_source: state.pivotSource,
     },
     reference: {
       L_mm: state.reference.effectiveLengthMm,
@@ -969,6 +1056,7 @@ export function enableTonearmGeometryLabInteractions(): void {
   const root = document;
   const els = elements(root);
 
+  renderTonearmSelectionState(els);
   loadNullPointsRuntimeData()
     .then((data) => {
       state.nullPoints = data;
@@ -985,6 +1073,7 @@ export function enableTonearmGeometryLabInteractions(): void {
 
   els.standard?.addEventListener('change', () => {
     if (els.standard) state.standard = els.standard.value as AlignmentStandard;
+    applySelectedTonearm(els);
     recompute(els);
     refreshSimulationFromReference(els);
     recomputeSimulation(els);
@@ -992,27 +1081,60 @@ export function enableTonearmGeometryLabInteractions(): void {
 
   els.method?.addEventListener('change', () => {
     if (els.method) state.method = els.method.value as AlignmentMethod;
+    applySelectedTonearm(els);
     recompute(els);
     refreshSimulationFromReference(els);
     recomputeSimulation(els);
   });
 
-  els.tonearm?.addEventListener('change', () => {
-    if (els.tonearm) state.tonearmId = els.tonearm.value;
-    applyTonearmSelection(els);
-    recompute(els);
-    refreshSimulationFromReference(els);
-    recomputeSimulation(els);
+  els.tonearmPick?.addEventListener('click', () => {
+    const button = els.tonearmPick;
+    if (button) {
+      button.disabled = true;
+      const originalLabel = button.textContent ?? 'Pick';
+      button.textContent = 'Loading';
+      const restore = () => {
+        button.disabled = false;
+        button.textContent = state.selectedTonearm ? 'Change' : originalLabel;
+      };
+      loadTonearmPickerItems()
+        .then((items) => {
+          restore();
+          openRuntimePickerModal({
+            kind: 'tonearm',
+            title: 'Select tonearm reference',
+            items,
+            appliedItemId: state.selectedTonearm?.id ?? null,
+            onApply: (item) => {
+              if (typeof item.effectiveLengthMm !== 'number' || !Number.isFinite(item.effectiveLengthMm)) {
+                return;
+              }
+              state.selectedTonearm = {
+                id: item.id,
+                displayName: item.displayName,
+                effectiveLengthMm: item.effectiveLengthMm,
+                effectiveMassG: item.effectiveMassG,
+              };
+              applySelectedTonearm(els);
+              recompute(els);
+              refreshSimulationFromReference(els);
+              recomputeSimulation(els);
+            },
+          });
+        })
+        .catch((error: unknown) => {
+          restore();
+          setActionStatus(els, 'error', error instanceof Error ? error.message : 'Unable to load tonearm dataset.');
+        });
+    }
   });
 
   els.pivot?.addEventListener('input', () => {
-    if (els.tonearm) {
-      els.tonearm.value = 'custom';
-      state.tonearmId = 'custom';
-    }
+    state.pivotSource = 'manual';
     recompute(els);
     refreshSimulationFromReference(els);
     recomputeSimulation(els);
+    renderTonearmSelectionState(els);
   });
 
   [els.simP, els.simOh, els.simOa].forEach((input) => {
@@ -1028,8 +1150,8 @@ export function enableTonearmGeometryLabInteractions(): void {
     Object.assign(state, defaultState());
     if (els.standard) els.standard.value = state.standard;
     if (els.method) els.method.value = state.method;
-    if (els.tonearm) els.tonearm.value = state.tonearmId;
     if (els.pivot) els.pivot.value = state.pivotToSpindleMm.toFixed(1);
+    renderTonearmSelectionState(els);
     setActiveTab(els, state.tab);
     if (state.nullPoints !== null) {
       recompute(els);

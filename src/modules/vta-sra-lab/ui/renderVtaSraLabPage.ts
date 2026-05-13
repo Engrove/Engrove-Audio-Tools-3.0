@@ -4,14 +4,34 @@ import {
   type VtaSraInput,
   type VtaSraResult,
 } from '../engine/vtaSra';
+import { renderText } from '../../../shared/ui/renderSafe';
 import { renderToolTopbar } from '../../../shared/ui/renderToolTopbar';
 import {
   readNumberFromInput,
   type ParseNumberResult,
 } from '../../../shared/util/parseNumberInput';
+import {
+  loadTonearmsWithEffectiveLength,
+  type TonearmRuntimeRecord,
+} from '../../tonearm-match-lab/data/loadTonearmRuntimeData';
+import {
+  openRuntimePickerModal,
+  type RuntimePickerItem,
+} from '../../../shared/ui/runtimePickerModal';
+
+type LengthSource = 'dataset' | 'manual' | 'default';
+
+type SelectedTonearm = {
+  id: string;
+  displayName: string;
+  effectiveLengthMm: number;
+  effectiveMassG?: number;
+};
 
 type VtaState = {
   effectiveLengthMm: number;
+  lengthSource: LengthSource;
+  selectedTonearm: SelectedTonearm | null;
   referenceSraDeg: number;
   pillarDeltaMm: number;
   matDeltaMm: number;
@@ -23,6 +43,8 @@ type VtaState = {
 
 const defaultState = (): VtaState => ({
   effectiveLengthMm: 237,
+  lengthSource: 'default',
+  selectedTonearm: null,
   referenceSraDeg: 92,
   pillarDeltaMm: 0,
   matDeltaMm: 0,
@@ -84,6 +106,19 @@ function physicalConstantsMarkup(): string {
       <div class="ea-panel-body--flush">
         <table class="ea-form-table" aria-label="Physical constants">
           <tbody>
+            <tr data-vta-tonearm-row>
+              <td class="ea-col-status"><span class="ea-dot ea-dot--planned" data-vta-tonearm-dot aria-hidden="true"></span></td>
+              <td class="ea-col-label">Tonearm
+                <span class="ea-form-table-sublabel">Pick from dataset</span>
+              </td>
+              <td class="ea-col-value">
+                <div class="vta-picker-row">
+                  <span class="vta-picker-summary" data-vta-tonearm-summary>No tonearm selected.</span>
+                  <button class="ea-button ea-button--secondary vta-picker-button" type="button" data-vta-tonearm-pick aria-label="Pick tonearm from dataset">Pick</button>
+                </div>
+              </td>
+              <td class="ea-col-meta" data-vta-tonearm-meta><span class="ea-badge">Optional</span></td>
+            </tr>
             <tr>
               <td class="ea-col-status">${statusDot('done')}</td>
               <td class="ea-col-label">Effective length (L)
@@ -92,7 +127,7 @@ function physicalConstantsMarkup(): string {
               <td class="ea-col-value">
                 <input class="ea-input vta-input" type="number" inputmode="decimal" step="0.1" value="237.0" data-vta-l aria-label="Effective length in millimetres" />
               </td>
-              <td class="ea-col-meta"><span class="ea-badge">mm</span></td>
+              <td class="ea-col-meta" data-vta-l-meta><span class="ea-badge">mm</span></td>
             </tr>
             <tr>
               <td class="ea-col-status">${statusDot('done')}</td>
@@ -371,6 +406,11 @@ export function renderVtaSraLabPage(): string {
 function elements(root: ParentNode) {
   return {
     inputL: root.querySelector<HTMLInputElement>('[data-vta-l]'),
+    inputLMeta: root.querySelector<HTMLElement>('[data-vta-l-meta]'),
+    tonearmPick: root.querySelector<HTMLButtonElement>('[data-vta-tonearm-pick]'),
+    tonearmSummary: root.querySelector<HTMLElement>('[data-vta-tonearm-summary]'),
+    tonearmMeta: root.querySelector<HTMLElement>('[data-vta-tonearm-meta]'),
+    tonearmDot: root.querySelector<HTMLElement>('[data-vta-tonearm-dot]'),
     inputRefSra: root.querySelector<HTMLInputElement>('[data-vta-ref-sra]'),
     inputSimPh: root.querySelector<HTMLInputElement>('[data-vta-sim-ph]'),
     inputSimMt: root.querySelector<HTMLInputElement>('[data-vta-sim-mt]'),
@@ -397,6 +437,45 @@ function elements(root: ParentNode) {
 }
 
 type Elements = ReturnType<typeof elements>;
+
+function renderTonearmSelectionState(els: Elements): void {
+  const tonearm = state.selectedTonearm;
+  if (els.tonearmSummary) {
+    if (!tonearm) {
+      els.tonearmSummary.textContent = 'No tonearm selected.';
+    } else {
+      const detail = [
+        `${formatNumber(tonearm.effectiveLengthMm, 1)} mm effective length`,
+        typeof tonearm.effectiveMassG === 'number' ? `${formatNumber(tonearm.effectiveMassG, 1)} g effective mass` : null,
+      ].filter(Boolean).join(' · ');
+      els.tonearmSummary.innerHTML = `
+        <strong>${renderText(tonearm.displayName)}</strong>
+        <span>${renderText(detail || 'No match values copied.')}</span>
+      `;
+    }
+  }
+  if (els.tonearmPick) {
+    els.tonearmPick.textContent = tonearm ? 'Change' : 'Pick';
+    els.tonearmPick.setAttribute('aria-label', tonearm ? 'Change selected tonearm' : 'Pick tonearm from dataset');
+  }
+  if (els.tonearmDot) {
+    els.tonearmDot.className = `ea-dot ea-dot--${tonearm ? 'done' : 'planned'}`;
+  }
+  if (els.tonearmMeta) {
+    els.tonearmMeta.innerHTML = tonearm
+      ? '<span class="ea-badge ea-badge--manufacturer">Dataset</span>'
+      : '<span class="ea-badge">Optional</span>';
+  }
+  if (els.inputLMeta) {
+    if (state.lengthSource === 'dataset') {
+      els.inputLMeta.innerHTML = '<span class="ea-badge ea-badge--manufacturer">Dataset</span>';
+    } else if (state.lengthSource === 'manual') {
+      els.inputLMeta.innerHTML = '<span class="ea-badge ea-badge--setup">Manual</span>';
+    } else {
+      els.inputLMeta.innerHTML = '<span class="ea-badge">mm</span>';
+    }
+  }
+}
 
 function describeParseProblem(label: string, result: ParseNumberResult): string | null {
   if (result.kind === 'ok') return null;
@@ -544,7 +623,16 @@ function downloadJsonExport(): void {
     tool: 'vta-sra-lab',
     timestamp: new Date().toISOString(),
     inputs: {
+      tonearm: state.selectedTonearm
+        ? {
+            id: state.selectedTonearm.id,
+            display_name: state.selectedTonearm.displayName,
+            effective_length_mm: state.selectedTonearm.effectiveLengthMm,
+            effective_mass_g: state.selectedTonearm.effectiveMassG ?? null,
+          }
+        : null,
       effective_length_mm: state.effectiveLengthMm,
+      effective_length_source: state.lengthSource,
       reference_sra_deg: state.referenceSraDeg,
       pillar_delta_mm: state.pillarDeltaMm,
       mat_delta_mm: state.matDeltaMm,
@@ -584,10 +672,64 @@ export function enableVtaSraLabInteractions(): void {
   applyStoredTheme();
   const els = elements(document);
 
-  const inputs = [els.inputL, els.inputRefSra, els.inputSimPh, els.inputSimMt, els.inputTarget];
-  for (const input of inputs) {
+  renderTonearmSelectionState(els);
+
+  const otherInputs = [els.inputRefSra, els.inputSimPh, els.inputSimMt, els.inputTarget];
+  for (const input of otherInputs) {
     input?.addEventListener('input', () => updateView(els));
   }
+
+  els.inputL?.addEventListener('input', () => {
+    state.lengthSource = 'manual';
+    state.selectedTonearm = null;
+    renderTonearmSelectionState(els);
+    updateView(els);
+  });
+
+  els.tonearmPick?.addEventListener('click', () => {
+    const button = els.tonearmPick;
+    if (!button) return;
+    const originalLabel = button.textContent ?? 'Pick';
+    button.disabled = true;
+    button.textContent = 'Loading';
+    const restore = () => {
+      button.disabled = false;
+      button.textContent = state.selectedTonearm ? 'Change' : originalLabel;
+    };
+    loadTonearmPickerItems()
+      .then((items) => {
+        restore();
+        openRuntimePickerModal({
+          kind: 'tonearm',
+          title: 'Select tonearm reference',
+          items,
+          appliedItemId: state.selectedTonearm?.id ?? null,
+          onApply: (item) => {
+            if (typeof item.effectiveLengthMm !== 'number' || !Number.isFinite(item.effectiveLengthMm)) {
+              return;
+            }
+            state.selectedTonearm = {
+              id: item.id,
+              displayName: item.displayName,
+              effectiveLengthMm: item.effectiveLengthMm,
+              effectiveMassG: item.effectiveMassG,
+            };
+            state.effectiveLengthMm = item.effectiveLengthMm;
+            state.lengthSource = 'dataset';
+            if (els.inputL) {
+              els.inputL.value = item.effectiveLengthMm.toFixed(1);
+              els.inputL.removeAttribute('aria-invalid');
+            }
+            renderTonearmSelectionState(els);
+            updateView(els);
+          },
+        });
+      })
+      .catch((error: unknown) => {
+        restore();
+        setActionStatus(els, 'error', error instanceof Error ? error.message : 'Unable to load tonearm dataset.');
+      });
+  });
 
   els.resetSim?.addEventListener('click', () => {
     state.pillarDeltaMm = 0;
@@ -604,6 +746,7 @@ export function enableVtaSraLabInteractions(): void {
     if (els.inputSimPh) els.inputSimPh.value = state.pillarDeltaMm.toFixed(2);
     if (els.inputSimMt) els.inputSimMt.value = state.matDeltaMm.toFixed(2);
     if (els.inputTarget) els.inputTarget.value = state.targetSraDeltaDeg.toFixed(2);
+    renderTonearmSelectionState(els);
     updateView(els);
   });
 
@@ -615,4 +758,28 @@ export function enableVtaSraLabInteractions(): void {
   });
 
   updateView(els);
+}
+
+let vtaTonearmPickerItemsPromise: Promise<RuntimePickerItem[]> | null = null;
+
+function vtaTonearmRecordToPickerItem(record: TonearmRuntimeRecord): RuntimePickerItem {
+  return {
+    id: record.id,
+    kind: 'tonearm',
+    displayName: record.display_name,
+    effectiveMassG: record.effective_mass_g,
+    effectiveLengthMm: record.effective_length_mm,
+  };
+}
+
+function loadTonearmPickerItems(): Promise<RuntimePickerItem[]> {
+  if (!vtaTonearmPickerItemsPromise) {
+    vtaTonearmPickerItemsPromise = loadTonearmsWithEffectiveLength()
+      .then((records) => records.map(vtaTonearmRecordToPickerItem))
+      .catch((error: unknown) => {
+        vtaTonearmPickerItemsPromise = null;
+        throw error;
+      });
+  }
+  return vtaTonearmPickerItemsPromise;
 }

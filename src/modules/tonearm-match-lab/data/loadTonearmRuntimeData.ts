@@ -23,6 +23,7 @@ export type TonearmRuntimeRecord = {
   display_name: string;
   match_ready: boolean;
   effective_mass_g?: number;
+  effective_length_mm?: number;
 };
 
 export type TonearmRuntimeData = {
@@ -128,6 +129,7 @@ function parseTonearmRecord(value: unknown, index: number): TonearmRuntimeRecord
     display_name: readRequiredString(value, 'display_name', label),
     match_ready: readRequiredBoolean(value, 'match_ready', label),
     effective_mass_g: readOptionalNumber(value, 'effective_mass_g', label),
+    effective_length_mm: readOptionalNumber(value, 'effective_length_mm', label),
   };
 }
 
@@ -180,4 +182,17 @@ export async function loadTonearmRuntimeData(): Promise<TonearmRuntimeData> {
     .filter((record) => record.match_ready);
 
   return { cartridges, tonearms };
+}
+
+/*
+ * Geometry Lab and VTA & SRA Lab only need tonearm records that publish an
+ * effective length. They do not need cartridge data and do not need the
+ * match_ready gating that Tonearm Match Lab enforces (match_ready depends on
+ * effective_mass_g, which neither geometry nor SRA math uses).
+ */
+export async function loadTonearmsWithEffectiveLength(): Promise<TonearmRuntimeRecord[]> {
+  const tonearmsJson = await fetchJson(TONEARMS_RUNTIME_INDEX_PATH);
+  return parseArrayJson(tonearmsJson, 'tonearms.index.json')
+    .map(parseTonearmRecord)
+    .filter((record) => typeof record.effective_length_mm === 'number' && Number.isFinite(record.effective_length_mm));
 }

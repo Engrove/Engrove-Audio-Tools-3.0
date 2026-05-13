@@ -189,25 +189,90 @@
   table-layout: fixed;
 }
 
+.geo-workbench-main .ea-form-table:not(.ea-form-table--two-column) {
+  width: 100%;
+}
+
 .geo-workbench-main .ea-form-table:not(.ea-form-table--two-column) .ea-col-status {
-  width: 22px;
+  width: 20px;
+  padding-right: 0;
 }
 
 .geo-workbench-main .ea-form-table:not(.ea-form-table--two-column) .ea-col-label {
-  width: auto;
+  width: 38%;
   min-width: 0;
+  padding-right: var(--ea-space-2);
   white-space: normal;
 }
 
 .geo-workbench-main .ea-form-table:not(.ea-form-table--two-column) .ea-col-value {
-  width: 11rem;
+  width: auto;
+  min-width: 8rem;
+  padding-right: var(--ea-space-2);
+}
+
+.geo-workbench-main .ea-form-table:not(.ea-form-table--two-column) .ea-col-value .ea-input {
+  width: 100%;
+  min-width: 0;
 }
 
 .geo-workbench-main .ea-form-table:not(.ea-form-table--two-column) .ea-col-meta {
-  width: 4rem;
+  width: 6.5rem;
   padding-right: var(--ea-space-3);
   text-align: right;
   white-space: nowrap;
+}
+
+.geo-workbench-main .ea-form-table:not(.ea-form-table--two-column) .ea-col-meta .ea-badge {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.geo-picker-row {
+  display: flex;
+  align-items: center;
+  gap: var(--ea-space-2);
+  min-width: 0;
+}
+
+.geo-picker-summary {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 1px;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ea-text-medium);
+  font-family: var(--ea-font-data);
+  font-size: var(--ea-font-size-small);
+  line-height: 1.25;
+}
+
+.geo-picker-summary strong {
+  display: block;
+  overflow: hidden;
+  color: var(--ea-text-high);
+  font-size: var(--ea-font-size-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.geo-picker-summary span {
+  display: block;
+  overflow: hidden;
+  color: var(--ea-text-low);
+  font-family: var(--ea-font-data);
+  font-size: var(--ea-font-size-micro);
+  letter-spacing: var(--ea-letter-label);
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.geo-picker-button {
+  flex: 0 0 auto;
+  min-width: 4.5rem;
+  padding-inline: var(--ea-space-3);
 }
 
 .geo-formula-reminder {

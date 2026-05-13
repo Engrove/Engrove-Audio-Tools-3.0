@@ -21,27 +21,43 @@
 
 .vta-workbench-main .ea-form-table {
   table-layout: fixed;
+  width: 100%;
 }
 
 .vta-workbench-main .ea-form-table:not(.ea-form-table--two-column) .ea-col-status {
-  width: 22px;
+  width: 20px;
+  padding-right: 0;
 }
 
 .vta-workbench-main .ea-form-table:not(.ea-form-table--two-column) .ea-col-label {
-  width: auto;
+  width: 38%;
   min-width: 0;
+  padding-right: var(--ea-space-2);
   white-space: normal;
 }
 
 .vta-workbench-main .ea-form-table:not(.ea-form-table--two-column) .ea-col-value {
-  width: 11rem;
+  width: auto;
+  min-width: 8rem;
+  padding-right: var(--ea-space-2);
+}
+
+.vta-workbench-main .ea-form-table:not(.ea-form-table--two-column) .ea-col-value .ea-input {
+  width: 100%;
+  min-width: 0;
 }
 
 .vta-workbench-main .ea-form-table:not(.ea-form-table--two-column) .ea-col-meta {
-  width: 4rem;
+  width: 6.5rem;
   padding-right: var(--ea-space-3);
   text-align: right;
   white-space: nowrap;
+}
+
+.vta-workbench-main .ea-form-table:not(.ea-form-table--two-column) .ea-col-meta .ea-badge {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .vta-workbench-main {
@@ -115,6 +131,52 @@
   color: var(--ea-text-medium);
   font-size: var(--ea-font-size-small);
   line-height: 1.45;
+}
+
+.vta-picker-row {
+  display: flex;
+  align-items: center;
+  gap: var(--ea-space-2);
+  min-width: 0;
+}
+
+.vta-picker-summary {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 1px;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ea-text-medium);
+  font-family: var(--ea-font-data);
+  font-size: var(--ea-font-size-small);
+  line-height: 1.25;
+}
+
+.vta-picker-summary strong {
+  display: block;
+  overflow: hidden;
+  color: var(--ea-text-high);
+  font-size: var(--ea-font-size-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vta-picker-summary span {
+  display: block;
+  overflow: hidden;
+  color: var(--ea-text-low);
+  font-family: var(--ea-font-data);
+  font-size: var(--ea-font-size-micro);
+  letter-spacing: var(--ea-letter-label);
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.vta-picker-button {
+  flex: 0 0 auto;
+  min-width: 4.5rem;
+  padding-inline: var(--ea-space-3);
 }
 
 .vta-input {
