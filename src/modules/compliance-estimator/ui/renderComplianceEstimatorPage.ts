@@ -17,7 +17,7 @@ import {
   type RuntimePickerItem,
 } from '../../../shared/ui/runtimePickerModal';
 import { escapeAttribute, renderText } from '../../../shared/ui/renderSafe';
-import { buildVersionLabel } from '../../../shared/app/buildVersion';
+import { renderToolTopbar } from '../../../shared/ui/renderToolTopbar';
 
 type EvaluatedCompliance =
   | {
@@ -49,34 +49,6 @@ const complianceState: ComplianceUiState = {
 };
 
 let cartridgePickerItemsPromise: Promise<RuntimePickerItem[]> | null = null;
-
-function renderTopbar(active: 'tools' | 'match' | 'estimator'): string {
-  const nav = [
-    { key: 'tools', label: 'Tools', href: '/' },
-    { key: 'match', label: 'Match Lab', href: '/tonearm-calculator' },
-    { key: 'estimator', label: 'Estimator', href: '/compliance' },
-  ];
-
-  return `
-    <header class="ea-topbar" aria-label="Primary navigation">
-      <a class="ea-brand" href="/" aria-label="Engrove Audio Tools home">
-        <span class="ea-brand-accent" aria-hidden="true">//</span>
-        <span>Engrove Audio Tools</span>
-      </a>
-      <span class="ea-topbar-divider" aria-hidden="true"></span>
-      <nav class="ea-topnav" aria-label="Tools navigation">
-        ${nav.map((item) => `
-          <a class="ea-topnav-link" href="${item.href}"${active === item.key ? ' aria-current="page"' : ''}>${item.label}</a>
-        `).join('')}
-      </nav>
-      <div class="ea-topbar-meta">
-        <span class="ea-build-status">${buildVersionLabel()}</span>
-        <button class="ea-theme-toggle" type="button" data-theme-toggle aria-label="Toggle light and dark theme">☼</button>
-        <img class="ea-maintainer-avatar" src="/images/engrove.webp" alt="" aria-hidden="true" />
-      </div>
-    </header>
-  `;
-}
 
 function statusDotMarkup(statusClass: string): string {
   return `<span class="ea-dot ea-dot--${escapeAttribute(statusClass)}" aria-hidden="true"></span>`;
@@ -653,7 +625,7 @@ export function renderComplianceEstimatorPage(): string {
   return `
     <main class="tm-lab-shell ea-tool-shell">
       <a class="tm-lab-skip-link" href="#compliance-estimator">Skip to estimator</a>
-      ${renderTopbar('estimator')}
+      ${renderToolTopbar('estimator')}
 
       <section class="ea-contextbar" aria-label="Route context">
         <div class="ea-contextbar__path">

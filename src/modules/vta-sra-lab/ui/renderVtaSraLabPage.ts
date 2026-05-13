@@ -4,7 +4,11 @@ import {
   type VtaSraInput,
   type VtaSraResult,
 } from '../engine/vtaSra';
-import { buildVersionLabel } from '../../../shared/app/buildVersion';
+import { renderToolTopbar } from '../../../shared/ui/renderToolTopbar';
+import {
+  readNumberFromInput,
+  type ParseNumberResult,
+} from '../../../shared/util/parseNumberInput';
 
 type VtaState = {
   effectiveLengthMm: number;
@@ -52,30 +56,6 @@ function formatNumber(value: number, fractionDigits: number): string {
 function signedNumber(value: number, fractionDigits: number): string {
   const text = formatNumber(Math.abs(value), fractionDigits);
   return value >= 0 ? `+${text}` : `-${text}`;
-}
-
-function renderTopbar(): string {
-  return `
-    <header class="ea-topbar" aria-label="Primary navigation">
-      <a class="ea-brand" href="/" aria-label="Engrove Audio Tools home">
-        <span class="ea-brand-accent" aria-hidden="true">//</span>
-        <span>Engrove Audio Tools</span>
-      </a>
-      <span class="ea-topbar-divider" aria-hidden="true"></span>
-      <nav class="ea-topnav" aria-label="Tools navigation">
-        <a class="ea-topnav-link" href="/">Tools</a>
-        <a class="ea-topnav-link" href="/tonearm-calculator">Match Lab</a>
-        <a class="ea-topnav-link" href="/compliance">Estimator</a>
-        <a class="ea-topnav-link" href="/geometry-lab">Geometry Lab</a>
-        <a class="ea-topnav-link" href="/vta-sra-lab" aria-current="page">VTA Lab</a>
-      </nav>
-      <div class="ea-topbar-meta">
-        <span class="ea-build-status">${buildVersionLabel()}</span>
-        <button class="ea-theme-toggle" type="button" data-theme-toggle aria-label="Toggle light and dark theme">&#9788;</button>
-        <img class="ea-maintainer-avatar" src="/images/engrove.webp" alt="" aria-hidden="true" />
-      </div>
-    </header>
-  `;
 }
 
 function renderContextBar(): string {
@@ -141,7 +121,7 @@ function alignmentSimulationMarkup(): string {
         <button class="ea-button ea-button--ghost vta-reset-sim" type="button" data-vta-reset-sim>Reset sim</button>
       </div>
       <div class="ea-panel-body--flush">
-        <table class="ea-form-table ea-form-table--two-column vta-sim-table" aria-label="Reference and simulated VTA values">
+        <table class="ea-form-table ea-form-table--two-column" aria-label="Reference and simulated VTA values">
           <thead>
             <tr>
               <th></th>
@@ -247,7 +227,7 @@ function profileSvgMarkup(): string {
     <svg class="vta-svg-profile" viewBox="0 0 840 700" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" fill="none" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Tonearm side profile">
       <title>Tonearm side profile</title>
       <desc>Schematic side view of the tonearm pivot, pillar, plinth, platter, record and stylus tip used to visualise pillar height and mat thickness adjustments.</desc>
-      <g class="vta-svg-header">
+      <g>
         <text x="50" y="60" font-family="JetBrains Mono" font-size="18" fill="currentColor" stroke="none" data-vta-svg-l>L: 237.0 mm</text>
         <text x="50" y="92" font-family="JetBrains Mono" font-size="18" fill="currentColor" stroke="none" data-vta-svg-sra>SRA: 92.00 deg</text>
         <text x="50" y="124" font-family="JetBrains Mono" font-size="18" fill="currentColor" stroke="none" data-vta-svg-delta>&Delta; pillar: 0.00 mm &middot; &Delta; mat: 0.00 mm</text>
@@ -258,7 +238,7 @@ function profileSvgMarkup(): string {
           <text x="50" y="-16" font-family="JetBrains Mono" font-size="12" text-anchor="middle" fill="currentColor" stroke="none">100.0 MM SCALE</text>
         </g>
       </g>
-      <g class="vta-svg-plinth-base">
+      <g>
         <rect x="50" y="560" width="740" height="100" fill="var(--ea-bg-panel-alt)"></rect>
         <line x1="50" y1="560" x2="790" y2="560" stroke-width="1"></line>
         <line x1="50" y1="660" x2="790" y2="660" stroke-width="0.8"></line>
@@ -266,7 +246,7 @@ function profileSvgMarkup(): string {
         <line x1="790" y1="560" x2="790" y2="660" stroke-width="0.8"></line>
         <text x="420" y="618" font-family="Inter" font-style="italic" font-size="14" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.55">PLINTH &middot; PLATTER REFERENCE PLANE TOP</text>
       </g>
-      <g class="vta-svg-platter">
+      <g>
         <rect x="320" y="500" width="470" height="60" fill="var(--ea-bg-panel)"></rect>
         <line x1="320" y1="500" x2="790" y2="500" stroke-width="0.6"></line>
         <line x1="320" y1="500" x2="320" y2="560" stroke-width="0.6"></line>
@@ -281,12 +261,12 @@ function profileSvgMarkup(): string {
         <text x="700" y="475" font-family="JetBrains Mono" font-size="12" text-anchor="end" fill="currentColor" stroke="none" opacity="0.7">GROOVE</text>
         <line x1="703" y1="471" x2="743" y2="481" stroke-width="0.4" opacity="0.5"></line>
       </g>
-      <g class="vta-svg-base">
+      <g>
         <path d="M 184 560 L 184 538 L 198 518 L 222 518 L 236 538 L 236 560 Z" fill="var(--ea-bg-panel)"></path>
         <line x1="184" y1="560" x2="236" y2="560" stroke-width="0.5"></line>
         <circle cx="232" cy="534" r="2" fill="currentColor" stroke="none"></circle>
       </g>
-      <g class="vta-svg-pillar-group">
+      <g>
         <rect data-vta-svg-pillar x="204" y="445" width="14" height="73" fill="var(--ea-bg-panel)"></rect>
         <line x1="200" y1="498" x2="222" y2="498" stroke-width="0.7"></line>
         <line x1="200" y1="502" x2="222" y2="502" stroke-width="0.7"></line>
@@ -371,7 +351,7 @@ function actionBarMarkup(): string {
 export function renderVtaSraLabPage(): string {
   return `
     <main class="ea-tool-shell vta-shell">
-      ${renderTopbar()}
+      ${renderToolTopbar('vta')}
       ${renderContextBar()}
       <section class="ea-workbench vta-workbench" aria-label="VTA lab workbench">
         <div class="vta-workbench-grid">
@@ -418,10 +398,12 @@ function elements(root: ParentNode) {
 
 type Elements = ReturnType<typeof elements>;
 
-function readNumber(input: HTMLInputElement | null, fallback: number): number {
-  if (!input) return fallback;
-  const value = parseFloat(input.value);
-  return Number.isFinite(value) ? value : fallback;
+function describeParseProblem(label: string, result: ParseNumberResult): string | null {
+  if (result.kind === 'ok') return null;
+  if (result.kind === 'blank') return `${label} is required.`;
+  if (result.reason === 'not-a-number') return `${label} must be a valid number.`;
+  if (result.reason === 'negative') return `${label} must not be negative.`;
+  return `${label} must be greater than zero.`;
 }
 
 function setActionStatus(els: Elements, kind: 'planned' | 'active' | 'done' | 'error', text: string): void {
@@ -430,45 +412,63 @@ function setActionStatus(els: Elements, kind: 'planned' | 'active' | 'done' | 'e
 }
 
 function updateView(els: Elements): void {
-  state.effectiveLengthMm = readNumber(els.inputL, state.effectiveLengthMm);
-  state.referenceSraDeg = readNumber(els.inputRefSra, state.referenceSraDeg);
-  state.pillarDeltaMm = readNumber(els.inputSimPh, state.pillarDeltaMm);
-  state.matDeltaMm = readNumber(els.inputSimMt, state.matDeltaMm);
-  state.targetSraDeltaDeg = readNumber(els.inputTarget, state.targetSraDeltaDeg);
+  const lParse = readNumberFromInput(els.inputL);
+  const refParse = readNumberFromInput(els.inputRefSra, { allowNegative: true, allowZero: true });
+  const phParse = readNumberFromInput(els.inputSimPh, { allowNegative: true, allowZero: true });
+  const mtParse = readNumberFromInput(els.inputSimMt, { allowNegative: true, allowZero: true });
+  const targetParse = readNumberFromInput(els.inputTarget, { allowNegative: true, allowZero: true });
+
+  const problems = [
+    describeParseProblem('Effective length', lParse),
+    describeParseProblem('Reference SRA', refParse),
+    describeParseProblem('Pillar height delta', phParse),
+    describeParseProblem('Mat thickness delta', mtParse),
+  ].filter((value): value is string => value !== null);
+  const inverseProblems = [
+    describeParseProblem('Effective length', lParse),
+    describeParseProblem('Target SRA delta', targetParse),
+  ].filter((value): value is string => value !== null);
 
   let result: VtaSraResult | null = null;
   let required: number | null = null;
-  let validationMessage: string | null = null;
 
-  try {
-    const input: VtaSraInput = {
-      effectiveLengthMm: state.effectiveLengthMm,
-      referenceSraDeg: state.referenceSraDeg,
-      pillarDeltaMm: state.pillarDeltaMm,
-      matDeltaMm: state.matDeltaMm,
-    };
-    result = computeVtaSra(input);
-  } catch (error) {
-    validationMessage = error instanceof Error ? error.message : 'Invalid VTA input.';
+  if (problems.length === 0 && lParse.kind === 'ok' && refParse.kind === 'ok' && phParse.kind === 'ok' && mtParse.kind === 'ok') {
+    state.effectiveLengthMm = lParse.value;
+    state.referenceSraDeg = refParse.value;
+    state.pillarDeltaMm = phParse.value;
+    state.matDeltaMm = mtParse.value;
+    try {
+      const input: VtaSraInput = {
+        effectiveLengthMm: state.effectiveLengthMm,
+        referenceSraDeg: state.referenceSraDeg,
+        pillarDeltaMm: state.pillarDeltaMm,
+        matDeltaMm: state.matDeltaMm,
+      };
+      result = computeVtaSra(input);
+    } catch (error) {
+      problems.push(error instanceof Error ? error.message : 'Invalid VTA input.');
+    }
   }
 
-  try {
-    required = computeInverseVtaSra({
-      effectiveLengthMm: state.effectiveLengthMm,
-      targetSraDeltaDeg: state.targetSraDeltaDeg,
-    });
-  } catch (error) {
-    if (validationMessage === null) {
-      validationMessage = error instanceof Error ? error.message : 'Invalid inverse target.';
+  if (inverseProblems.length === 0 && lParse.kind === 'ok' && targetParse.kind === 'ok') {
+    state.targetSraDeltaDeg = targetParse.value;
+    try {
+      required = computeInverseVtaSra({
+        effectiveLengthMm: lParse.value,
+        targetSraDeltaDeg: targetParse.value,
+      });
+    } catch (error) {
+      inverseProblems.push(error instanceof Error ? error.message : 'Invalid inverse target.');
     }
   }
 
   state.result = result;
   state.requiredPillarDeltaMm = required;
 
+  if (els.refActual) els.refActual.textContent = refParse.kind === 'ok' ? formatNumber(refParse.value, 2) : '—';
+  if (els.refDelta) els.refDelta.textContent = signedNumber(0, 3);
+
   if (result) {
-    if (els.refDelta) els.refDelta.textContent = signedNumber(0, 3);
-    if (els.refActual) els.refActual.textContent = formatNumber(state.referenceSraDeg, 2);
     if (els.simDelta) els.simDelta.value = signedNumber(result.sraDeltaDeg, 3);
     if (els.simActual) els.simActual.value = formatNumber(result.sraActualDeg, 2);
   } else {
@@ -476,22 +476,28 @@ function updateView(els: Elements): void {
     if (els.simActual) els.simActual.value = '—';
   }
 
-  if (required !== null) {
-    if (els.required) els.required.textContent = `${signedNumber(required, 3)} mm`;
+  if (required !== null && els.required) {
+    els.required.textContent = `${signedNumber(required, 3)} mm`;
   } else if (els.required) {
     els.required.textContent = '—';
   }
 
-  updateSvg(els, result);
+  const renderResult = result ?? null;
+  updateSvg(els, renderResult);
+  const allProblems = [...problems, ...inverseProblems];
+  const validationMessage = allProblems.length > 0 ? allProblems[0] : null;
+  const anyBlank = [lParse, refParse, phParse, mtParse, targetParse].some((parse) => parse.kind === 'blank');
 
   if (validationMessage) {
-    setActionStatus(els, 'error', validationMessage);
+    setActionStatus(els, anyBlank ? 'planned' : 'error', validationMessage);
   } else if (result && required !== null) {
     setActionStatus(
       els,
       'active',
       `Δ SRA = ${signedNumber(result.sraDeltaDeg, 3)} deg · required Δ pillar = ${signedNumber(required, 2)} mm.`,
     );
+  } else {
+    setActionStatus(els, 'planned', 'Awaiting input.');
   }
 }
 

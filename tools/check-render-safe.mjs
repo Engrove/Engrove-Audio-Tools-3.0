@@ -34,6 +34,7 @@ function patchTempUiImports() {
   source = source.replace("from '../../../shared/ui/runtimePickerModal';", "from '../../../shared/ui/runtimePickerModal.js';");
   source = source.replace("from '../../../shared/ui/renderSafe';", "from '../../../shared/ui/renderSafe.js';");
   source = source.replace("from '../../../shared/app/buildVersion';", "from '../../../shared/app/buildVersion.js';");
+  source = source.replace("from '../../../shared/ui/renderToolTopbar';", "from '../../../shared/ui/renderToolTopbar.js';");
   writeFileSync(absolutePath, source, 'utf8');
 }
 
@@ -156,6 +157,17 @@ async function runChecks() {
       "export const buildVersion: string = '0.0.0';",
       "export function buildVersionLabel(): string {",
       "  return 'Build v' + buildVersion;",
+      "}",
+      '',
+    ].join('\n'),
+  );
+
+  writeTempSource(
+    'src/shared/ui/renderToolTopbar.ts',
+    [
+      "export type ToolRouteKey = 'tools' | 'match' | 'estimator' | 'geometry' | 'vta';",
+      "export function renderToolTopbar(_active: ToolRouteKey): string {",
+      "  return '<header class=\"ea-topbar\"></header>';",
       "}",
       '',
     ].join('\n'),

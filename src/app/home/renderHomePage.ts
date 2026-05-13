@@ -1,6 +1,4 @@
-import { buildVersion } from '../../shared/app/buildVersion';
-
-const repoVersion = buildVersion;
+import { renderToolTopbar } from '../../shared/ui/renderToolTopbar';
 
 type ToolCard = {
   id: string;
@@ -53,34 +51,6 @@ const tools: readonly ToolCard[] = [
   },
 ];
 
-function renderTopbar(active: 'tools' | 'match' | 'estimator'): string {
-  const nav = [
-    { key: 'tools', label: 'Tools', href: '/' },
-    { key: 'match', label: 'Match Lab', href: '/tonearm-calculator' },
-    { key: 'estimator', label: 'Estimator', href: '/compliance' },
-  ];
-
-  return `
-    <header class="ea-topbar" aria-label="Primary navigation">
-      <a class="ea-brand" href="/" aria-label="Engrove Audio Tools home">
-        <span class="ea-brand-accent" aria-hidden="true">//</span>
-        <span>Engrove Audio Tools</span>
-      </a>
-      <span class="ea-topbar-divider" aria-hidden="true"></span>
-      <nav class="ea-topnav" aria-label="Tools navigation">
-        ${nav.map((item) => `
-          <a class="ea-topnav-link" href="${item.href}"${active === item.key ? ' aria-current="page"' : ''}>${item.label}</a>
-        `).join('')}
-      </nav>
-      <div class="ea-topbar-meta">
-        <span class="ea-build-status">Build v${repoVersion}</span>
-        <button class="ea-theme-toggle" type="button" data-theme-toggle aria-label="Toggle light and dark theme">☼</button>
-        <img class="ea-maintainer-avatar" src="/images/engrove.webp" alt="" aria-hidden="true" />
-      </div>
-    </header>
-  `;
-}
-
 function renderToolCard(tool: ToolCard): string {
   const content = `
     <span class="ea-tool-card-head">
@@ -120,7 +90,7 @@ function toggleTheme(): void {
 export function renderHomePage(): string {
   return `
     <div class="ea-site-shell">
-      ${renderTopbar('tools')}
+      ${renderToolTopbar('tools')}
 
       <main class="ea-home-main" aria-labelledby="home-title">
         <section class="ea-home-header">

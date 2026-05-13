@@ -15,7 +15,11 @@ import {
   type NullPointsRuntimeData,
 } from '../data/loadNullPoints';
 import { renderText } from '../../../shared/ui/renderSafe';
-import { buildVersionLabel } from '../../../shared/app/buildVersion';
+import { renderToolTopbar } from '../../../shared/ui/renderToolTopbar';
+import {
+  readNumberFromInput,
+  type ParseNumberResult,
+} from '../../../shared/util/parseNumberInput';
 
 type GeometryTab = 'graph' | 'prot-ideal' | 'prot-sim';
 
@@ -98,30 +102,6 @@ function tonearmOptionsMarkup(): string {
 
 function statusDot(kind: 'planned' | 'active' | 'done' | 'error'): string {
   return `<span class="ea-dot ea-dot--${kind}" aria-hidden="true"></span>`;
-}
-
-function renderTopbar(): string {
-  return `
-    <header class="ea-topbar" aria-label="Primary navigation">
-      <a class="ea-brand" href="/" aria-label="Engrove Audio Tools home">
-        <span class="ea-brand-accent" aria-hidden="true">//</span>
-        <span>Engrove Audio Tools</span>
-      </a>
-      <span class="ea-topbar-divider" aria-hidden="true"></span>
-      <nav class="ea-topnav" aria-label="Tools navigation">
-        <a class="ea-topnav-link" href="/">Tools</a>
-        <a class="ea-topnav-link" href="/tonearm-calculator">Match Lab</a>
-        <a class="ea-topnav-link" href="/compliance">Estimator</a>
-        <a class="ea-topnav-link" href="/geometry-lab" aria-current="page">Geometry Lab</a>
-        <a class="ea-topnav-link" href="/vta-sra-lab">VTA Lab</a>
-      </nav>
-      <div class="ea-topbar-meta">
-        <span class="ea-build-status">${buildVersionLabel()}</span>
-        <button class="ea-theme-toggle" type="button" data-theme-toggle aria-label="Toggle light and dark theme">&#9788;</button>
-        <img class="ea-maintainer-avatar" src="/images/engrove.webp" alt="" aria-hidden="true" />
-      </div>
-    </header>
-  `;
 }
 
 function renderContextBar(): string {
@@ -349,7 +329,7 @@ function actionBarMarkup(): string {
 export function renderTonearmGeometryLabPage(): string {
   return `
     <main class="ea-tool-shell geo-shell">
-      ${renderTopbar()}
+      ${renderToolTopbar('geometry')}
       ${renderContextBar()}
       <section class="ea-workbench geo-workbench" aria-label="Geometry lab workbench">
         <div class="geo-workbench-grid">
@@ -416,17 +396,38 @@ function applyTonearmSelection(els: Elements): void {
   }
 }
 
+function describeParseProblem(label: string, result: ParseNumberResult): string | null {
+  if (result.kind === 'ok') return null;
+  if (result.kind === 'blank') return `${label} is required.`;
+  if (result.reason === 'not-a-number') return `${label} must be a valid number.`;
+  if (result.reason === 'negative') return `${label} must not be negative.`;
+  return `${label} must be greater than zero.`;
+}
+
 function recompute(els: Elements): void {
   if (!state.nullPoints) {
     return;
   }
 
-  const pivotInput = parseFloat(els.pivot?.value ?? '');
-  const pivot = Number.isFinite(pivotInput) && pivotInput > 0 ? pivotInput : state.pivotToSpindleMm;
-  state.pivotToSpindleMm = pivot;
+  const pivotParse = readNumberFromInput(els.pivot);
+  if (pivotParse.kind !== 'ok') {
+    const message = describeParseProblem('Pivot-to-spindle', pivotParse) ?? 'Pivot-to-spindle is required.';
+    setActionStatus(els, pivotParse.kind === 'blank' ? 'planned' : 'error', message);
+    state.reference = null;
+    if (els.refP) els.refP.textContent = '—';
+    if (els.refL) els.refL.textContent = '—';
+    if (els.refOh) els.refOh.textContent = '—';
+    if (els.refOa) els.refOa.textContent = '—';
+    if (els.refN1) els.refN1.textContent = '—';
+    if (els.refN2) els.refN2.textContent = '—';
+    recomputeSimulation(els);
+    return;
+  }
+
+  state.pivotToSpindleMm = pivotParse.value;
 
   const np = nullPointsFor(state.nullPoints, state.standard, state.method);
-  const reference = computeReferenceGeometry(pivot, np);
+  const reference = computeReferenceGeometry(pivotParse.value, np);
   state.reference = reference;
 
   if (els.refP) els.refP.textContent = formatNumber(reference.pivotToSpindleMm, 1);
@@ -450,9 +451,31 @@ function refreshSimulationFromReference(els: Elements): void {
 }
 
 function recomputeSimulation(els: Elements): void {
-  const p = parseFloat(els.simP?.value ?? '') || 0;
-  const oh = parseFloat(els.simOh?.value ?? '') || 0;
-  const oa = parseFloat(els.simOa?.value ?? '') || 0;
+  const pParse = readNumberFromInput(els.simP);
+  const ohParse = readNumberFromInput(els.simOh, { allowNegative: true, allowZero: true });
+  const oaParse = readNumberFromInput(els.simOa, { allowNegative: true, allowZero: true });
+  const problems = [
+    describeParseProblem('Simulated pivot-to-spindle', pParse),
+    describeParseProblem('Simulated overhang', ohParse),
+    describeParseProblem('Simulated offset angle', oaParse),
+  ].filter((value): value is string => value !== null);
+  const anyBlank = [pParse, ohParse, oaParse].some((parse) => parse.kind === 'blank');
+
+  if (problems.length > 0) {
+    state.simulated = null;
+    if (els.simL) els.simL.value = '—';
+    if (els.simN1) els.simN1.value = '—';
+    if (els.simN2) els.simN2.value = '—';
+    els.rowN1?.removeAttribute('data-row-error');
+    els.rowN2?.removeAttribute('data-row-error');
+    setActionStatus(els, anyBlank ? 'planned' : 'error', problems[0]);
+    draw(els);
+    return;
+  }
+
+  const p = pParse.kind === 'ok' ? pParse.value : 0;
+  const oh = ohParse.kind === 'ok' ? ohParse.value : 0;
+  const oa = oaParse.kind === 'ok' ? oaParse.value : 0;
   state.simulatedPivotMm = p;
   state.simulatedOverhangMm = oh;
   state.simulatedOffsetAngleDeg = oa;
