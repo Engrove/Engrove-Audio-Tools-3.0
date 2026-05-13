@@ -19,3 +19,5 @@
 *.jpeg binary
 *.gif binary
 *.ico binary
+.gitattributes text eol=lf
+public/_headers text eol=lf
