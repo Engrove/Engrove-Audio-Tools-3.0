@@ -165,7 +165,7 @@ async function runChecks() {
   writeTempSource(
     'src/shared/ui/renderToolTopbar.ts',
     [
-      "export type ToolRouteKey = 'tools' | 'match' | 'estimator' | 'geometry' | 'vta';",
+      "export type ToolRouteKey = 'tools' | 'match' | 'estimator' | 'geometry' | 'vta' | 'measurement';",
       "export function renderToolTopbar(_active: ToolRouteKey): string {",
       "  return '<header class=\"ea-topbar\"></header>';",
       "}",

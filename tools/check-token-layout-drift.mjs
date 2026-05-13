@@ -16,6 +16,7 @@ const CSS_AUDIT_FILES = [
   'src/modules/tonearm-match-lab/ui/tonearmMatchLab.css',
   'src/modules/tonearm-geometry-lab/ui/tonearmGeometryLab.css',
   'src/modules/vta-sra-lab/ui/vtaSraLab.css',
+  'src/modules/measurement-lab/ui/measurementLab.css',
 ];
 const DYNAMIC_EA_FALLBACK_ALLOWLIST = new Set(['--ea-scroll-progress']);
 // Tokens intentionally managed by app runtime rather than global tokens.css definitions.

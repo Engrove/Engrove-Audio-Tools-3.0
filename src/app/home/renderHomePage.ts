@@ -43,6 +43,14 @@ const tools: readonly ToolCard[] = [
     ariaLabel: 'Open VTA and SRA Lab',
   },
   {
+    id: 'Audio capture',
+    icon: '◉',
+    title: 'Measurement Lab',
+    summary: 'Capture audio from a test record via your ADC under strict measurement constraints. S30A foundation: device selection, sample-rate honesty and live peak/RMS metering.',
+    href: '/measurement-lab',
+    ariaLabel: 'Open Measurement Lab',
+  },
+  {
     id: 'Reference data',
     icon: '▤',
     title: 'Data Explorer',

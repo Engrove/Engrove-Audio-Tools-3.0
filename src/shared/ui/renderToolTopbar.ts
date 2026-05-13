@@ -1,6 +1,6 @@
 import { buildVersionLabel } from '../app/buildVersion';
 
-export type ToolRouteKey = 'tools' | 'match' | 'estimator' | 'geometry' | 'vta';
+export type ToolRouteKey = 'tools' | 'match' | 'estimator' | 'geometry' | 'vta' | 'measurement';
 
 type NavItem = {
   readonly key: ToolRouteKey;
@@ -14,6 +14,7 @@ const navItems: readonly NavItem[] = [
   { key: 'estimator', label: 'Estimator', href: '/compliance' },
   { key: 'geometry', label: 'Geometry Lab', href: '/geometry-lab' },
   { key: 'vta', label: 'VTA Lab', href: '/vta-sra-lab' },
+  { key: 'measurement', label: 'Measurement Lab', href: '/measurement-lab' },
 ];
 
 function navLink(item: NavItem, active: ToolRouteKey): string {

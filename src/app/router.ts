@@ -15,8 +15,12 @@ import {
   enableVtaSraLabInteractions,
   renderVtaSraLabPage,
 } from '../modules/vta-sra-lab';
+import {
+  enableMeasurementLabInteractions,
+  renderMeasurementLabPage,
+} from '../modules/measurement-lab';
 
-export type AppRoute = 'home' | 'tonearm-calculator' | 'compliance' | 'geometry-lab' | 'vta-sra-lab';
+export type AppRoute = 'home' | 'tonearm-calculator' | 'compliance' | 'geometry-lab' | 'vta-sra-lab' | 'measurement-lab';
 
 const tonearmCalculatorPath = '/tonearm-calculator';
 const tonearmCalculatorHash = '#/tonearm-calculator';
@@ -26,11 +30,14 @@ const geometryLabPath = '/geometry-lab';
 const geometryLabHash = '#/geometry-lab';
 const vtaSraLabPath = '/vta-sra-lab';
 const vtaSraLabHash = '#/vta-sra-lab';
+const measurementLabPath = '/measurement-lab';
+const measurementLabHash = '#/measurement-lab';
 const applicationRouteHashes = new Set([
   tonearmCalculatorHash,
   complianceHash,
   geometryLabHash,
   vtaSraLabHash,
+  measurementLabHash,
 ]);
 const applicationRoutePaths = new Set([
   '/',
@@ -38,6 +45,7 @@ const applicationRoutePaths = new Set([
   compliancePath,
   geometryLabPath,
   vtaSraLabPath,
+  measurementLabPath,
 ]);
 
 function normalizeRoute(pathname: string, hash: string): AppRoute {
@@ -55,6 +63,10 @@ function normalizeRoute(pathname: string, hash: string): AppRoute {
 
   if (hash === vtaSraLabHash || pathname === vtaSraLabPath) {
     return 'vta-sra-lab';
+  }
+
+  if (hash === measurementLabHash || pathname === measurementLabPath) {
+    return 'measurement-lab';
   }
 
   return 'home';
@@ -82,6 +94,12 @@ function renderRoute(app: HTMLElement, route: AppRoute): void {
   if (route === 'vta-sra-lab') {
     app.innerHTML = renderVtaSraLabPage();
     enableVtaSraLabInteractions();
+    return;
+  }
+
+  if (route === 'measurement-lab') {
+    app.innerHTML = renderMeasurementLabPage();
+    enableMeasurementLabInteractions();
     return;
   }
 

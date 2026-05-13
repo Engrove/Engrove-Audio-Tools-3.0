@@ -12,6 +12,7 @@ TypeScript/Vite SPA, deployed as Cloudflare static assets.
 | `/compliance` | Compliance Estimator | Convert published 100 Hz dynamic compliance to a 10 Hz quasi-static value |
 | `/geometry-lab` | Tonearm Geometry Lab | Compute ideal IEC/DIN alignment (Baerwald / Löfgren A / Löfgren B / Stevenson) and simulate mounting errors against the math; print-ready arc protractor |
 | `/vta-sra-lab` | VTA & SRA Lab | Solve stylus rake angle change from pillar and mat adjustments; inverse-solve for a target SRA delta; live SVG side profile |
+| `/measurement-lab` | Measurement Lab | Capture audio from a test record via the user's ADC under strict measurement constraints. S30A foundation: device selection, sample-rate honesty and live peak/RMS metering. Speed, W&F, frequency response, THD and resonance peak measurements arrive in later slices. |
 
 Every tool computes live in the browser, exports a JSON session, and supports
 light/dark theme persisted in `localStorage`.
@@ -26,9 +27,11 @@ src/
     compliance-estimator/   engine, UI, CSS
     tonearm-geometry-lab/   engine, data loader, UI, CSS
     vta-sra-lab/            engine, UI, CSS
+    measurement-lab/        audio capture foundation, UI, CSS
   shared/
     app/buildVersion.ts     unified build label
     audio-domain/           cartridge + tonearm domain types
+    audio-io/               strict-constraints capture, AudioContext wrapper, level metrics
     privacy/analytics.ts    consent-gated analytics loader
     ui/                     renderSafe escape helpers, runtime picker modal, CSS
 public/data/audio/v3/runtime/
