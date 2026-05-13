@@ -15,7 +15,8 @@
     "check:render-safe": "node tools/check-render-safe.mjs",
     "check:tonearm-selectors": "node tools/check-tonearm-runtime-selectors.mjs",
     "check:ui-doctrine": "node tools/check-ui-doctrine.mjs",
-    "check:sanitation": "npm run check && npm run check:ui-doctrine && npm run check:integrity && npm run check:render-safe && npm run check:tonearm && npm run check:tonearm-selectors && npm run validate:data",
+    "check:measurement-lab": "node tools/check-measurement-lab.mjs",
+    "check:sanitation": "npm run check && npm run check:ui-doctrine && npm run check:integrity && npm run check:render-safe && npm run check:tonearm && npm run check:tonearm-selectors && npm run validate:data && npm run check:measurement-lab",
     "check:tokens-layout": "node tools/check-token-layout-drift.mjs"
   },
   "dependencies": {},

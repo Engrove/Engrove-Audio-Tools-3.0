@@ -13,6 +13,7 @@ const files = {
   publicCartridges: 'public/data/audio/v3/runtime/cartridges.index.json',
   publicTonearms: 'public/data/audio/v3/runtime/tonearms.index.json',
   publicNullPoints: 'public/data/audio/v3/runtime/null-points.json',
+  publicTestRecords: 'public/data/audio/v3/runtime/test-records.json',
   publicManifest: 'public/data/audio/v3/runtime/audio-index.manifest.json',
 };
 
@@ -20,10 +21,37 @@ const publicFetchPaths = {
   cartridges: '/data/audio/v3/runtime/cartridges.index.json',
   tonearms: '/data/audio/v3/runtime/tonearms.index.json',
   nullPoints: '/data/audio/v3/runtime/null-points.json',
+  testRecords: '/data/audio/v3/runtime/test-records.json',
 };
 
 const supportedAlignmentStandards = ['IEC', 'DIN'];
 const supportedAlignmentMethods = ['Baerwald', 'LofgrenA', 'LofgrenB', 'Stevenson'];
+
+const supportedTestBandPurposes = new Set([
+  'speed',
+  'freq_response',
+  'crosstalk',
+  'thd',
+  'imd',
+  'resonance',
+  'tracking_ability',
+]);
+const supportedTestBandChannels = new Set([
+  'mono',
+  'L',
+  'R',
+  'both',
+  'out_of_phase',
+]);
+const supportedTestBandTypes = new Set([
+  'sine',
+  'sweep',
+  'dual_tone',
+  'silence',
+  'noise',
+  'pulse',
+]);
+const kebabIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const limits = {
   minCartridgeRecords: 1000,
@@ -289,6 +317,114 @@ function validateNullPoints(data) {
   return recordCount;
 }
 
+function validateTestRecordBand(record, side, band, location) {
+  if (!isObject(band)) {
+    add('error', 'test_records.band_invalid', location, 'Test-record band must be an object.');
+    return;
+  }
+  if (typeof band.index !== 'string' || band.index.trim() === '') {
+    add('error', 'test_records.band_index_invalid', `${location}.index`, 'Each band must declare a non-empty string index.');
+  }
+  if (typeof band.label !== 'string' || band.label.trim() === '') {
+    add('error', 'test_records.band_label_invalid', `${location}.label`, 'Each band must declare a non-empty label.');
+  }
+  if (!supportedTestBandTypes.has(band.type)) {
+    add('error', 'test_records.band_type_invalid', `${location}.type`, `Band type "${band.type}" is not in the closed vocabulary.`);
+  }
+  if (!supportedTestBandChannels.has(band.channel)) {
+    add('error', 'test_records.band_channel_invalid', `${location}.channel`, `Band channel "${band.channel}" is not in the closed vocabulary.`);
+  }
+  if (!supportedTestBandPurposes.has(band.purpose)) {
+    add('error', 'test_records.band_purpose_invalid', `${location}.purpose`, `Band purpose "${band.purpose}" is not in the closed vocabulary.`);
+  }
+  if (!isNumber(band.duration_seconds) || band.duration_seconds <= 0) {
+    add('error', 'test_records.band_duration_invalid', `${location}.duration_seconds`, 'Band duration_seconds must be a positive finite number.');
+  }
+  if (band.type === 'sine') {
+    if (!isNumber(band.frequency_hz) || band.frequency_hz <= 0) {
+      add('error', 'test_records.band_frequency_invalid', `${location}.frequency_hz`, 'Sine band must declare a positive frequency_hz.');
+    }
+  } else if (band.type === 'sweep') {
+    if (!isNumber(band.from_hz) || band.from_hz <= 0) {
+      add('error', 'test_records.band_sweep_from_invalid', `${location}.from_hz`, 'Sweep band must declare a positive from_hz.');
+    }
+    if (!isNumber(band.to_hz) || band.to_hz <= 0) {
+      add('error', 'test_records.band_sweep_to_invalid', `${location}.to_hz`, 'Sweep band must declare a positive to_hz.');
+    }
+    if (isNumber(band.from_hz) && isNumber(band.to_hz) && band.from_hz === band.to_hz) {
+      add('error', 'test_records.band_sweep_range', location, 'Sweep band from_hz and to_hz must differ.');
+    }
+  }
+  if ('notes' in band && typeof band.notes !== 'string') {
+    add('error', 'test_records.band_notes_invalid', `${location}.notes`, 'Band notes must be a string when present.');
+  }
+}
+
+function validateTestRecords(data) {
+  if (!isObject(data)) {
+    add('error', 'test_records.invalid', files.publicTestRecords, 'Test-records dataset must be an object.');
+    return 0;
+  }
+  if (typeof data.version !== 'string' || data.version.trim() === '') {
+    add('error', 'test_records.version_missing', `${files.publicTestRecords}:version`, 'Test-records dataset must declare a version string.');
+  }
+  if (!Array.isArray(data.records)) {
+    add('error', 'test_records.records_missing', `${files.publicTestRecords}:records`, 'Test-records dataset must declare a records array.');
+    return 0;
+  }
+  let bandCount = 0;
+  const seenIds = new Set();
+  for (let recordIndex = 0; recordIndex < data.records.length; recordIndex += 1) {
+    const record = data.records[recordIndex];
+    const recordLocation = `${files.publicTestRecords}:records[${recordIndex}]`;
+    if (!isObject(record)) {
+      add('error', 'test_records.record_invalid', recordLocation, 'Test-record entry must be an object.');
+      continue;
+    }
+    if (typeof record.id !== 'string' || !kebabIdPattern.test(record.id)) {
+      add('error', 'test_records.record_id_invalid', `${recordLocation}.id`, 'Test-record id must be kebab-case ASCII.');
+    } else if (seenIds.has(record.id)) {
+      add('error', 'test_records.record_id_duplicate', `${recordLocation}.id`, `Duplicate test-record id "${record.id}".`);
+    } else {
+      seenIds.add(record.id);
+    }
+    if (typeof record.manufacturer !== 'string' || record.manufacturer.trim() === '') {
+      add('error', 'test_records.record_manufacturer_invalid', `${recordLocation}.manufacturer`, 'Test-record must declare a non-empty manufacturer.');
+    }
+    if (typeof record.title !== 'string' || record.title.trim() === '') {
+      add('error', 'test_records.record_title_invalid', `${recordLocation}.title`, 'Test-record must declare a non-empty title.');
+    }
+    if (typeof record.source !== 'string' || record.source.trim() === '') {
+      add('error', 'test_records.record_source_invalid', `${recordLocation}.source`, 'Test-record must declare a non-empty source citation.');
+    }
+    if (!Array.isArray(record.sides) || record.sides.length === 0) {
+      add('error', 'test_records.record_sides_missing', `${recordLocation}.sides`, 'Test-record must declare at least one side.');
+      continue;
+    }
+    for (let sideIndex = 0; sideIndex < record.sides.length; sideIndex += 1) {
+      const side = record.sides[sideIndex];
+      const sideLocation = `${recordLocation}.sides[${sideIndex}]`;
+      if (!isObject(side)) {
+        add('error', 'test_records.side_invalid', sideLocation, 'Test-record side must be an object.');
+        continue;
+      }
+      if (typeof side.side !== 'string' || side.side.trim() === '') {
+        add('error', 'test_records.side_label_invalid', `${sideLocation}.side`, 'Side label must be a non-empty string.');
+      }
+      if (!Array.isArray(side.bands) || side.bands.length === 0) {
+        add('error', 'test_records.side_bands_missing', `${sideLocation}.bands`, 'Side must declare at least one band.');
+        continue;
+      }
+      for (let bandIndex = 0; bandIndex < side.bands.length; bandIndex += 1) {
+        const band = side.bands[bandIndex];
+        validateTestRecordBand(record, side, band, `${sideLocation}.bands[${bandIndex}]`);
+        bandCount += 1;
+      }
+    }
+  }
+  return bandCount;
+}
+
 function assertSummary(summary, cartridges, tonearms) {
   if (summary?.inspected_structure?.cartridges_shape !== 'row_array') {
     add('warning', 'summary.cartridges_shape', 'summary.inspected_structure.cartridges_shape', 'Expected cartridges source shape row_array.');
@@ -385,6 +521,7 @@ const [
   publicCartridges,
   publicTonearms,
   publicNullPoints,
+  publicTestRecords,
   publicManifest,
 ] = await Promise.all([
   readJsonFile(files.sourceCartridges, { requireNoBom: true, requireLf: true }),
@@ -393,6 +530,7 @@ const [
   readJsonFile(files.publicCartridges, { requireNoBom: true, requireLf: true }),
   readJsonFile(files.publicTonearms, { requireNoBom: true, requireLf: true }),
   readJsonFile(files.publicNullPoints, { requireNoBom: true, requireLf: true }),
+  readJsonFile(files.publicTestRecords, { requireNoBom: true, requireLf: true }),
   readJsonFile(files.publicManifest, { requireNoBom: true, requireLf: true }),
 ]);
 
@@ -439,11 +577,13 @@ if (cartridgesAreArray && tonearmsAreArray) {
 }
 
 const nullPointsRecordCount = validateNullPoints(publicNullPoints.data);
+const testRecordsBandCount = validateTestRecords(publicTestRecords.data);
 
 const outputs = manifestOutputs(publicManifest.data);
 assertManifestEntry(outputs, publicFetchPaths.cartridges, publicCartridges, cartridgesAreArray ? publicCartridges.data.length : null);
 assertManifestEntry(outputs, publicFetchPaths.tonearms, publicTonearms, tonearmsAreArray ? publicTonearms.data.length : null);
 assertManifestEntry(outputs, publicFetchPaths.nullPoints, publicNullPoints, nullPointsRecordCount);
+assertManifestEntry(outputs, publicFetchPaths.testRecords, publicTestRecords, testRecordsBandCount);
 
 for (const output of outputs) {
   if (typeof output?.path === 'string' && output.path.includes('src/data/')) {
@@ -458,6 +598,7 @@ console.log('Engrove Audio Tools 3.0 audio data validation');
 console.log(`- cartridges: ${cartridgesAreArray ? publicCartridges.data.length : 'invalid'}`);
 console.log(`- tonearms: ${tonearmsAreArray ? publicTonearms.data.length : 'invalid'}`);
 console.log(`- null-points: ${nullPointsRecordCount} entries`);
+console.log(`- test-records: ${testRecordsBandCount} bands`);
 console.log(`- public manifest: ${files.publicManifest}`);
 console.log(`- errors: ${errorCount}`);
 console.log(`- warnings: ${warningCount}`);

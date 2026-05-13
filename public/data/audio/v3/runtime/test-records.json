@@ -1,0 +1,374 @@
+{
+  "version": "1.0.0",
+  "records": [
+    {
+      "id": "hifi-news-hfn-001",
+      "manufacturer": "Hi-Fi News",
+      "title": "Hi-Fi News Test Record",
+      "edition": "Reissue (~2010+)",
+      "format": "12-inch LP, 33 1/3 rpm",
+      "source": "Hi-Fi News & Record Review technical notes",
+      "sides": [
+        {
+          "side": "A",
+          "bands": [
+            {
+              "index": "A1",
+              "label": "Anti-skate bias 300 Hz +12 dB",
+              "type": "sine",
+              "channel": "mono",
+              "frequency_hz": 300,
+              "duration_seconds": 60,
+              "purpose": "tracking_ability",
+              "notes": "Tracking ability at +12 dB lateral modulation. Used to set anti-skate so left and right break-up are balanced."
+            },
+            {
+              "index": "A2",
+              "label": "Anti-skate bias 300 Hz +14 dB",
+              "type": "sine",
+              "channel": "mono",
+              "frequency_hz": 300,
+              "duration_seconds": 60,
+              "purpose": "tracking_ability",
+              "notes": "Tracking ability at +14 dB lateral modulation."
+            },
+            {
+              "index": "A3",
+              "label": "Anti-skate bias 300 Hz +16 dB",
+              "type": "sine",
+              "channel": "mono",
+              "frequency_hz": 300,
+              "duration_seconds": 60,
+              "purpose": "tracking_ability",
+              "notes": "Tracking ability at +16 dB lateral modulation."
+            },
+            {
+              "index": "A4",
+              "label": "Anti-skate bias 300 Hz +18 dB",
+              "type": "sine",
+              "channel": "mono",
+              "frequency_hz": 300,
+              "duration_seconds": 60,
+              "purpose": "tracking_ability",
+              "notes": "Tracking ability at +18 dB lateral modulation."
+            },
+            {
+              "index": "A5",
+              "label": "Speed reference 3150 Hz",
+              "type": "sine",
+              "channel": "both",
+              "frequency_hz": 3150,
+              "duration_seconds": 60,
+              "purpose": "speed",
+              "notes": "DIN 45 545 reference tone for platter speed and wow & flutter analysis."
+            },
+            {
+              "index": "A6",
+              "label": "L channel identification 1 kHz",
+              "type": "sine",
+              "channel": "L",
+              "frequency_hz": 1000,
+              "duration_seconds": 30,
+              "purpose": "crosstalk",
+              "notes": "Tone present on the left channel only. Used together with the R band to measure channel separation."
+            },
+            {
+              "index": "A7",
+              "label": "R channel identification 1 kHz",
+              "type": "sine",
+              "channel": "R",
+              "frequency_hz": 1000,
+              "duration_seconds": 30,
+              "purpose": "crosstalk",
+              "notes": "Tone present on the right channel only."
+            },
+            {
+              "index": "A8",
+              "label": "Out-of-phase 1 kHz",
+              "type": "sine",
+              "channel": "out_of_phase",
+              "frequency_hz": 1000,
+              "duration_seconds": 30,
+              "purpose": "crosstalk",
+              "notes": "Vertical-only modulation used for azimuth alignment."
+            }
+          ]
+        },
+        {
+          "side": "B",
+          "bands": [
+            {
+              "index": "B1",
+              "label": "Constant-velocity sweep 30 Hz to 20 kHz",
+              "type": "sweep",
+              "channel": "both",
+              "from_hz": 30,
+              "to_hz": 20000,
+              "duration_seconds": 60,
+              "purpose": "freq_response",
+              "notes": "RIAA-encoded logarithmic sweep used for cartridge frequency-response analysis."
+            },
+            {
+              "index": "B2",
+              "label": "Low-frequency resonance 5 Hz to 30 Hz",
+              "type": "sweep",
+              "channel": "both",
+              "from_hz": 5,
+              "to_hz": 30,
+              "duration_seconds": 30,
+              "purpose": "resonance",
+              "notes": "Slow sweep through the cartridge-arm fundamental resonance region."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "jvc-trs-1007",
+      "manufacturer": "JVC",
+      "title": "TRS-1007 Test Record",
+      "edition": "1979",
+      "format": "12-inch LP, 33 1/3 rpm",
+      "source": "JVC TRS-1007 technical insert",
+      "sides": [
+        {
+          "side": "A",
+          "bands": [
+            {
+              "index": "A1",
+              "label": "Reference 1 kHz",
+              "type": "sine",
+              "channel": "both",
+              "frequency_hz": 1000,
+              "duration_seconds": 30,
+              "purpose": "freq_response",
+              "notes": "0 dB reference tone."
+            },
+            {
+              "index": "A2",
+              "label": "Frequency response sweep 20 Hz to 20 kHz",
+              "type": "sweep",
+              "channel": "both",
+              "from_hz": 20,
+              "to_hz": 20000,
+              "duration_seconds": 90,
+              "purpose": "freq_response",
+              "notes": "Constant-amplitude logarithmic sweep. PCML and similar projects analyse this band with SJPlot."
+            },
+            {
+              "index": "A3",
+              "label": "L channel 1 kHz",
+              "type": "sine",
+              "channel": "L",
+              "frequency_hz": 1000,
+              "duration_seconds": 30,
+              "purpose": "crosstalk"
+            },
+            {
+              "index": "A4",
+              "label": "R channel 1 kHz",
+              "type": "sine",
+              "channel": "R",
+              "frequency_hz": 1000,
+              "duration_seconds": 30,
+              "purpose": "crosstalk"
+            },
+            {
+              "index": "A5",
+              "label": "Speed reference 3150 Hz",
+              "type": "sine",
+              "channel": "both",
+              "frequency_hz": 3150,
+              "duration_seconds": 60,
+              "purpose": "speed"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cbs-str-100",
+      "manufacturer": "CBS Laboratories",
+      "title": "STR-100 Standard Test Record",
+      "edition": "1965",
+      "format": "12-inch LP, 33 1/3 rpm",
+      "source": "CBS Laboratories STR-100 technical bulletin",
+      "sides": [
+        {
+          "side": "A",
+          "bands": [
+            {
+              "index": "A1",
+              "label": "1 kHz reference",
+              "type": "sine",
+              "channel": "both",
+              "frequency_hz": 1000,
+              "duration_seconds": 30,
+              "purpose": "freq_response",
+              "notes": "0 dB reference."
+            },
+            {
+              "index": "A2",
+              "label": "100 Hz reference",
+              "type": "sine",
+              "channel": "both",
+              "frequency_hz": 100,
+              "duration_seconds": 30,
+              "purpose": "freq_response"
+            },
+            {
+              "index": "A3",
+              "label": "10 kHz reference",
+              "type": "sine",
+              "channel": "both",
+              "frequency_hz": 10000,
+              "duration_seconds": 30,
+              "purpose": "freq_response"
+            },
+            {
+              "index": "A4",
+              "label": "Speed reference 3150 Hz",
+              "type": "sine",
+              "channel": "both",
+              "frequency_hz": 3150,
+              "duration_seconds": 60,
+              "purpose": "speed"
+            },
+            {
+              "index": "A5",
+              "label": "L channel 1 kHz",
+              "type": "sine",
+              "channel": "L",
+              "frequency_hz": 1000,
+              "duration_seconds": 30,
+              "purpose": "crosstalk"
+            },
+            {
+              "index": "A6",
+              "label": "R channel 1 kHz",
+              "type": "sine",
+              "channel": "R",
+              "frequency_hz": 1000,
+              "duration_seconds": 30,
+              "purpose": "crosstalk"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "clearaudio-ca-trs-1007",
+      "manufacturer": "Clearaudio",
+      "title": "CA-TRS-1007 Test Record",
+      "edition": "2008 reissue of JVC TRS-1007",
+      "format": "12-inch LP, 33 1/3 rpm",
+      "source": "Clearaudio CA-TRS-1007 technical sleeve",
+      "sides": [
+        {
+          "side": "A",
+          "bands": [
+            {
+              "index": "A1",
+              "label": "Frequency response sweep 20 Hz to 20 kHz",
+              "type": "sweep",
+              "channel": "both",
+              "from_hz": 20,
+              "to_hz": 20000,
+              "duration_seconds": 90,
+              "purpose": "freq_response",
+              "notes": "Constant-amplitude logarithmic sweep. Directly compatible with PCML SJPlot analysis."
+            },
+            {
+              "index": "A2",
+              "label": "Reference 1 kHz",
+              "type": "sine",
+              "channel": "both",
+              "frequency_hz": 1000,
+              "duration_seconds": 30,
+              "purpose": "freq_response"
+            },
+            {
+              "index": "A3",
+              "label": "Speed reference 3150 Hz",
+              "type": "sine",
+              "channel": "both",
+              "frequency_hz": 3150,
+              "duration_seconds": 60,
+              "purpose": "speed"
+            },
+            {
+              "index": "A4",
+              "label": "L channel 1 kHz",
+              "type": "sine",
+              "channel": "L",
+              "frequency_hz": 1000,
+              "duration_seconds": 30,
+              "purpose": "crosstalk"
+            },
+            {
+              "index": "A5",
+              "label": "R channel 1 kHz",
+              "type": "sine",
+              "channel": "R",
+              "frequency_hz": 1000,
+              "duration_seconds": 30,
+              "purpose": "crosstalk"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ortofon-test-record",
+      "manufacturer": "Ortofon",
+      "title": "Ortofon Test Record",
+      "edition": "Modern reissue",
+      "format": "12-inch LP, 33 1/3 rpm",
+      "source": "Ortofon test-record technical sleeve",
+      "sides": [
+        {
+          "side": "A",
+          "bands": [
+            {
+              "index": "A1",
+              "label": "Reference 1 kHz",
+              "type": "sine",
+              "channel": "both",
+              "frequency_hz": 1000,
+              "duration_seconds": 30,
+              "purpose": "freq_response"
+            },
+            {
+              "index": "A2",
+              "label": "Frequency sweep 20 Hz to 20 kHz",
+              "type": "sweep",
+              "channel": "both",
+              "from_hz": 20,
+              "to_hz": 20000,
+              "duration_seconds": 90,
+              "purpose": "freq_response"
+            },
+            {
+              "index": "A3",
+              "label": "Tracking ability 300 Hz",
+              "type": "sine",
+              "channel": "mono",
+              "frequency_hz": 300,
+              "duration_seconds": 60,
+              "purpose": "tracking_ability"
+            },
+            {
+              "index": "A4",
+              "label": "Speed reference 3150 Hz",
+              "type": "sine",
+              "channel": "both",
+              "frequency_hz": 3150,
+              "duration_seconds": 60,
+              "purpose": "speed"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

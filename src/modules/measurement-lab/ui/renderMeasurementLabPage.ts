@@ -20,6 +20,7 @@ import {
   type SampleRateMatchClassification,
   type StrictAudioStream,
 } from '../../../shared/audio-io';
+import { createIriaaFilterNode, type IriaaFilterNode } from '../dsp/iriaaNode';
 
 type SourceMode = 'live' | 'self-test';
 type CaptureState = 'idle' | 'connecting' | 'live' | 'error';
@@ -40,6 +41,7 @@ type LabState = {
   captureState: CaptureState;
   devices: AudioInputDeviceInfo[];
   selectedDeviceId: string | null;
+  iriaaEnabled: boolean;
   audioHandle: MeasurementAudioContextHandle | null;
   stream: StrictAudioStream | null;
   honesty: SampleRateHonestyReport | null;
@@ -48,6 +50,7 @@ type LabState = {
   analysers: { L: AnalyserNode; R: AnalyserNode } | null;
   splitter: ChannelSplitterNode | null;
   sourceNode: AudioNode | null;
+  iriaaNode: IriaaFilterNode | null;
   silentSink: GainNode | null;
   meterFrame: number | null;
   meterLastTimestamp: number | null;
@@ -88,6 +91,7 @@ const state: LabState = {
   captureState: 'idle',
   devices: [],
   selectedDeviceId: null,
+  iriaaEnabled: false,
   audioHandle: null,
   stream: null,
   honesty: null,
@@ -96,6 +100,7 @@ const state: LabState = {
   analysers: null,
   splitter: null,
   sourceNode: null,
+  iriaaNode: null,
   silentSink: null,
   meterFrame: null,
   meterLastTimestamp: null,
@@ -192,6 +197,19 @@ function audioSourcePanelMarkup(): string {
                 </select>
               </td>
               <td class="ea-col-meta" data-mlab-device-meta><span class="ea-badge">Live only</span></td>
+            </tr>
+            <tr>
+              <td class="ea-col-status">${statusDot('done')}</td>
+              <td class="ea-col-label">Software iRIAA
+                <span class="ea-form-table-sublabel">Apply RIAA de-emphasis in software</span>
+              </td>
+              <td class="ea-col-value">
+                <div class="mlab-segmented" role="radiogroup" aria-label="Software iRIAA filter">
+                  <button class="mlab-segmented-option mlab-segmented-option--active" role="radio" aria-checked="true" type="button" data-mlab-iriaa="off">Bypass</button>
+                  <button class="mlab-segmented-option" role="radio" aria-checked="false" type="button" data-mlab-iriaa="on">Apply</button>
+                </div>
+              </td>
+              <td class="ea-col-meta"><span class="ea-badge">Filter</span></td>
             </tr>
             <tr>
               <td class="ea-col-status">${statusDot('planned')}</td>
@@ -340,6 +358,7 @@ export function renderMeasurementLabPage(): string {
 function elements(root: ParentNode) {
   return {
     sourceModeButtons: root.querySelectorAll<HTMLButtonElement>('[data-mlab-source-mode]'),
+    iriaaButtons: root.querySelectorAll<HTMLButtonElement>('[data-mlab-iriaa]'),
     deviceSelect: root.querySelector<HTMLSelectElement>('[data-mlab-device]'),
     deviceDot: root.querySelector<HTMLElement>('[data-mlab-device-dot]'),
     deviceMeta: root.querySelector<HTMLElement>('[data-mlab-device-meta]'),
@@ -363,6 +382,16 @@ type Elements = ReturnType<typeof elements>;
 function setActionStatus(els: Elements, kind: 'planned' | 'active' | 'done' | 'error', text: string): void {
   if (els.actionStatusDot) els.actionStatusDot.className = `ea-dot ea-dot--${kind}`;
   if (els.actionStatusText) els.actionStatusText.textContent = text;
+}
+
+function renderIriaaToggle(els: Elements): void {
+  els.iriaaButtons.forEach((button) => {
+    const value = button.dataset.mlabIriaa;
+    const active = (value === 'on') === state.iriaaEnabled;
+    button.setAttribute('aria-checked', active ? 'true' : 'false');
+    button.classList.toggle('mlab-segmented-option--active', active);
+    button.disabled = state.captureState === 'live' || state.captureState === 'connecting';
+  });
 }
 
 function renderSourceMode(els: Elements): void {
@@ -599,6 +628,10 @@ async function teardownAudio(): Promise<void> {
     try { state.analysers.R.disconnect(); } catch { /* not connected */ }
     state.analysers = null;
   }
+  if (state.iriaaNode) {
+    try { state.iriaaNode.node.disconnect(); } catch { /* not connected */ }
+    state.iriaaNode = null;
+  }
   if (state.silentSink) {
     try { state.silentSink.disconnect(); } catch { /* not connected */ }
     state.silentSink = null;
@@ -643,10 +676,18 @@ async function startLiveCapture(els: Elements): Promise<void> {
   const sourceNode = audioHandle.context.createMediaStreamSource(stream.stream);
   const splitter = audioHandle.context.createChannelSplitter(2);
   const analysers = buildAnalysers(audioHandle.context);
-  sourceNode.connect(splitter);
+  let iriaa: IriaaFilterNode | null = null;
+  if (state.iriaaEnabled) {
+    iriaa = createIriaaFilterNode(audioHandle.context);
+    sourceNode.connect(iriaa.node);
+    iriaa.node.connect(splitter);
+  } else {
+    sourceNode.connect(splitter);
+  }
   splitter.connect(analysers.L, 0);
   splitter.connect(analysers.R, 1);
   state.sourceNode = sourceNode;
+  state.iriaaNode = iriaa;
   state.splitter = splitter;
   state.analysers = analysers;
   state.channelCount = typeof stream.trackSettings.channelCount === 'number'
@@ -677,13 +718,23 @@ async function startSelfTest(els: Elements): Promise<void> {
   const silentSink = audioHandle.context.createGain();
   silentSink.gain.value = 0;
   const analysers = buildAnalysers(audioHandle.context);
+  let iriaa: IriaaFilterNode | null = null;
   oscillator.connect(gain);
-  gain.connect(analysers.L);
-  gain.connect(analysers.R);
-  gain.connect(silentSink);
+  if (state.iriaaEnabled) {
+    iriaa = createIriaaFilterNode(audioHandle.context);
+    gain.connect(iriaa.node);
+    iriaa.node.connect(analysers.L);
+    iriaa.node.connect(analysers.R);
+    iriaa.node.connect(silentSink);
+  } else {
+    gain.connect(analysers.L);
+    gain.connect(analysers.R);
+    gain.connect(silentSink);
+  }
   silentSink.connect(audioHandle.context.destination);
   oscillator.start();
   state.selfTestOscillator = oscillator;
+  state.iriaaNode = iriaa;
   state.analysers = analysers;
   state.silentSink = silentSink;
   state.channelCount = 2;
@@ -700,6 +751,7 @@ async function connectMeasurementLab(els: Elements): Promise<void> {
   state.captureState = 'connecting';
   state.errorMessage = null;
   renderConnectionButtons(els);
+  renderIriaaToggle(els);
   renderSessionStatus(els);
   try {
     await teardownAudio();
@@ -731,6 +783,7 @@ async function connectMeasurementLab(els: Elements): Promise<void> {
     clearMeterDom(els);
   }
   renderConnectionButtons(els);
+  renderIriaaToggle(els);
   renderSessionStatus(els);
   renderActualFormat(els);
 }
@@ -740,6 +793,7 @@ async function disconnectMeasurementLab(els: Elements): Promise<void> {
   state.captureState = 'idle';
   clearMeterDom(els);
   renderConnectionButtons(els);
+  renderIriaaToggle(els);
   renderSessionStatus(els);
   renderActualFormat(els);
 }
@@ -768,6 +822,7 @@ export function enableMeasurementLabInteractions(): void {
   state.selectedDeviceId = readStoredDeviceId();
 
   renderSourceMode(els);
+  renderIriaaToggle(els);
   renderDeviceList(els);
   renderActualFormat(els);
   renderConnectionButtons(els);
@@ -783,6 +838,16 @@ export function enableMeasurementLabInteractions(): void {
       if (state.captureState === 'live' || state.captureState === 'connecting') return;
       state.sourceMode = next;
       renderSourceMode(els);
+    });
+  });
+
+  els.iriaaButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      if (state.captureState === 'live' || state.captureState === 'connecting') return;
+      const next = button.dataset.mlabIriaa === 'on';
+      if (next === state.iriaaEnabled) return;
+      state.iriaaEnabled = next;
+      renderIriaaToggle(els);
     });
   });
 
