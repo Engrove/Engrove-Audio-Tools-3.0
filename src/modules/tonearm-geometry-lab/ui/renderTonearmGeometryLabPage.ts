@@ -841,6 +841,10 @@ function drawProtractor(els: Elements, isSim: boolean): void {
   ctx.fillText(`OH: ${data.oh.toFixed(2)} mm`, 20, 116);
   ctx.fillText(`OA: ${data.oa.toFixed(2)} deg`, 20, 132);
 
+  // Protractor geometry is rendered in millimetre-domain coordinates and then
+  // scaled into the preview canvas here. The reference ruler below intentionally
+  // uses the same mm-to-canvas mapping as the arc/null-grid geometry; it is a
+  // print verification aid, not a guarantee of printer behavior.
   const scale = Math.min(widthPx / 220, heightPx / 160);
   const cx = widthPx * 0.2;
   const cy = heightPx * 0.65;
@@ -849,20 +853,7 @@ function drawProtractor(els: Elements, isSim: boolean): void {
   ctx.translate(cx, cy);
   ctx.scale(scale, scale);
 
-  ctx.strokeStyle = cLine;
-  ctx.lineWidth = 0.5;
-  ctx.beginPath();
-  ctx.moveTo(10, -140);
-  ctx.lineTo(110, -140);
-  ctx.moveTo(10, -138);
-  ctx.lineTo(10, -142);
-  ctx.moveTo(110, -138);
-  ctx.lineTo(110, -142);
-  ctx.stroke();
-  ctx.fillStyle = cLine;
-  ctx.font = '5px JetBrains Mono, monospace';
-  ctx.textAlign = 'center';
-  ctx.fillText('100.0 MM CALIBRATION SCALE', 60, -144);
+  drawReferenceScale(ctx, cLine);
 
   ctx.lineWidth = 0.25;
   ctx.beginPath();
@@ -943,6 +934,49 @@ function drawProtractor(els: Elements, isSim: boolean): void {
     ctx.fillText(`NULL R=${n.toFixed(1)}`, 0, -32);
     ctx.restore();
   }
+
+  ctx.restore();
+}
+
+
+function drawReferenceScale(ctx: CanvasRenderingContext2D, color: string): void {
+  const startX = 60;
+  const startY = -85;
+  const lengthMm = 100;
+  const majorTickHeight = 6;
+  const minorTickHeight = 2.4;
+
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineCap = 'butt';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+
+  ctx.lineWidth = 0.35;
+  ctx.beginPath();
+  ctx.moveTo(startX, startY);
+  ctx.lineTo(startX + lengthMm, startY);
+  ctx.stroke();
+
+  ctx.lineWidth = 0.18;
+  ctx.beginPath();
+  for (let mm = 0; mm <= lengthMm; mm += 1) {
+    const x = startX + mm;
+    const isMajor = mm % 10 === 0;
+    const tickHeight = isMajor ? majorTickHeight : minorTickHeight;
+    ctx.moveTo(x, startY);
+    ctx.lineTo(x, startY + tickHeight);
+  }
+  ctx.stroke();
+
+  ctx.font = 'bold 4.2px JetBrains Mono, monospace';
+  ctx.fillText('100.0 MM REFERENCE', startX + lengthMm / 2, startY - 8);
+  ctx.font = '3.2px JetBrains Mono, monospace';
+  ctx.fillText('PRINT AT 100%. VERIFY THIS SCALE MEASURES 100.0 MM.', startX + lengthMm / 2, startY - 3);
+  ctx.textBaseline = 'top';
+  ctx.fillText('0', startX, startY + majorTickHeight + 1.5);
+  ctx.fillText('100 mm', startX + lengthMm, startY + majorTickHeight + 1.5);
 
   ctx.restore();
 }
