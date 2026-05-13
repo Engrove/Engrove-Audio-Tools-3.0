@@ -311,13 +311,14 @@ function profileSvgMarkup(): string {
         <line x1="200" y1="510" x2="222" y2="510" stroke-width="0.7"></line>
       </g>
       <g data-vta-svg-arm-vertical>
-        <g data-vta-svg-arm-rotate transform-origin="210 420">
+        <g data-vta-svg-bearing-housing>
           <rect x="184" y="395" width="52" height="50" rx="3" fill="var(--ea-bg-panel)"></rect>
           <circle cx="210" cy="420" r="14" fill="none" stroke-width="0.5"></circle>
-          <circle cx="210" cy="420" r="3.5" fill="currentColor" stroke="none"></circle>
           <line x1="184" y1="438" x2="156" y2="438" stroke-width="1.2"></line>
           <line x1="156" y1="438" x2="156" y2="460" stroke-width="0.6" stroke-dasharray="2 1.5"></line>
           <circle cx="156" cy="466" r="6" fill="var(--ea-bg-panel)"></circle>
+        </g>
+        <g data-vta-svg-arm-rotate>
           <line x1="184" y1="420" x2="112" y2="420" stroke-width="3"></line>
           <line x1="176" y1="415" x2="176" y2="425" stroke-width="0.8"></line>
           <line x1="167" y1="415" x2="167" y2="425" stroke-width="0.8"></line>
@@ -343,6 +344,7 @@ function profileSvgMarkup(): string {
           <line x1="740" y1="464" x2="745" y2="483" stroke-width="1.6"></line>
           <circle cx="745" cy="485" r="4" fill="var(--ea-interactive-accent)" stroke="none"></circle>
         </g>
+        <circle cx="210" cy="420" r="3.5" fill="currentColor" stroke="none"></circle>
       </g>
       <line x1="745" y1="500" x2="745" y2="555" stroke="currentColor" stroke-dasharray="3 3" opacity="0.5" stroke-width="0.8"></line>
       <text x="751" y="535" font-family="JetBrains Mono" font-size="11" fill="currentColor" stroke="none" opacity="0.7">VERT REF</text>

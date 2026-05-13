@@ -163,7 +163,7 @@ function setupTableMarkup(): string {
             <tr>
               <td class="ea-col-status">${statusDot('done')}</td>
               <td class="ea-col-label">Standard
-                <span class="ea-form-table-sublabel">Inner-groove radius convention</span>
+                <span class="geo-standard-context" data-geo-standard-context>Inner-groove radius convention</span>
               </td>
               <td class="ea-col-value">
                 <select class="ea-input" data-geo-standard aria-label="Alignment standard">
@@ -379,6 +379,7 @@ export function renderTonearmGeometryLabPage(): string {
 function elements(root: ParentNode) {
   return {
     standard: root.querySelector<HTMLSelectElement>('[data-geo-standard]'),
+    standardContext: root.querySelector<HTMLElement>('[data-geo-standard-context]'),
     method: root.querySelector<HTMLSelectElement>('[data-geo-method]'),
     tonearmPick: root.querySelector<HTMLButtonElement>('[data-geo-tonearm-pick]'),
     tonearmSummary: root.querySelector<HTMLElement>('[data-geo-tonearm-summary]'),
@@ -485,7 +486,20 @@ function describeParseProblem(label: string, result: ParseNumberResult): string 
   return `${label} must be greater than zero.`;
 }
 
+function renderStandardContext(els: Elements): void {
+  if (!els.standardContext) return;
+  if (!state.nullPoints) {
+    els.standardContext.textContent = 'Inner-groove radius convention';
+    return;
+  }
+  const standardLabelText = state.standard === 'IEC' ? 'IEC 98:1958' : 'DIN';
+  const radii = radiiFor(state.nullPoints, state.standard);
+  els.standardContext.textContent =
+    `${standardLabelText} · inner ${formatNumber(radii.innerMm, 3)} mm · outer ${formatNumber(radii.outerMm, 3)} mm`;
+}
+
 function recompute(els: Elements): void {
+  renderStandardContext(els);
   if (!state.nullPoints) {
     return;
   }

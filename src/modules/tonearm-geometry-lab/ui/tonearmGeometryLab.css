@@ -229,6 +229,21 @@
   text-overflow: ellipsis;
 }
 
+.geo-standard-context {
+  display: block;
+  margin-top: 2px;
+  color: var(--ea-text-low);
+  font-family: var(--ea-font-data);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.3;
+  text-transform: none;
+  white-space: normal;
+  word-spacing: 0.05em;
+}
+
 .geo-picker-row {
   display: flex;
   align-items: center;
