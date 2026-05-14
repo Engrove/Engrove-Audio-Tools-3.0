@@ -1,5 +1,27 @@
 # Measurement Lab
 
+S30H adds:
+
+- `fnv1aHex` — synchronous 32-bit FNV-1a hash used to anonymise the
+  captured device label before it reaches the JSON export. No async
+  SubtleCrypto call required; the hash is computed inline at export time.
+- `buildSessionJson()` — collects all measurement results from the live
+  `LabState` and serialises them into the
+  `engrove-toolbox.session/v1` schema: capture metadata (device label
+  hash, requested/actual sample rate, honesty classification, iRIAA
+  flag, source mode), empty `selection` stub (cartridge / tonearm /
+  test-record all `null` at this stage), and `measurements` with one
+  entry per panel (speed, channel_balance, frequency_response, thd,
+  imd, resonance). No raw audio is included.
+- `downloadSessionJson()` — triggers a browser download via
+  `Blob` + `URL.createObjectURL` and a temporary `<a>` element.
+- **Export JSON** button in the action bar. The button is always
+  enabled so a partial export (some measurements `null`) is possible
+  at any stage. No CI gate extension needed: the export is a
+  formatting concern, not a DSP correctness concern.
+
+
+
 S30A foundation slice. Captures audio from the user's ADC under strict
 constraints (echo cancellation, noise suppression and automatic gain
 control all forced off) so a measurement pipeline can run on top of it

@@ -472,6 +472,127 @@ function visualizationMarkup(): string {
   `;
 }
 
+function fnv1aHex(str: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(16).padStart(8, '0');
+}
+
+type SessionJson = {
+  schema: 'engrove-toolbox.session/v1';
+  tool: 'measurement-lab';
+  timestamp: string;
+  capture: {
+    device_label_hash: string | null;
+    requested_sample_rate_hz: number;
+    actual_sample_rate_hz: number | null;
+    honesty_classification: string | null;
+    iriaa_applied: boolean;
+    source_mode: string;
+  };
+  selection: { cartridge: null; tonearm: null; test_record: null };
+  measurements: {
+    speed: object | null;
+    channel_balance: object | null;
+    frequency_response: object | null;
+    thd: object | null;
+    imd: object | null;
+    resonance: object | null;
+  };
+};
+
+function buildSessionJson(): SessionJson {
+  const deviceLabel = state.devices.find(d => d.deviceId === state.selectedDeviceId)?.label ?? null;
+
+  const speedResult = state.speed.result;
+  const channelResult = (() => {
+    const { leftCapture, rightCapture } = state.channel;
+    if (!leftCapture || !rightCapture) return null;
+    const bal = summariseChannelBalance(leftCapture, rightCapture);
+    return {
+      left_rms_dbfs: leftCapture.leftRmsDbFs,
+      right_rms_dbfs: rightCapture.rightRmsDbFs,
+      balance_db: bal.balanceDb,
+      left_to_right_crosstalk_db: bal.leftToRightCrosstalkDb,
+      right_to_left_crosstalk_db: bal.rightToLeftCrosstalkDb,
+    };
+  })();
+
+  const freqResult = state.freq.result;
+  const thdResult = (() => {
+    const r = state.thd.result;
+    if (!r) return null;
+    if (isThdResult(r)) {
+      return { type: 'thd', fundamental_hz: r.fundamentalHz, thd_percent: r.thdPercent, harmonics_dbc: r.harmonics };
+    }
+    return { type: 'imd', f1_hz: r.f1Hz, f2_hz: r.f2Hz, imd_percent: r.imdPercent };
+  })();
+
+  const resResult = state.resonance.result;
+
+  return {
+    schema: 'engrove-toolbox.session/v1',
+    tool: 'measurement-lab',
+    timestamp: new Date().toISOString(),
+    capture: {
+      device_label_hash: deviceLabel != null ? fnv1aHex(deviceLabel) : null,
+      requested_sample_rate_hz: defaultRequestedSampleRateHz,
+      actual_sample_rate_hz: state.honesty?.contextActualHz ?? null,
+      honesty_classification: state.honesty?.classification ?? null,
+      iriaa_applied: state.iriaaEnabled,
+      source_mode: state.sourceMode,
+    },
+    selection: { cartridge: null, tonearm: null, test_record: null },
+    measurements: {
+      speed: speedResult
+        ? {
+            speed_deviation_percent: speedResult.speedDeviationPercent,
+            unweighted_wf_percent: speedResult.unweightedWfPercent,
+            weighted_wf_percent: speedResult.weightedWfPercent,
+            classification: classifyWf(speedResult.unweightedWfPercent).label,
+          }
+        : null,
+      channel_balance: channelResult,
+      frequency_response: freqResult
+        ? {
+            fft_size: freqResult.fftSize,
+            block_count: freqResult.blockCount,
+            frequencies_hz: Array.from(freqResult.frequenciesHz),
+            magnitudes_db: Array.from(freqResult.magnitudesDb),
+          }
+        : null,
+      thd: thdResult && thdResult.type === 'thd' ? thdResult : null,
+      imd: thdResult && thdResult.type === 'imd' ? thdResult : null,
+      resonance: resResult
+        ? {
+            peak_frequency_hz: resResult.peakFrequencyHz,
+            peak_amplitude_dbfs: resResult.peakAmplitudeDbFs,
+            q_estimate: resResult.qEstimate,
+            sweep_type: state.resonance.sweepType,
+            sweep_from_hz: state.resonance.fromHz,
+            sweep_to_hz: state.resonance.toHz,
+          }
+        : null,
+    },
+  };
+}
+
+function downloadSessionJson(): void {
+  const json = JSON.stringify(buildSessionJson(), null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `engrove-measurement-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 function actionBarMarkup(): string {
   return `
     <footer class="ea-actionbar" aria-label="Measurement lab actions">
@@ -482,7 +603,7 @@ function actionBarMarkup(): string {
         </span>
       </div>
       <div class="ea-actionbar__group">
-        <span class="mlab-formula-reminder" aria-hidden="true">Foundation · S30A</span>
+        <button class="ea-button ea-button--ghost" type="button" data-mlab-export>Export JSON</button>
         <button class="ea-button ea-button--ghost" type="button" data-mlab-reset>Reset</button>
       </div>
     </footer>
@@ -528,6 +649,7 @@ function elements(root: ParentNode) {
     honesty: root.querySelector<HTMLElement>('[data-mlab-honesty]'),
     connect: root.querySelector<HTMLButtonElement>('[data-mlab-connect]'),
     disconnect: root.querySelector<HTMLButtonElement>('[data-mlab-disconnect]'),
+    exportBtn: root.querySelector<HTMLButtonElement>('[data-mlab-export]'),
     reset: root.querySelector<HTMLButtonElement>('[data-mlab-reset]'),
     actionStatusDot: root.querySelector<HTMLElement>('[data-mlab-action-status] .ea-dot'),
     actionStatusText: root.querySelector<HTMLElement>('[data-mlab-action-status-text]'),
@@ -1884,6 +2006,10 @@ export function enableMeasurementLabInteractions(): void {
 
   els.disconnect?.addEventListener('click', () => {
     void disconnectMeasurementLab(els);
+  });
+
+  els.exportBtn?.addEventListener('click', () => {
+    downloadSessionJson();
   });
 
   els.reset?.addEventListener('click', () => {
