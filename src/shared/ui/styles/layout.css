@@ -42,6 +42,8 @@ body {
 }
 
 .ea-topbar {
+  position: relative;
+  z-index: 10;
   min-height: var(--ea-shell-topbar-height);
   display: grid;
   grid-template-columns: auto auto minmax(0, 1fr) auto;
@@ -173,6 +175,8 @@ body {
 }
 
 .ea-contextbar {
+  position: relative;
+  z-index: 9;
   min-height: var(--ea-shell-context-height);
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
