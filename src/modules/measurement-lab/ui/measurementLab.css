@@ -345,6 +345,82 @@
   color: #fff;
 }
 
+/* --- Frequency response chart (S30E) --- */
+
+.mlab-freq-chart {
+  display: block;
+  width: 100%;
+  max-width: 800px;
+  height: auto;
+  margin: 0 auto;
+  overflow: visible;
+}
+
+.mlab-freq-chart-wrap {
+  padding: 4px 0 8px;
+}
+
+.mlab-freq-grid {
+  stroke: var(--ea-border);
+  stroke-width: 1;
+  fill: none;
+}
+
+.mlab-freq-grid--zero {
+  stroke: var(--ea-muted, #666);
+  stroke-width: 1.5;
+}
+
+.mlab-freq-axis-label {
+  fill: var(--ea-text-muted, #888);
+  font-size: 11px;
+  font-family: var(--ea-font-mono, ui-monospace, monospace);
+}
+
+.mlab-freq-response {
+  fill: none;
+  stroke: var(--ea-accent, #4a9eff);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.mlab-freq-riaa {
+  fill: none;
+  stroke: var(--ea-text-muted, #888);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+  stroke-linejoin: round;
+}
+
+.mlab-freq-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--ea-text-muted);
+  padding: 0 2px;
+}
+
+.mlab-freq-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mlab-freq-legend-swatch {
+  flex-shrink: 0;
+  width: 20px;
+  height: 2px;
+  background: var(--ea-accent, #4a9eff);
+  border-radius: 1px;
+}
+
+.mlab-freq-legend-swatch--dashed {
+  background: transparent;
+  border-top: 1.5px dashed var(--ea-text-muted, #888);
+}
+
 @media (max-width: 1180px) {
   .mlab-workbench-grid {
     grid-template-columns: 1fr;

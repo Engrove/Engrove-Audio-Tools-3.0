@@ -23,7 +23,10 @@ import {
 import { createIriaaFilterNode, type IriaaFilterNode } from '../dsp/iriaaNode';
 import { createSpeedFlutterCapture, type SpeedFlutterCapture, type SpeedFlutterResult } from '../dsp/speedFlutterNode';
 import { createStereoChannelCapture, type StereoCapture, type ChannelCaptureMetrics } from '../dsp/stereoCaptureNode';
+import { createSweepCapture, type SweepCapture } from '../dsp/sweepCaptureNode';
 import { summariseChannelBalance } from '../engine/crosstalk';
+import { computeFrequencyResponse, type FreqResponseResult } from '../engine/freqResponse';
+import { computeRiaaMagnitudeDb } from '../engine/iriaaFilter';
 
 type SourceMode = 'live' | 'self-test';
 type CaptureState = 'idle' | 'connecting' | 'live' | 'error';
@@ -56,6 +59,13 @@ type ChannelStateBag = {
   capture: StereoCapture | null;
 };
 
+type FreqState = {
+  active: boolean;
+  elapsedSeconds: number;
+  result: FreqResponseResult | null;
+  capture: SweepCapture | null;
+};
+
 type LabState = {
   sourceMode: SourceMode;
   captureState: CaptureState;
@@ -79,6 +89,7 @@ type LabState = {
   channelCount: number;
   speed: SpeedState;
   channel: ChannelStateBag;
+  freq: FreqState;
 };
 
 /*
@@ -95,6 +106,7 @@ void tokenLayoutGeneratedClassNames;
 const speedMeasurementDurationSeconds = 30;
 const defaultSpeedReferenceHz = 3150;
 const channelMeasurementDurationSeconds = 10;
+const freqMeasurementDurationSeconds = 10;
 
 const defaultRequestedSampleRateHz = 96_000;
 const defaultRequestedChannelCount = 2;
@@ -146,6 +158,12 @@ const state: LabState = {
     elapsedSeconds: 0,
     leftCapture: null,
     rightCapture: null,
+    capture: null,
+  },
+  freq: {
+    active: false,
+    elapsedSeconds: 0,
+    result: null,
     capture: null,
   },
 };
@@ -323,6 +341,20 @@ function channelPanelMarkup(): string {
   `;
 }
 
+function freqPanelMarkup(): string {
+  return `
+    <section class="ea-panel" aria-labelledby="mlab-freq-title">
+      <div class="ea-panel-header">
+        <span class="ea-panel-header-id">05</span>
+        <span id="mlab-freq-title">Frequency response</span>
+      </div>
+      <div class="ea-panel-body" data-mlab-freq-body>
+        <p class="ea-muted">Connect a source to begin a frequency response measurement.</p>
+      </div>
+    </section>
+  `;
+}
+
 function meterChannelMarkup(channel: ChannelKey, label: string): string {
   return `
     <div class="mlab-meter-channel" data-mlab-meter-channel="${channel}">
@@ -347,7 +379,7 @@ function visualizationMarkup(): string {
   return `
     <aside class="ea-panel mlab-viz-panel" aria-labelledby="mlab-viz-title">
       <div class="ea-panel-header">
-        <span class="ea-panel-header-id">05</span>
+        <span class="ea-panel-header-id">06</span>
         <span id="mlab-viz-title">Level meter</span>
       </div>
       <div class="ea-panel-body mlab-viz-body">
@@ -394,6 +426,7 @@ export function renderMeasurementLabPage(): string {
             ${sessionPanelMarkup()}
             ${speedPanelMarkup()}
             ${channelPanelMarkup()}
+            ${freqPanelMarkup()}
           </div>
           ${visualizationMarkup()}
         </div>
@@ -424,6 +457,7 @@ function elements(root: ParentNode) {
     meterGrid: root.querySelector<HTMLElement>('[data-mlab-meter-grid]'),
     speedBody: root.querySelector<HTMLElement>('[data-mlab-speed-body]'),
     channelBody: root.querySelector<HTMLElement>('[data-mlab-channel-body]'),
+    freqBody: root.querySelector<HTMLElement>('[data-mlab-freq-body]'),
   };
 }
 
@@ -677,6 +711,188 @@ function renderChannelPanel(els: Elements): void {
   body.querySelector<HTMLButtonElement>('[data-mlab-channel-start-l]')?.addEventListener('click', () => {
     startChannelCapture(els, 'left');
   });
+}
+
+function buildFreqResponseSvg(result: FreqResponseResult, iriaaEnabled: boolean): string {
+  const L = 48, R = 16, T = 16, B = 36;
+  const W = 800, H = 280;
+  const CW = W - L - R;
+  const CH = H - T - B;
+  const dbMin = -30, dbMax = 30;
+  const fMin = 20, fMax = 20000;
+
+  function xOf(f: number): number {
+    return L + (Math.log2(f / fMin) / Math.log2(fMax / fMin)) * CW;
+  }
+  function yOf(db: number): number {
+    const clamped = Math.max(dbMin, Math.min(dbMax, db));
+    return T + ((dbMax - clamped) / (dbMax - dbMin)) * CH;
+  }
+
+  const vGridFreqs = [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000];
+  const hGridDbs = [-30, -20, -10, 0, 10, 20, 30];
+  const gridLines = [
+    ...vGridFreqs.map((f) => {
+      const x = xOf(f).toFixed(1);
+      return `<line class="mlab-freq-grid" x1="${x}" y1="${T}" x2="${x}" y2="${T + CH}"/>`;
+    }),
+    ...hGridDbs.map((db) => {
+      const y = yOf(db).toFixed(1);
+      const cls = db === 0 ? 'mlab-freq-grid mlab-freq-grid--zero' : 'mlab-freq-grid';
+      return `<line class="${cls}" x1="${L}" y1="${y}" x2="${L + CW}" y2="${y}"/>`;
+    }),
+  ].join('');
+
+  const xLabels = [20, 100, 500, 1000, 2000, 5000, 10000, 20000].map((f) => {
+    const label = f >= 1000 ? `${f / 1000}k` : `${f}`;
+    return `<text class="mlab-freq-axis-label" x="${xOf(f).toFixed(1)}" y="${T + CH + 26}" text-anchor="middle">${label}</text>`;
+  }).join('');
+
+  const yLabels = hGridDbs.filter((db) => db % 10 === 0).map((db) => {
+    const y = (yOf(db) + 4).toFixed(1);
+    return `<text class="mlab-freq-axis-label" x="${L - 6}" y="${y}" text-anchor="end">${db > 0 ? '+' : ''}${db}</text>`;
+  }).join('');
+
+  const { frequenciesHz, magnitudesDb } = result;
+  const responsePts: string[] = [];
+  for (let b = 0; b < frequenciesHz.length; b++) {
+    const f = frequenciesHz[b];
+    if (f < fMin || f > fMax) continue;
+    responsePts.push(`${xOf(f).toFixed(1)},${yOf(magnitudesDb[b]).toFixed(1)}`);
+  }
+  const responsePath = responsePts.length > 1
+    ? `<polyline class="mlab-freq-response" points="${responsePts.join(' ')}"/>`
+    : '';
+
+  let riaaPath = '';
+  if (!iriaaEnabled) {
+    const riaaRef = computeRiaaMagnitudeDb(1000);
+    const riaaPts: string[] = [];
+    for (let b = 0; b < frequenciesHz.length; b++) {
+      const f = frequenciesHz[b];
+      if (f < fMin || f > fMax) continue;
+      riaaPts.push(`${xOf(f).toFixed(1)},${yOf(computeRiaaMagnitudeDb(f) - riaaRef).toFixed(1)}`);
+    }
+    if (riaaPts.length > 1) {
+      riaaPath = `<polyline class="mlab-freq-riaa" points="${riaaPts.join(' ')}"/>`;
+    }
+  }
+
+  const legend = `
+    <div class="mlab-freq-legend">
+      <span class="mlab-freq-legend-item">
+        <span class="mlab-freq-legend-swatch"></span>
+        <span>Measured response</span>
+      </span>
+      ${!iriaaEnabled ? `
+      <span class="mlab-freq-legend-item">
+        <span class="mlab-freq-legend-swatch mlab-freq-legend-swatch--dashed"></span>
+        <span>RIAA reference</span>
+      </span>` : ''}
+    </div>
+  `;
+
+  const svg = `<svg class="mlab-freq-chart" viewBox="0 0 ${W} ${H}" aria-label="Frequency response chart" role="img">${gridLines}${xLabels}${yLabels}${riaaPath}${responsePath}</svg>`;
+  return svg + legend;
+}
+
+function renderFreqPanel(els: Elements): void {
+  const body = els.freqBody;
+  if (!body) return;
+
+  if (state.captureState !== 'live') {
+    body.innerHTML = '<p class="ea-muted">Connect a source to begin a frequency response measurement.</p>';
+    return;
+  }
+
+  if (state.freq.active) {
+    const pct = Math.min(100, (state.freq.elapsedSeconds / freqMeasurementDurationSeconds) * 100);
+    const remaining = Math.max(0, freqMeasurementDurationSeconds - state.freq.elapsedSeconds);
+    body.innerHTML = `
+      <p class="ea-muted">Capturing ${freqMeasurementDurationSeconds}&thinsp;s of audio&hellip;</p>
+      <div class="mlab-progress-track" role="progressbar" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100" aria-label="Capture progress">
+        <div class="mlab-progress-fill" style="width:${pct.toFixed(1)}%"></div>
+      </div>
+      <p class="mlab-progress-label">${remaining.toFixed(1)}&nbsp;s remaining</p>
+      <div class="mlab-session-controls">
+        <button class="ea-button ea-button--ghost" type="button" data-mlab-freq-cancel>Cancel</button>
+      </div>
+    `;
+    body.querySelector<HTMLButtonElement>('[data-mlab-freq-cancel]')?.addEventListener('click', () => {
+      stopFreqCapture();
+      state.freq.active = false;
+      renderFreqPanel(els);
+    });
+    return;
+  }
+
+  if (state.freq.result) {
+    const chartHtml = buildFreqResponseSvg(state.freq.result, state.iriaaEnabled);
+    body.innerHTML = `
+      <div class="mlab-freq-chart-wrap">${chartHtml}</div>
+      <p class="mlab-wf-note">${state.freq.result.blockCount} blocks averaged &middot; ${(state.freq.result.sampleRateHz / 1000).toFixed(1)}&thinsp;kHz &middot; FFT size ${state.freq.result.fftSize}</p>
+      <div class="mlab-session-controls">
+        <button class="ea-button ea-button--primary" type="button" data-mlab-freq-start>Measure again</button>
+      </div>
+    `;
+    body.querySelector<HTMLButtonElement>('[data-mlab-freq-start]')?.addEventListener('click', () => {
+      state.freq.result = null;
+      startFreqCapture(els);
+    });
+    return;
+  }
+
+  const overlayNote = !state.iriaaEnabled
+    ? ' The RIAA reference curve will be overlaid for comparison.'
+    : '';
+  body.innerHTML = `
+    <p class="ea-muted">Capture ${freqMeasurementDurationSeconds}&thinsp;s of audio and compute the frequency response (20&thinsp;Hz&thinsp;–&thinsp;20&thinsp;kHz).${overlayNote}</p>
+    <div class="mlab-session-controls">
+      <button class="ea-button ea-button--primary" type="button" data-mlab-freq-start>Start capture</button>
+    </div>
+  `;
+  body.querySelector<HTMLButtonElement>('[data-mlab-freq-start]')?.addEventListener('click', () => {
+    startFreqCapture(els);
+  });
+}
+
+function stopFreqCapture(): void {
+  if (state.freq.capture) {
+    state.freq.capture.stop();
+    state.freq.capture = null;
+  }
+  state.freq.active = false;
+  state.freq.elapsedSeconds = 0;
+}
+
+function startFreqCapture(els: Elements): void {
+  const context = state.audioHandle?.context;
+  const source = state.preSplitterNode;
+  if (!context || !source || state.captureState !== 'live') return;
+
+  stopFreqCapture();
+  state.freq.active = true;
+  state.freq.elapsedSeconds = 0;
+  state.freq.result = null;
+  renderFreqPanel(els);
+
+  state.freq.capture = createSweepCapture(
+    context,
+    source,
+    freqMeasurementDurationSeconds,
+    {
+      onProgress: (elapsed) => {
+        state.freq.elapsedSeconds = elapsed;
+        renderFreqPanel(els);
+      },
+      onDone: (samples) => {
+        state.freq.capture = null;
+        state.freq.active = false;
+        state.freq.result = computeFrequencyResponse(samples, context.sampleRate);
+        renderFreqPanel(els);
+      },
+    },
+  );
 }
 
 function resetChannelMeasurement(): void {
@@ -1003,6 +1219,8 @@ async function teardownAudio(): Promise<void> {
   stopSpeedMeasurement();
   state.speed.result = null;
   resetChannelMeasurement();
+  stopFreqCapture();
+  state.freq.result = null;
   if (state.selfTestOscillator) {
     try { state.selfTestOscillator.stop(); } catch { /* already stopped */ }
     try { state.selfTestOscillator.disconnect(); } catch { /* not connected */ }
@@ -1180,6 +1398,7 @@ async function connectMeasurementLab(els: Elements): Promise<void> {
   renderActualFormat(els);
   renderSpeedPanel(els);
   renderChannelPanel(els);
+  renderFreqPanel(els);
 }
 
 async function disconnectMeasurementLab(els: Elements): Promise<void> {
@@ -1192,6 +1411,7 @@ async function disconnectMeasurementLab(els: Elements): Promise<void> {
   renderActualFormat(els);
   renderSpeedPanel(els);
   renderChannelPanel(els);
+  renderFreqPanel(els);
 }
 
 async function refreshDeviceList(els: Elements): Promise<void> {
@@ -1225,6 +1445,7 @@ export function enableMeasurementLabInteractions(): void {
   renderSessionStatus(els);
   renderSpeedPanel(els);
   renderChannelPanel(els);
+  renderFreqPanel(els);
   clearMeterDom(els);
 
   void refreshDeviceList(els);

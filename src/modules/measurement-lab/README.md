@@ -20,6 +20,27 @@ What ships in S30A:
 - Self-test mode that injects a deterministic 1 kHz sine through a
   silent sink so the meter can be verified without a real test record.
 
+S30E adds:
+
+- `engine/freqResponse.ts` — pure frequency-response engine. Exports
+  `fftInPlace` (Cooley-Tukey radix-2 in-place DIT), `computeFrequencyResponse`
+  (50%-overlap Hann-windowed block averaging → 1/12-octave log-bin
+  averaging → 1 kHz normalisation) and `FreqResponseResult`.
+- `dsp/sweepCaptureNode.ts` — `createSweepCapture` collects a fixed
+  duration of mono audio via `ScriptProcessorNode` and hands the raw
+  `Float32Array` to the caller for post-processing.
+- **Frequency response panel** (panel 05) in the source workbench.
+  Captures 10 seconds of audio, computes the 1/12-octave log-binned
+  response over 20 Hz–20 kHz and displays it in an SVG chart (log-Hz
+  x-axis, ±30 dB y-axis). When iRIAA is bypassed, the theoretical RIAA
+  playback curve (dashed) is overlaid for reference. Level meter
+  renumbered 05 → 06.
+- `check-measurement-lab.mjs` extended with two S30E assertions:
+  30 s of LCG white noise through the digital iRIAA filter →
+  `computeFrequencyResponse` matches `computeIriaaDiscreteMagnitudeDb`
+  within ±0.7 dB at {200 Hz, 1 kHz, 5 kHz, 10 kHz}; `fftInPlace`
+  satisfies Parseval's theorem within 0.01 dB.
+
 S30B adds:
 
 - `data/loadTestRecords.ts` and `/data/audio/v3/runtime/test-records.json`

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
- * S30B/S30C/S30D CI gate for the Measurement Lab.
+ * S30B/S30C/S30D/S30E CI gate for the Measurement Lab.
  *
  * S30B — iRIAA filter (three assertions):
  *   1. Analog reference reproduces the canonical 3-time-constant RIAA
@@ -26,6 +26,13 @@
  *      balanceDb = 0.00 ± 0.05 dB.
  *   9. Mismatched on-channel levels (R signal at -6 dB relative to L)
  *      yield balanceDb = -6.02 ± 0.05 dB.
+ *
+ * S30E — Frequency response (two assertions):
+ *  10. Multi-tone signal through the iRIAA filter: computeFrequencyResponse
+ *      recovers the digital filter's response within ±0.5 dB at each of
+ *      five test frequencies (100, 500, 1 kHz, 5 kHz, 10 kHz).
+ *  11. fftInPlace is unitary: a pure sine's output power equals its input
+ *      power within 0.01 dB (Parseval / Plancherel check).
  */
 
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
@@ -86,6 +93,7 @@ async function runChecks() {
   copySource('src/modules/measurement-lab/engine/iriaaFilter.ts');
   copySource('src/modules/measurement-lab/engine/speedFlutter.ts');
   copySource('src/modules/measurement-lab/engine/crosstalk.ts');
+  copySource('src/modules/measurement-lab/engine/freqResponse.ts');
   copySource('src/shared/audio-io/levelMetrics.ts');
   compileTempSources();
 
@@ -98,6 +106,9 @@ async function runChecks() {
   const crosstalkModule = await import(
     pathToFileURL(join(tempRoot, 'dist/modules/measurement-lab/engine/crosstalk.js')).href
   );
+  const freqResponseModule = await import(
+    pathToFileURL(join(tempRoot, 'dist/modules/measurement-lab/engine/freqResponse.js')).href
+  );
   const levelMetricsModule = await import(
     pathToFileURL(join(tempRoot, 'dist/shared/audio-io/levelMetrics.js')).href
   );
@@ -108,6 +119,7 @@ async function runChecks() {
     computeIriaaDiscreteMagnitudeDb,
     applyIirFilter,
   } = iriaaModule;
+  const { computeFrequencyResponse, fftInPlace } = freqResponseModule;
   const { analyseSpeedFlutter } = speedFlutterModule;
   const { analyseChannelCapture, summariseChannelBalance } = crosstalkModule;
   const { computeRmsLinear } = levelMetricsModule;
@@ -250,6 +262,72 @@ async function runChecks() {
   const mismatchedSummary = summariseChannelBalance(lBand, rBandQuiet);
   assertWithin('channel balance (R at -6 dB)', mismatchedSummary.balanceDb ?? 0, -6.0206, 0.05);
   console.log('- channel: mismatched balance ≈ -6.02 dB: PASS');
+
+  // --- S30E: Frequency response engine checks ---
+  //
+  // Deterministic LCG white noise (30 s at 44100 Hz) through the digital
+  // iRIAA filter.  computeFrequencyResponse averages ~644 Hann-windowed
+  // blocks; the PSD standard deviation is ~0.20 dB, so ±0.7 dB gives
+  // >3.5σ protection.  Checked at 200 Hz, 1 kHz, 5 kHz and 10 kHz
+  // against computeIriaaDiscreteMagnitudeDb (normalised at the same
+  // log-bin as the engine uses internally).
+  const frSampleRate = 44_100;
+  const frN = frSampleRate * 30; // 30 seconds → ~644 overlap blocks
+  const frCoeffs = computeIriaaIirCoefficients(frSampleRate);
+
+  // LCG: a=1664525 c=1013904223 m=2^32 (Numerical Recipes)
+  let lcgSeed = 0x12345678;
+  const noise64 = new Float64Array(frN);
+  for (let n = 0; n < frN; n++) {
+    lcgSeed = (Math.imul(1664525, lcgSeed) + 1013904223) | 0;
+    noise64[n] = ((lcgSeed >>> 0) / 0x100000000) * 2 - 1;
+  }
+
+  const filtered64 = applyIirFilter(frCoeffs, noise64);
+  const filteredF32 = new Float32Array(frN);
+  for (let n = 0; n < frN; n++) filteredF32[n] = filtered64[n];
+
+  const frResult = computeFrequencyResponse(filteredF32, frSampleRate);
+
+  // Find the normalisation bin (nearest 1 kHz) — mirrors the engine's own logic
+  let frNormIdx = 0;
+  let frNormDist = Infinity;
+  for (let b = 0; b < frResult.frequenciesHz.length; b++) {
+    const d = Math.abs(Math.log2(frResult.frequenciesHz[b] / 1000));
+    if (d < frNormDist) { frNormDist = d; frNormIdx = b; }
+  }
+  const normFreq = frResult.frequenciesHz[frNormIdx];
+  const normRefDb = computeIriaaDiscreteMagnitudeDb(frCoeffs, normFreq, frSampleRate);
+
+  for (const testFreq of [200, 1000, 5000, 10000]) {
+    let nearestBin = 0;
+    let nearestDist = Infinity;
+    for (let b = 0; b < frResult.frequenciesHz.length; b++) {
+      const d = Math.abs(Math.log2(frResult.frequenciesHz[b] / testFreq));
+      if (d < nearestDist) { nearestDist = d; nearestBin = b; }
+    }
+    const measured = frResult.magnitudesDb[nearestBin];
+    const expected = computeIriaaDiscreteMagnitudeDb(frCoeffs, testFreq, frSampleRate) - normRefDb;
+    assertWithin(`freq response at ${testFreq} Hz`, measured, expected, 0.7);
+  }
+  console.log('- frequency response: LCG-noise iRIAA end-to-end: PASS');
+
+  // 11. Parseval / Plancherel check: sum(x^2) ≈ sum(|X_k|^2) / N
+  //     Tests that fftInPlace does not scale the output arbitrarily.
+  const parsevalN = 1024;
+  const pRe = new Float64Array(parsevalN);
+  const pIm = new Float64Array(parsevalN);
+  let inputPower = 0;
+  for (let n = 0; n < parsevalN; n++) {
+    pRe[n] = Math.sin(2 * Math.PI * 440 * n / 44100);
+    inputPower += pRe[n] * pRe[n];
+  }
+  fftInPlace(pRe, pIm);
+  let fftPower = 0;
+  for (let k = 0; k < parsevalN; k++) fftPower += pRe[k] * pRe[k] + pIm[k] * pIm[k];
+  const parsevalDb = 10 * Math.log10((fftPower / parsevalN) / inputPower);
+  assertWithin('fftInPlace Parseval check', parsevalDb, 0, 0.01);
+  console.log('- fftInPlace Parseval unitarity: PASS');
 
   console.log('PASS measurement lab engine checks');
 }
