@@ -40,6 +40,7 @@
   flex-direction: column;
   position: sticky;
   top: var(--ea-space-4);
+  z-index: 1;
 }
 
 .mlab-viz-body {

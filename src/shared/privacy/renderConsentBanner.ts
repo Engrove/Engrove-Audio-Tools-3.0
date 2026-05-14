@@ -56,6 +56,7 @@ export function mountConsentBanner(): void {
 
   banner.querySelector('[data-consent-decline]')?.addEventListener('click', () => {
     writeStoredAnalyticsConsent('denied');
+    applyAnalyticsConsent('denied');
     removeBanner();
   });
 }
