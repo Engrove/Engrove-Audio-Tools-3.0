@@ -117,6 +117,7 @@ type LabState = {
   freq: FreqState;
   thd: ThdStateBag;
   resonance: ResonanceStateBag;
+  log: string[];
 };
 
 /*
@@ -213,6 +214,7 @@ const state: LabState = {
     result: null,
     capture: null,
   },
+  log: [],
 };
 
 function readStoredDeviceId(): string | null {
@@ -337,17 +339,6 @@ function audioSourcePanelMarkup(): string {
           </tbody>
         </table>
       </div>
-    </section>
-  `;
-}
-
-function sessionPanelMarkup(): string {
-  return `
-    <section class="ea-panel" aria-labelledby="mlab-session-title">
-      <div class="ea-panel-header">
-        <span class="ea-panel-header-id">02</span>
-        <span id="mlab-session-title">Capture session</span>
-      </div>
       <div class="ea-panel-body">
         <p class="ea-muted" data-mlab-session-status>Capture is idle. Choose a source mode and click Connect to begin.</p>
         <div class="mlab-session-controls">
@@ -364,7 +355,7 @@ function speedPanelMarkup(): string {
   return `
     <section class="ea-panel" aria-labelledby="mlab-speed-title">
       <div class="ea-panel-header">
-        <span class="ea-panel-header-id">03</span>
+        <span class="ea-panel-header-id">02</span>
         <span id="mlab-speed-title">Speed &amp; Wow·Flutter</span>
       </div>
       <div class="ea-panel-body" data-mlab-speed-body>
@@ -378,7 +369,7 @@ function channelPanelMarkup(): string {
   return `
     <section class="ea-panel" aria-labelledby="mlab-channel-title">
       <div class="ea-panel-header">
-        <span class="ea-panel-header-id">04</span>
+        <span class="ea-panel-header-id">03</span>
         <span id="mlab-channel-title">Channel balance &amp; crosstalk</span>
       </div>
       <div class="ea-panel-body" data-mlab-channel-body>
@@ -392,7 +383,7 @@ function freqPanelMarkup(): string {
   return `
     <section class="ea-panel" aria-labelledby="mlab-freq-title">
       <div class="ea-panel-header">
-        <span class="ea-panel-header-id">05</span>
+        <span class="ea-panel-header-id">04</span>
         <span id="mlab-freq-title">Frequency response</span>
       </div>
       <div class="ea-panel-body" data-mlab-freq-body>
@@ -406,7 +397,7 @@ function thdPanelMarkup(): string {
   return `
     <section class="ea-panel" aria-labelledby="mlab-thd-title">
       <div class="ea-panel-header">
-        <span class="ea-panel-header-id">06</span>
+        <span class="ea-panel-header-id">05</span>
         <span id="mlab-thd-title">THD &amp; IMD</span>
       </div>
       <div class="ea-panel-body" data-mlab-thd-body>
@@ -420,7 +411,7 @@ function resonancePanelMarkup(): string {
   return `
     <section class="ea-panel" aria-labelledby="mlab-resonance-title">
       <div class="ea-panel-header">
-        <span class="ea-panel-header-id">07</span>
+        <span class="ea-panel-header-id">06</span>
         <span id="mlab-resonance-title">Resonance peak</span>
       </div>
       <div class="ea-panel-body" data-mlab-resonance-body>
@@ -452,23 +443,37 @@ function meterChannelMarkup(channel: ChannelKey, label: string): string {
 
 function visualizationMarkup(): string {
   return `
-    <aside class="ea-panel mlab-viz-panel" aria-labelledby="mlab-viz-title">
-      <div class="ea-panel-header">
-        <span class="ea-panel-header-id">08</span>
-        <span id="mlab-viz-title">Level meter</span>
-      </div>
-      <div class="ea-panel-body mlab-viz-body">
-        <div class="mlab-meter-grid" data-mlab-meter-grid>
-          ${meterChannelMarkup('L', 'L channel')}
-          ${meterChannelMarkup('R', 'R channel')}
+    <div class="mlab-viz-col">
+      <aside class="ea-panel mlab-viz-panel" aria-labelledby="mlab-viz-title">
+        <div class="ea-panel-header">
+          <span class="ea-panel-header-id">07</span>
+          <span id="mlab-viz-title">Level meter</span>
         </div>
-        <p class="ea-muted mlab-meter-help">
-          The peak bar tracks the maximum instantaneous sample magnitude; the held
-          line shows the most recent peak, decaying at ${peakHoldDecayDbPerSecond}&nbsp;dB per second.
-          Anything at 0&nbsp;dBFS clips and is highlighted on the right.
-        </p>
-      </div>
-    </aside>
+        <div class="ea-panel-body mlab-viz-body">
+          <div class="mlab-meter-grid" data-mlab-meter-grid>
+            ${meterChannelMarkup('L', 'L channel')}
+            ${meterChannelMarkup('R', 'R channel')}
+          </div>
+          <p class="ea-muted mlab-meter-help">
+            The peak bar tracks the maximum instantaneous sample magnitude; the held
+            line shows the most recent peak, decaying at ${peakHoldDecayDbPerSecond}&nbsp;dB per second.
+            Anything at 0&nbsp;dBFS clips and is highlighted on the right.
+          </p>
+        </div>
+      </aside>
+      <aside class="ea-panel mlab-log-panel" aria-labelledby="mlab-log-title">
+        <div class="ea-panel-header">
+          <span class="ea-panel-header-id">08</span>
+          <span id="mlab-log-title">Activity log</span>
+          <span class="ea-panel-header-spacer"></span>
+          <button class="ea-panel-header-action" type="button" data-mlab-log-reset>Clear</button>
+          <button class="ea-panel-header-action" type="button" data-mlab-log-export>Export</button>
+        </div>
+        <div class="mlab-log-body" data-mlab-log-body>
+          <span class="mlab-log-empty">No activity yet.</span>
+        </div>
+      </aside>
+    </div>
   `;
 }
 
@@ -593,6 +598,163 @@ function downloadSessionJson(): void {
   URL.revokeObjectURL(url);
 }
 
+function appendLog(message: string): void {
+  const now = new Date();
+  const hh = now.getHours().toString().padStart(2, '0');
+  const mm = now.getMinutes().toString().padStart(2, '0');
+  const ss = now.getSeconds().toString().padStart(2, '0');
+  const entry = `${hh}:${mm}:${ss}  ${message}`;
+  state.log.push(entry);
+  const body = document.querySelector<HTMLElement>('[data-mlab-log-body]');
+  if (body) {
+    const empty = body.querySelector('.mlab-log-empty');
+    if (empty) empty.remove();
+    const line = document.createElement('div');
+    line.className = 'mlab-log-entry';
+    line.textContent = entry;
+    body.appendChild(line);
+    body.scrollTop = body.scrollHeight;
+  }
+}
+
+function renderLogPanel(els: Elements): void {
+  const body = els.logBody;
+  if (!body) return;
+  if (state.log.length === 0) {
+    body.innerHTML = '<span class="mlab-log-empty">No activity yet.</span>';
+    return;
+  }
+  body.innerHTML = state.log
+    .map(e => `<div class="mlab-log-entry">${renderText(e)}</div>`)
+    .join('');
+  body.scrollTop = body.scrollHeight;
+}
+
+function exportLog(): void {
+  const text = state.log.join('\n');
+  const blob = new Blob([text], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `engrove-log-${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function buildReportText(): string {
+  const hr = '━'.repeat(48);
+  const ts = new Date().toISOString();
+  const lines: string[] = [
+    'ENGROVE MEASUREMENT LAB — Session Report',
+    `Generated: ${ts}`,
+    hr,
+    '',
+  ];
+
+  // Capture
+  lines.push('CAPTURE SETUP');
+  const deviceLabel = state.devices.find(d => d.deviceId === state.selectedDeviceId)?.label ?? null;
+  lines.push(`  Source mode:           ${state.sourceMode}`);
+  lines.push(`  Input device (hash):   ${deviceLabel != null ? fnv1aHex(deviceLabel) : 'n/a'}`);
+  lines.push(`  Requested rate:        ${defaultRequestedSampleRateHz.toLocaleString()} Hz`);
+  if (state.honesty) {
+    lines.push(`  Actual rate:           ${state.honesty.contextActualHz.toLocaleString()} Hz`);
+    lines.push(`  Sample-rate honesty:   ${state.honesty.classification}`);
+  }
+  lines.push(`  Software iRIAA:        ${state.iriaaEnabled ? 'applied' : 'bypass'}`);
+  lines.push('');
+
+  // Speed
+  const sr = state.speed.result;
+  if (sr) {
+    lines.push('SPEED & WOW·FLUTTER');
+    lines.push(`  Speed deviation:       ${sr.speedDeviationPercent.toFixed(3)} %`);
+    lines.push(`  Unweighted W&F (AES6): ${sr.unweightedWfPercent.toFixed(3)} %`);
+    lines.push(`  IEC-weighted W&F:      ${sr.weightedWfPercent.toFixed(3)} %`);
+    lines.push(`  Classification:        ${classifyWf(sr.unweightedWfPercent).label}`);
+    lines.push('');
+  }
+
+  // Channel
+  const { leftCapture, rightCapture } = state.channel;
+  if (leftCapture && rightCapture) {
+    const bal = summariseChannelBalance(leftCapture, rightCapture);
+    lines.push('CHANNEL BALANCE & CROSSTALK');
+    lines.push(`  Left RMS:              ${leftCapture.leftRmsDbFs.toFixed(2)} dBFS`);
+    lines.push(`  Right RMS:             ${rightCapture.rightRmsDbFs.toFixed(2)} dBFS`);
+    lines.push(`  Channel balance:       ${(bal.balanceDb ?? 0).toFixed(2)} dB`);
+    lines.push(`  L→R crosstalk:         ${(bal.leftToRightCrosstalkDb ?? 0).toFixed(1)} dB`);
+    lines.push(`  R→L crosstalk:         ${(bal.rightToLeftCrosstalkDb ?? 0).toFixed(1)} dB`);
+    lines.push('');
+  }
+
+  // Freq response
+  const fr = state.freq.result;
+  if (fr) {
+    lines.push('FREQUENCY RESPONSE');
+    lines.push(`  FFT size:              ${fr.fftSize}`);
+    lines.push(`  Blocks averaged:       ${fr.blockCount}`);
+    lines.push(`  Sample rate:           ${fr.sampleRateHz.toLocaleString()} Hz`);
+    lines.push(`  Range:                 ${fr.frequenciesHz[0]?.toFixed(0) ?? '?'} – ${fr.frequenciesHz[fr.frequenciesHz.length - 1]?.toFixed(0) ?? '?'} Hz`);
+    lines.push('  (Full data in JSON export)');
+    lines.push('');
+  }
+
+  // THD / IMD
+  const tr = state.thd.result;
+  if (tr) {
+    if (isThdResult(tr)) {
+      lines.push('THD');
+      lines.push(`  Fundamental:           ${tr.fundamentalHz} Hz`);
+      lines.push(`  THD:                   ${tr.thdPercent.toFixed(3)} %`);
+      const hdbs = tr.harmonics.map((h, i) => `${i + 2}nd: ${h.toFixed(1)} dBc`).join(', ');
+      if (hdbs) lines.push(`  Harmonics:             ${hdbs}`);
+    } else {
+      lines.push('SMPTE IMD');
+      lines.push(`  f1 (LF):               ${tr.f1Hz} Hz`);
+      lines.push(`  f2 (HF):               ${tr.f2Hz} Hz`);
+      lines.push(`  IMD:                   ${tr.imdPercent.toFixed(3)} %`);
+    }
+    lines.push('');
+  }
+
+  // Resonance
+  const rr = state.resonance.result;
+  if (rr) {
+    lines.push('RESONANCE');
+    lines.push(`  Peak frequency:        ${rr.peakFrequencyHz.toFixed(2)} Hz`);
+    lines.push(`  Peak amplitude:        ${rr.peakAmplitudeDbFs.toFixed(1)} dBFS`);
+    lines.push(`  Q estimate:            ${rr.qEstimate != null ? rr.qEstimate.toFixed(2) : 'n/a'}`);
+    lines.push(`  Sweep type:            ${state.resonance.sweepType}`);
+    lines.push(`  Sweep range:           ${state.resonance.fromHz}–${state.resonance.toHz} Hz`);
+    lines.push('');
+  }
+
+  if (state.log.length > 0) {
+    lines.push(hr);
+    lines.push('ACTIVITY LOG');
+    state.log.forEach(e => lines.push(`  ${e}`));
+    lines.push('');
+  }
+
+  return lines.join('\n');
+}
+
+function downloadReportText(): void {
+  const text = buildReportText();
+  const blob = new Blob([text], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `engrove-report-${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 function actionBarMarkup(): string {
   return `
     <footer class="ea-actionbar" aria-label="Measurement lab actions">
@@ -603,6 +765,7 @@ function actionBarMarkup(): string {
         </span>
       </div>
       <div class="ea-actionbar__group">
+        <button class="ea-button ea-button--ghost" type="button" data-mlab-export-report>Export Report</button>
         <button class="ea-button ea-button--ghost" type="button" data-mlab-export>Export JSON</button>
         <button class="ea-button ea-button--ghost" type="button" data-mlab-reset>Reset</button>
       </div>
@@ -619,7 +782,6 @@ export function renderMeasurementLabPage(): string {
         <div class="mlab-workbench-grid">
           <div class="mlab-workbench-main">
             ${audioSourcePanelMarkup()}
-            ${sessionPanelMarkup()}
             ${speedPanelMarkup()}
             ${channelPanelMarkup()}
             ${freqPanelMarkup()}
@@ -650,6 +812,7 @@ function elements(root: ParentNode) {
     connect: root.querySelector<HTMLButtonElement>('[data-mlab-connect]'),
     disconnect: root.querySelector<HTMLButtonElement>('[data-mlab-disconnect]'),
     exportBtn: root.querySelector<HTMLButtonElement>('[data-mlab-export]'),
+    exportReportBtn: root.querySelector<HTMLButtonElement>('[data-mlab-export-report]'),
     reset: root.querySelector<HTMLButtonElement>('[data-mlab-reset]'),
     actionStatusDot: root.querySelector<HTMLElement>('[data-mlab-action-status] .ea-dot'),
     actionStatusText: root.querySelector<HTMLElement>('[data-mlab-action-status-text]'),
@@ -659,6 +822,9 @@ function elements(root: ParentNode) {
     freqBody: root.querySelector<HTMLElement>('[data-mlab-freq-body]'),
     thdBody: root.querySelector<HTMLElement>('[data-mlab-thd-body]'),
     resonanceBody: root.querySelector<HTMLElement>('[data-mlab-resonance-body]'),
+    logBody: root.querySelector<HTMLElement>('[data-mlab-log-body]'),
+    logResetBtn: root.querySelector<HTMLButtonElement>('[data-mlab-log-reset]'),
+    logExportBtn: root.querySelector<HTMLButtonElement>('[data-mlab-log-export]'),
   };
 }
 
@@ -1090,6 +1256,7 @@ function startFreqCapture(els: Elements): void {
         state.freq.capture = null;
         state.freq.active = false;
         state.freq.result = computeFrequencyResponse(samples, context.sampleRate);
+        appendLog(`Frequency response complete — ${state.freq.result.blockCount} blocks, ${state.freq.result.fftSize} FFT.`);
         renderFreqPanel(els);
       },
     },
@@ -1125,6 +1292,12 @@ function startThdCapture(els: Elements): void {
         state.thd.result = analyseTHD(samples, context.sampleRate, state.thd.fundamentalHz);
       } else {
         state.thd.result = analyseIMD(samples, context.sampleRate, state.thd.imdF1Hz, state.thd.imdF2Hz);
+      }
+      const thdDone = state.thd.result;
+      if (isThdResult(thdDone)) {
+        appendLog(`THD complete — ${thdDone.thdPercent.toFixed(3)} %`);
+      } else if (thdDone) {
+        appendLog(`IMD complete — ${thdDone.imdPercent.toFixed(3)} %`);
       }
       renderThdPanel(els);
     },
@@ -1298,6 +1471,7 @@ function startResonanceCapture(els: Elements): void {
       state.resonance.capture = null;
       state.resonance.active = false;
       state.resonance.result = analyseResonance(samples, context.sampleRate, fromHz, toHz, sweepType);
+      appendLog(`Resonance complete — peak ${state.resonance.result.peakFrequencyHz.toFixed(2)} Hz, Q ${state.resonance.result.qEstimate?.toFixed(2) ?? 'n/a'}`);
       renderResonancePanel(els);
     },
   });
@@ -1449,9 +1623,11 @@ function startChannelCapture(els: Elements, which: 'left' | 'right'): void {
         if (which === 'left') {
           state.channel.leftCapture = result;
           state.channel.step = 'left-done';
+          appendLog('Channel: left capture complete.');
         } else {
           state.channel.rightCapture = result;
           state.channel.step = 'done';
+          appendLog('Channel balance & crosstalk complete.');
         }
         renderChannelPanel(els);
       },
@@ -1722,6 +1898,7 @@ function startSpeedMeasurement(els: Elements): void {
         state.speed.result = result;
         state.speed.capture = null;
         renderSpeedPanel(els);
+        appendLog(`Speed & W&F complete — deviation ${result.speedDeviationPercent.toFixed(3)} %, unweighted W&F ${result.unweightedWfPercent.toFixed(3)} %`);
       },
     },
   );
@@ -1899,6 +2076,7 @@ async function connectMeasurementLab(els: Elements): Promise<void> {
       await startSelfTest(els);
     }
     state.captureState = 'live';
+    appendLog(`Connected — ${state.sourceMode === 'live' ? 'live capture' : 'self-test'} @ ${state.honesty?.contextActualHz?.toLocaleString() ?? '?'} Hz`);
   } catch (error) {
     state.captureState = 'error';
     state.errorMessage = error instanceof AudioStreamUnavailableError
@@ -1906,6 +2084,7 @@ async function connectMeasurementLab(els: Elements): Promise<void> {
       : error instanceof Error
         ? error.message
         : 'Audio capture failed.';
+    appendLog(`Connection failed: ${state.errorMessage ?? 'unknown error'}`);
     await teardownAudio();
     clearMeterDom(els);
   }
@@ -1923,6 +2102,7 @@ async function connectMeasurementLab(els: Elements): Promise<void> {
 async function disconnectMeasurementLab(els: Elements): Promise<void> {
   await teardownAudio();
   state.captureState = 'idle';
+  appendLog('Disconnected.');
   clearMeterDom(els);
   renderConnectionButtons(els);
   renderIriaaToggle(els);
@@ -1969,6 +2149,7 @@ export function enableMeasurementLabInteractions(): void {
   renderFreqPanel(els);
   renderThdPanel(els);
   renderResonancePanel(els);
+  renderLogPanel(els);
   clearMeterDom(els);
 
   void refreshDeviceList(els);
@@ -2010,6 +2191,12 @@ export function enableMeasurementLabInteractions(): void {
 
   els.exportBtn?.addEventListener('click', () => {
     downloadSessionJson();
+    appendLog('Exported session JSON.');
+  });
+
+  els.exportReportBtn?.addEventListener('click', () => {
+    downloadReportText();
+    appendLog('Exported session report (TXT).');
   });
 
   els.reset?.addEventListener('click', () => {
@@ -2018,6 +2205,16 @@ export function enableMeasurementLabInteractions(): void {
       state.errorMessage = null;
       renderSourceMode(els);
     });
+  });
+
+  els.logResetBtn?.addEventListener('click', () => {
+    state.log = [];
+    renderLogPanel(els);
+  });
+
+  els.logExportBtn?.addEventListener('click', () => {
+    exportLog();
+    appendLog('Exported activity log.');
   });
 
   if (typeof navigator !== 'undefined' && navigator.mediaDevices && typeof navigator.mediaDevices.addEventListener === 'function') {
