@@ -38,9 +38,9 @@ function isAnalyticsConsentState(value: unknown): value is AnalyticsConsentState
 export function readStoredAnalyticsConsent(): AnalyticsConsentState {
   try {
     const value = window.localStorage.getItem(consentStorageKey);
-    return isAnalyticsConsentState(value) ? value : 'unknown';
+    return isAnalyticsConsentState(value) ? value : 'granted';
   } catch {
-    return 'unknown';
+    return 'granted';
   }
 }
 
