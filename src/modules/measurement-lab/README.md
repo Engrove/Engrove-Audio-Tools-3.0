@@ -20,6 +20,32 @@ What ships in S30A:
 - Self-test mode that injects a deterministic 1 kHz sine through a
   silent sink so the meter can be verified without a real test record.
 
+S30G adds:
+
+- `engine/resonance.ts` — pure resonance-peak engine. Exports
+  `analyseResonance`: single-pole IIR envelope detection (LP on
+  rectified signal), peak-time → frequency mapping via log or linear
+  sweep law, and Q estimate from the −3 dB envelope bandwidth.
+- **Resonance peak panel** (panel 07) — 30 s sweep capture, log/linear
+  sweep type selector, reports resonance frequency in Hz, peak amplitude
+  in dBFS and Q estimate.
+- CI gate extended with two S30G assertions: Gaussian-envelope log-sweep
+  centred at 10 Hz gives `peakFrequencyHz` within ±1 Hz and Q within ±1
+  of the analytically expected value.
+
+S30F adds:
+
+- `engine/thd.ts` — pure THD and SMPTE IMD engine. Imports `fftInPlace`
+  from `freqResponse.ts`. Exports `analyseTHD` (50%-overlap averaged
+  power spectrum, 3-bin window per harmonic, THD% = √ΣP_h / √P₁ × 100)
+  and `analyseIMD` (SMPTE: sidebands at f2 ± n·f1).
+- **THD & IMD panel** (panel 06) — 5 s capture, THD/SMPTE IMD mode
+  toggle, adjustable fundamental frequency for THD, fixed 60 Hz + 7 kHz
+  for SMPTE IMD. Level meter renumbered 06 → 08.
+- CI gate extended with two S30F assertions: 1 kHz + 1 % 2nd harmonic
+  → THD = 1.00 ± 0.05 %; SMPTE dual-tone with symmetric ±60 Hz
+  sidebands at 1 % of f2 → IMD = 1.41 ± 0.10 %.
+
 S30E adds:
 
 - `engine/freqResponse.ts` — pure frequency-response engine. Exports

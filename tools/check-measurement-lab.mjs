@@ -28,11 +28,21 @@
  *      yield balanceDb = -6.02 ± 0.05 dB.
  *
  * S30E — Frequency response (two assertions):
- *  10. Multi-tone signal through the iRIAA filter: computeFrequencyResponse
- *      recovers the digital filter's response within ±0.5 dB at each of
- *      five test frequencies (100, 500, 1 kHz, 5 kHz, 10 kHz).
- *  11. fftInPlace is unitary: a pure sine's output power equals its input
- *      power within 0.01 dB (Parseval / Plancherel check).
+ *  10. LCG-noise iRIAA end-to-end: computeFrequencyResponse matches
+ *      computeIriaaDiscreteMagnitudeDb within ±0.7 dB at four frequencies.
+ *  11. fftInPlace Parseval unitarity within 0.01 dB.
+ *
+ * S30F — THD and SMPTE IMD (two assertions):
+ *  12. Synthesised 1 kHz + 1 % 2nd-harmonic distortion gives
+ *      thdPercent = 1.00 ± 0.05 %.
+ *  13. SMPTE dual-tone 60 Hz + 7 kHz with symmetric ±60 Hz sidebands at
+ *      1 % of f2 gives imdPercent = 1.41 ± 0.10 %.
+ *
+ * S30G — Resonance peak (two assertions):
+ *  14. Log sweep 5–30 Hz with a Gaussian amplitude envelope centred at
+ *      10 Hz gives peakFrequencyHz = 10.0 ± 1.0 Hz.
+ *  15. Q estimate is within ±1 of the analytically expected value derived
+ *      from the same Gaussian width.
  */
 
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
@@ -94,6 +104,8 @@ async function runChecks() {
   copySource('src/modules/measurement-lab/engine/speedFlutter.ts');
   copySource('src/modules/measurement-lab/engine/crosstalk.ts');
   copySource('src/modules/measurement-lab/engine/freqResponse.ts');
+  copySource('src/modules/measurement-lab/engine/thd.ts');
+  copySource('src/modules/measurement-lab/engine/resonance.ts');
   copySource('src/shared/audio-io/levelMetrics.ts');
   compileTempSources();
 
@@ -109,6 +121,12 @@ async function runChecks() {
   const freqResponseModule = await import(
     pathToFileURL(join(tempRoot, 'dist/modules/measurement-lab/engine/freqResponse.js')).href
   );
+  const thdModule = await import(
+    pathToFileURL(join(tempRoot, 'dist/modules/measurement-lab/engine/thd.js')).href
+  );
+  const resonanceModule = await import(
+    pathToFileURL(join(tempRoot, 'dist/modules/measurement-lab/engine/resonance.js')).href
+  );
   const levelMetricsModule = await import(
     pathToFileURL(join(tempRoot, 'dist/shared/audio-io/levelMetrics.js')).href
   );
@@ -120,6 +138,8 @@ async function runChecks() {
     applyIirFilter,
   } = iriaaModule;
   const { computeFrequencyResponse, fftInPlace } = freqResponseModule;
+  const { analyseTHD, analyseIMD } = thdModule;
+  const { analyseResonance } = resonanceModule;
   const { analyseSpeedFlutter } = speedFlutterModule;
   const { analyseChannelCapture, summariseChannelBalance } = crosstalkModule;
   const { computeRmsLinear } = levelMetricsModule;
@@ -328,6 +348,82 @@ async function runChecks() {
   const parsevalDb = 10 * Math.log10((fftPower / parsevalN) / inputPower);
   assertWithin('fftInPlace Parseval check', parsevalDb, 0, 0.01);
   console.log('- fftInPlace Parseval unitarity: PASS');
+
+  // --- S30F: THD and SMPTE IMD checks ---
+  //
+  // 12. 1 kHz + 1 % 2nd harmonic → THD = 1.00 ± 0.05 %
+  const thdSampleRate = 44_100;
+  const thdDuration = 5; // seconds
+  const thdN = thdSampleRate * thdDuration;
+  const thdSignal = new Float32Array(thdN);
+  for (let n = 0; n < thdN; n++) {
+    const t = n / thdSampleRate;
+    thdSignal[n] = Math.sin(2 * Math.PI * 1000 * t)
+                 + 0.01 * Math.sin(2 * Math.PI * 2000 * t);
+  }
+  const thdResult = analyseTHD(thdSignal, thdSampleRate, 1000);
+  assertWithin('THD (1 kHz + 1 % 2nd harmonic)', thdResult.thdPercent, 1.0, 0.05);
+  console.log('- THD: 1 kHz + 1 % 2nd harmonic → 1.00 %: PASS');
+
+  // 13. SMPTE dual-tone 60 Hz + 7 kHz, symmetric ±60 Hz sidebands at
+  //     1 % of f2 → IMD = √(2 × 0.01²) / 1 × 100 % = 1.414 ± 0.10 %
+  const imdSignal = new Float32Array(thdN);
+  for (let n = 0; n < thdN; n++) {
+    const t = n / thdSampleRate;
+    imdSignal[n] = Math.sin(2 * Math.PI * 60   * t)       // f1
+                 + Math.sin(2 * Math.PI * 7000  * t)       // f2
+                 + 0.01 * Math.sin(2 * Math.PI * 7060 * t) // upper sideband
+                 + 0.01 * Math.sin(2 * Math.PI * 6940 * t);// lower sideband
+  }
+  const imdResult = analyseIMD(imdSignal, thdSampleRate, 60, 7000);
+  // √(2) × 1 % ≈ 1.414 % (both sidebands equal)
+  assertWithin('SMPTE IMD (60 Hz + 7 kHz, 1 % symmetric sidebands)', imdResult.imdPercent, 1.414, 0.10);
+  console.log('- SMPTE IMD: 1 % symmetric sidebands → 1.41 %: PASS');
+
+  // --- S30G: Resonance peak checks ---
+  //
+  // Log sweep 5–30 Hz over 30 s at 44100 Hz with a Gaussian amplitude
+  // envelope (σ = 1 s) centred at f_peak = 10 Hz.
+  //
+  // Peak time for log sweep: t_peak = T × log(f_peak/f_start) / log(f_end/f_start)
+  //                                 = 30 × log(10/5) / log(30/5) ≈ 11.59 s
+  //
+  // −3 dB bandwidth (Gaussian, half-power at ±σ in time):
+  //   f_high = f_start × (f_end/f_start)^((t_peak + σ)/T) ≈ 10.72 Hz
+  //   f_low  = f_start × (f_end/f_start)^((t_peak - σ)/T) ≈  9.34 Hz
+  //   Q_expected = f_peak / (f_high − f_low) ≈ 10 / 1.38 ≈ 7.2
+  const resSR  = 44_100;
+  const resT   = 30; // seconds
+  const resN   = resSR * resT;
+  const resF0  = 5, resF1 = 30, resFpeak = 10;
+  const resSigma = 1.0; // Gaussian σ in seconds
+  const resTpeak = resT * Math.log(resFpeak / resF0) / Math.log(resF1 / resF0);
+
+  const sweepSig = new Float32Array(resN);
+  for (let n = 0; n < resN; n++) {
+    const t = n / resSR;
+    // Continuous phase for log chirp
+    const phase = 2 * Math.PI * resF0 * resT / Math.log(resF1 / resF0)
+                * (Math.pow(resF1 / resF0, t / resT) - 1);
+    const amp = Math.exp(-0.5 * ((t - resTpeak) / resSigma) ** 2);
+    sweepSig[n] = amp * Math.sin(phase);
+  }
+
+  const resResult = analyseResonance(sweepSig, resSR, resF0, resF1, 'log');
+  assertWithin('resonance peak frequency', resResult.peakFrequencyHz, resFpeak, 1.0);
+  console.log('- resonance: peak at 10 Hz (±1 Hz): PASS');
+
+  // Analytically expected Q: Gaussian -3 dB half-width = σ × √ln2, not σ
+  const dt3db = resSigma * Math.sqrt(Math.log(2));
+  const qFhigh = resF0 * Math.pow(resF1 / resF0, (resTpeak + dt3db) / resT);
+  const qFlow  = resF0 * Math.pow(resF1 / resF0, (resTpeak - dt3db) / resT);
+  const qExpected = resFpeak / (qFhigh - qFlow);
+  if (resResult.qEstimate !== null) {
+    assertWithin('resonance Q estimate', resResult.qEstimate, qExpected, 1.0);
+    console.log('- resonance: Q estimate within ±1 of expected: PASS');
+  } else {
+    throw new Error('resonance Q estimate: expected a non-null Q but got null.');
+  }
 
   console.log('PASS measurement lab engine checks');
 }

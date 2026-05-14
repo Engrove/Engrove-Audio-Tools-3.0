@@ -27,6 +27,8 @@ import { createSweepCapture, type SweepCapture } from '../dsp/sweepCaptureNode';
 import { summariseChannelBalance } from '../engine/crosstalk';
 import { computeFrequencyResponse, type FreqResponseResult } from '../engine/freqResponse';
 import { computeRiaaMagnitudeDb } from '../engine/iriaaFilter';
+import { analyseTHD, analyseIMD, type ThdResult, type ImdResult } from '../engine/thd';
+import { analyseResonance, type ResonanceResult, type ResonanceSweepType } from '../engine/resonance';
 
 type SourceMode = 'live' | 'self-test';
 type CaptureState = 'idle' | 'connecting' | 'live' | 'error';
@@ -66,6 +68,29 @@ type FreqState = {
   capture: SweepCapture | null;
 };
 
+type ThdMode = 'thd' | 'imd';
+type ThdStateBag = {
+  mode: ThdMode;
+  fundamentalHz: number;
+  imdF1Hz: number;
+  imdF2Hz: number;
+  active: boolean;
+  elapsedSeconds: number;
+  result: ThdResult | ImdResult | null;
+  capture: SweepCapture | null;
+};
+
+type ResonanceStateBag = {
+  sweepType: ResonanceSweepType;
+  fromHz: number;
+  toHz: number;
+  durationSeconds: number;
+  active: boolean;
+  elapsedSeconds: number;
+  result: ResonanceResult | null;
+  capture: SweepCapture | null;
+};
+
 type LabState = {
   sourceMode: SourceMode;
   captureState: CaptureState;
@@ -90,6 +115,8 @@ type LabState = {
   speed: SpeedState;
   channel: ChannelStateBag;
   freq: FreqState;
+  thd: ThdStateBag;
+  resonance: ResonanceStateBag;
 };
 
 /*
@@ -161,6 +188,26 @@ const state: LabState = {
     capture: null,
   },
   freq: {
+    active: false,
+    elapsedSeconds: 0,
+    result: null,
+    capture: null,
+  },
+  thd: {
+    mode: 'thd',
+    fundamentalHz: 1000,
+    imdF1Hz: 60,
+    imdF2Hz: 7000,
+    active: false,
+    elapsedSeconds: 0,
+    result: null,
+    capture: null,
+  },
+  resonance: {
+    sweepType: 'log',
+    fromHz: 5,
+    toHz: 25,
+    durationSeconds: 30,
     active: false,
     elapsedSeconds: 0,
     result: null,
@@ -355,6 +402,34 @@ function freqPanelMarkup(): string {
   `;
 }
 
+function thdPanelMarkup(): string {
+  return `
+    <section class="ea-panel" aria-labelledby="mlab-thd-title">
+      <div class="ea-panel-header">
+        <span class="ea-panel-header-id">06</span>
+        <span id="mlab-thd-title">THD &amp; IMD</span>
+      </div>
+      <div class="ea-panel-body" data-mlab-thd-body>
+        <p class="ea-muted">Connect a source to begin a THD or IMD measurement.</p>
+      </div>
+    </section>
+  `;
+}
+
+function resonancePanelMarkup(): string {
+  return `
+    <section class="ea-panel" aria-labelledby="mlab-resonance-title">
+      <div class="ea-panel-header">
+        <span class="ea-panel-header-id">07</span>
+        <span id="mlab-resonance-title">Resonance peak</span>
+      </div>
+      <div class="ea-panel-body" data-mlab-resonance-body>
+        <p class="ea-muted">Connect a source to measure the tonearm–cartridge resonance frequency.</p>
+      </div>
+    </section>
+  `;
+}
+
 function meterChannelMarkup(channel: ChannelKey, label: string): string {
   return `
     <div class="mlab-meter-channel" data-mlab-meter-channel="${channel}">
@@ -379,7 +454,7 @@ function visualizationMarkup(): string {
   return `
     <aside class="ea-panel mlab-viz-panel" aria-labelledby="mlab-viz-title">
       <div class="ea-panel-header">
-        <span class="ea-panel-header-id">06</span>
+        <span class="ea-panel-header-id">08</span>
         <span id="mlab-viz-title">Level meter</span>
       </div>
       <div class="ea-panel-body mlab-viz-body">
@@ -427,6 +502,8 @@ export function renderMeasurementLabPage(): string {
             ${speedPanelMarkup()}
             ${channelPanelMarkup()}
             ${freqPanelMarkup()}
+            ${thdPanelMarkup()}
+            ${resonancePanelMarkup()}
           </div>
           ${visualizationMarkup()}
         </div>
@@ -458,6 +535,8 @@ function elements(root: ParentNode) {
     speedBody: root.querySelector<HTMLElement>('[data-mlab-speed-body]'),
     channelBody: root.querySelector<HTMLElement>('[data-mlab-channel-body]'),
     freqBody: root.querySelector<HTMLElement>('[data-mlab-freq-body]'),
+    thdBody: root.querySelector<HTMLElement>('[data-mlab-thd-body]'),
+    resonanceBody: root.querySelector<HTMLElement>('[data-mlab-resonance-body]'),
   };
 }
 
@@ -895,6 +974,318 @@ function startFreqCapture(els: Elements): void {
   );
 }
 
+// ---- THD & IMD panel -------------------------------------------------------
+
+function stopThdCapture(): void {
+  if (state.thd.capture) { state.thd.capture.stop(); state.thd.capture = null; }
+  state.thd.active = false;
+  state.thd.elapsedSeconds = 0;
+}
+
+function startThdCapture(els: Elements): void {
+  const context = state.audioHandle?.context;
+  const source = state.preSplitterNode;
+  if (!context || !source || state.captureState !== 'live') return;
+
+  stopThdCapture();
+  state.thd.active = true;
+  state.thd.elapsedSeconds = 0;
+  state.thd.result = null;
+  renderThdPanel(els);
+
+  const durationSeconds = 5;
+  state.thd.capture = createSweepCapture(context, source, durationSeconds, {
+    onProgress: (elapsed) => { state.thd.elapsedSeconds = elapsed; renderThdPanel(els); },
+    onDone: (samples) => {
+      state.thd.capture = null;
+      state.thd.active = false;
+      if (state.thd.mode === 'thd') {
+        state.thd.result = analyseTHD(samples, context.sampleRate, state.thd.fundamentalHz);
+      } else {
+        state.thd.result = analyseIMD(samples, context.sampleRate, state.thd.imdF1Hz, state.thd.imdF2Hz);
+      }
+      renderThdPanel(els);
+    },
+  });
+}
+
+function isThdResult(r: ThdResult | ImdResult | null): r is ThdResult {
+  return r !== null && 'thdPercent' in r;
+}
+
+function renderThdPanel(els: Elements): void {
+  const body = els.thdBody;
+  if (!body) return;
+
+  if (state.captureState !== 'live') {
+    body.innerHTML = '<p class="ea-muted">Connect a source to begin a THD or IMD measurement.</p>';
+    return;
+  }
+
+  if (state.thd.active) {
+    const pct = Math.min(100, (state.thd.elapsedSeconds / 5) * 100);
+    const remaining = Math.max(0, 5 - state.thd.elapsedSeconds);
+    body.innerHTML = `
+      <p class="ea-muted">Capturing 5&thinsp;s of audio for ${state.thd.mode.toUpperCase()} measurement&hellip;</p>
+      <div class="mlab-progress-track" role="progressbar" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100" aria-label="Capture progress">
+        <div class="mlab-progress-fill" style="width:${pct.toFixed(1)}%"></div>
+      </div>
+      <p class="mlab-progress-label">${remaining.toFixed(1)}&nbsp;s remaining</p>
+      <div class="mlab-session-controls">
+        <button class="ea-button ea-button--ghost" type="button" data-mlab-thd-cancel>Cancel</button>
+      </div>
+    `;
+    body.querySelector<HTMLButtonElement>('[data-mlab-thd-cancel]')?.addEventListener('click', () => {
+      stopThdCapture(); renderThdPanel(els);
+    });
+    return;
+  }
+
+  if (state.thd.result !== null) {
+    const r = state.thd.result;
+    let resultHtml: string;
+    if (isThdResult(r)) {
+      const h2 = r.harmonics[0] !== undefined ? r.harmonics[0].toFixed(1) : '—';
+      const h3 = r.harmonics[1] !== undefined ? r.harmonics[1].toFixed(1) : '—';
+      resultHtml = `
+        <div class="mlab-wf-result">
+          <div class="mlab-wf-result-row">
+            <span class="mlab-wf-result-label">THD</span>
+            <span class="mlab-wf-result-value">${r.thdPercent.toFixed(3)}&nbsp;%</span>
+          </div>
+          <div class="mlab-wf-result-row">
+            <span class="mlab-wf-result-label">2nd harmonic</span>
+            <span class="mlab-wf-result-value">${h2}&nbsp;dBc</span>
+          </div>
+          <div class="mlab-wf-result-row">
+            <span class="mlab-wf-result-label">3rd harmonic</span>
+            <span class="mlab-wf-result-value">${h3}&nbsp;dBc</span>
+          </div>
+          <p class="mlab-wf-note">Fundamental ${r.fundamentalHz.toLocaleString('en-US')}&nbsp;Hz &middot; ${r.harmonics.length} harmonics analysed</p>
+        </div>
+      `;
+    } else {
+      resultHtml = `
+        <div class="mlab-wf-result">
+          <div class="mlab-wf-result-row">
+            <span class="mlab-wf-result-label">SMPTE IMD</span>
+            <span class="mlab-wf-result-value">${r.imdPercent.toFixed(3)}&nbsp;%</span>
+          </div>
+          <p class="mlab-wf-note">f1 ${r.f1Hz}&nbsp;Hz &middot; f2 ${r.f2Hz.toLocaleString('en-US')}&nbsp;Hz</p>
+        </div>
+      `;
+    }
+    body.innerHTML = `${resultHtml}
+      <div class="mlab-session-controls">
+        <button class="ea-button ea-button--primary" type="button" data-mlab-thd-start>Measure again</button>
+      </div>
+    `;
+    body.querySelector<HTMLButtonElement>('[data-mlab-thd-start]')?.addEventListener('click', () => {
+      state.thd.result = null; startThdCapture(els);
+    });
+    return;
+  }
+
+  // Idle
+  const isTHD = state.thd.mode === 'thd';
+  body.innerHTML = `
+    <table class="ea-form-table" aria-label="THD and IMD setup">
+      <tbody>
+        <tr>
+          <td class="ea-col-status">${statusDot('done')}</td>
+          <td class="ea-col-label">Measurement type</td>
+          <td class="ea-col-value">
+            <div class="mlab-segmented" role="radiogroup" aria-label="THD or IMD">
+              <button class="mlab-segmented-option${isTHD ? ' mlab-segmented-option--active' : ''}" role="radio" aria-checked="${isTHD}" type="button" data-mlab-thd-mode="thd">THD</button>
+              <button class="mlab-segmented-option${!isTHD ? ' mlab-segmented-option--active' : ''}" role="radio" aria-checked="${!isTHD}" type="button" data-mlab-thd-mode="imd">SMPTE IMD</button>
+            </div>
+          </td>
+          <td class="ea-col-meta"><span class="ea-badge">Mode</span></td>
+        </tr>
+        ${isTHD ? `
+        <tr>
+          <td class="ea-col-status">${statusDot('planned')}</td>
+          <td class="ea-col-label">Fundamental
+            <span class="ea-form-table-sublabel">Tone frequency on test record</span>
+          </td>
+          <td class="ea-col-value">
+            <select class="ea-input" data-mlab-thd-fund aria-label="Fundamental frequency">
+              <option value="1000" ${state.thd.fundamentalHz === 1000 ? 'selected' : ''}>1000 Hz</option>
+              <option value="315"  ${state.thd.fundamentalHz === 315  ? 'selected' : ''}>315 Hz</option>
+              <option value="10000" ${state.thd.fundamentalHz === 10000 ? 'selected' : ''}>10 kHz</option>
+            </select>
+          </td>
+          <td class="ea-col-meta"><span class="ea-badge">Hz</span></td>
+        </tr>` : `
+        <tr>
+          <td class="ea-col-status">${statusDot('planned')}</td>
+          <td class="ea-col-label">f1 (low) / f2 (high)</td>
+          <td class="ea-col-value mlab-requested">60&nbsp;Hz &middot; 7&nbsp;kHz (SMPTE)</td>
+          <td class="ea-col-meta"><span class="ea-badge">Fixed</span></td>
+        </tr>`}
+        <tr>
+          <td class="ea-col-status">${statusDot('done')}</td>
+          <td class="ea-col-label">Capture duration</td>
+          <td class="ea-col-value mlab-requested">5&nbsp;s</td>
+          <td class="ea-col-meta"><span class="ea-badge">Fixed</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="mlab-session-controls">
+      <button class="ea-button ea-button--primary" type="button" data-mlab-thd-start>Start capture</button>
+    </div>
+  `;
+  body.querySelectorAll<HTMLButtonElement>('[data-mlab-thd-mode]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const m = btn.dataset.mlabThdMode as ThdMode | undefined;
+      if (m && m !== state.thd.mode) { state.thd.mode = m; renderThdPanel(els); }
+    });
+  });
+  body.querySelector<HTMLSelectElement>('[data-mlab-thd-fund]')?.addEventListener('change', (e) => {
+    const v = parseInt((e.currentTarget as HTMLSelectElement).value, 10);
+    if (Number.isFinite(v) && v > 0) state.thd.fundamentalHz = v;
+  });
+  body.querySelector<HTMLButtonElement>('[data-mlab-thd-start]')?.addEventListener('click', () => {
+    startThdCapture(els);
+  });
+}
+
+// ---- Resonance panel -------------------------------------------------------
+
+function stopResonanceCapture(): void {
+  if (state.resonance.capture) { state.resonance.capture.stop(); state.resonance.capture = null; }
+  state.resonance.active = false;
+  state.resonance.elapsedSeconds = 0;
+}
+
+function startResonanceCapture(els: Elements): void {
+  const context = state.audioHandle?.context;
+  const source = state.preSplitterNode;
+  if (!context || !source || state.captureState !== 'live') return;
+
+  stopResonanceCapture();
+  state.resonance.active = true;
+  state.resonance.elapsedSeconds = 0;
+  state.resonance.result = null;
+  renderResonancePanel(els);
+
+  const { durationSeconds, fromHz, toHz, sweepType } = state.resonance;
+  state.resonance.capture = createSweepCapture(context, source, durationSeconds, {
+    onProgress: (elapsed) => { state.resonance.elapsedSeconds = elapsed; renderResonancePanel(els); },
+    onDone: (samples) => {
+      state.resonance.capture = null;
+      state.resonance.active = false;
+      state.resonance.result = analyseResonance(samples, context.sampleRate, fromHz, toHz, sweepType);
+      renderResonancePanel(els);
+    },
+  });
+}
+
+function renderResonancePanel(els: Elements): void {
+  const body = els.resonanceBody;
+  if (!body) return;
+
+  if (state.captureState !== 'live') {
+    body.innerHTML = '<p class="ea-muted">Connect a source to measure the tonearm–cartridge resonance frequency.</p>';
+    return;
+  }
+
+  if (state.resonance.active) {
+    const dur = state.resonance.durationSeconds;
+    const pct = Math.min(100, (state.resonance.elapsedSeconds / dur) * 100);
+    const remaining = Math.max(0, dur - state.resonance.elapsedSeconds);
+    body.innerHTML = `
+      <p class="ea-muted">Capturing ${dur}&thinsp;s sweep&hellip;</p>
+      <div class="mlab-progress-track" role="progressbar" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100" aria-label="Capture progress">
+        <div class="mlab-progress-fill" style="width:${pct.toFixed(1)}%"></div>
+      </div>
+      <p class="mlab-progress-label">${remaining.toFixed(1)}&nbsp;s remaining</p>
+      <div class="mlab-session-controls">
+        <button class="ea-button ea-button--ghost" type="button" data-mlab-res-cancel>Cancel</button>
+      </div>
+    `;
+    body.querySelector<HTMLButtonElement>('[data-mlab-res-cancel]')?.addEventListener('click', () => {
+      stopResonanceCapture(); renderResonancePanel(els);
+    });
+    return;
+  }
+
+  if (state.resonance.result) {
+    const r = state.resonance.result;
+    const qStr = r.qEstimate !== null ? r.qEstimate.toFixed(1) : '—';
+    const f0Str = r.peakFrequencyHz.toFixed(1);
+    body.innerHTML = `
+      <div class="mlab-wf-result">
+        <div class="mlab-wf-result-row">
+          <span class="mlab-wf-result-label">Resonance frequency</span>
+          <span class="mlab-wf-result-value">${f0Str}&nbsp;Hz</span>
+        </div>
+        <div class="mlab-wf-result-row">
+          <span class="mlab-wf-result-label">Peak amplitude</span>
+          <span class="mlab-wf-result-value">${r.peakAmplitudeDbFs.toFixed(1)}&nbsp;dBFS</span>
+        </div>
+        <div class="mlab-wf-result-row">
+          <span class="mlab-wf-result-label">Q estimate</span>
+          <span class="mlab-wf-result-value">${qStr}</span>
+        </div>
+        <p class="mlab-wf-note">Sweep ${state.resonance.fromHz}&ndash;${state.resonance.toHz}&nbsp;Hz (${state.resonance.sweepType}) &middot; ${state.resonance.durationSeconds}&nbsp;s</p>
+      </div>
+      <div class="mlab-session-controls">
+        <button class="ea-button ea-button--primary" type="button" data-mlab-res-start>Measure again</button>
+      </div>
+    `;
+    body.querySelector<HTMLButtonElement>('[data-mlab-res-start]')?.addEventListener('click', () => {
+      state.resonance.result = null; startResonanceCapture(els);
+    });
+    return;
+  }
+
+  // Idle
+  const { sweepType, fromHz, toHz, durationSeconds } = state.resonance;
+  body.innerHTML = `
+    <p class="ea-muted">Play the low-frequency sweep band on your test record. The tool detects the resonance frequency from the amplitude envelope of the captured signal.</p>
+    <table class="ea-form-table" aria-label="Resonance sweep setup">
+      <tbody>
+        <tr>
+          <td class="ea-col-status">${statusDot('planned')}</td>
+          <td class="ea-col-label">Sweep type</td>
+          <td class="ea-col-value">
+            <div class="mlab-segmented" role="radiogroup" aria-label="Sweep type">
+              <button class="mlab-segmented-option${sweepType === 'log' ? ' mlab-segmented-option--active' : ''}" role="radio" aria-checked="${sweepType === 'log'}" type="button" data-mlab-res-sweep="log">Log</button>
+              <button class="mlab-segmented-option${sweepType === 'linear' ? ' mlab-segmented-option--active' : ''}" role="radio" aria-checked="${sweepType === 'linear'}" type="button" data-mlab-res-sweep="linear">Linear</button>
+            </div>
+          </td>
+          <td class="ea-col-meta"><span class="ea-badge">Type</span></td>
+        </tr>
+        <tr>
+          <td class="ea-col-status">${statusDot('planned')}</td>
+          <td class="ea-col-label">Sweep range</td>
+          <td class="ea-col-value mlab-requested">${fromHz}&ndash;${toHz}&nbsp;Hz</td>
+          <td class="ea-col-meta"><span class="ea-badge">Hz</span></td>
+        </tr>
+        <tr>
+          <td class="ea-col-status">${statusDot('done')}</td>
+          <td class="ea-col-label">Duration</td>
+          <td class="ea-col-value mlab-requested">${durationSeconds}&nbsp;s</td>
+          <td class="ea-col-meta"><span class="ea-badge">Fixed</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="mlab-session-controls">
+      <button class="ea-button ea-button--primary" type="button" data-mlab-res-start>Start capture</button>
+    </div>
+  `;
+  body.querySelectorAll<HTMLButtonElement>('[data-mlab-res-sweep]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const t = btn.dataset.mlabResSweep as ResonanceSweepType | undefined;
+      if (t && t !== state.resonance.sweepType) { state.resonance.sweepType = t; renderResonancePanel(els); }
+    });
+  });
+  body.querySelector<HTMLButtonElement>('[data-mlab-res-start]')?.addEventListener('click', () => {
+    startResonanceCapture(els);
+  });
+}
+
 function resetChannelMeasurement(): void {
   stopChannelMeasurement();
   state.channel.step = 'idle';
@@ -1221,6 +1612,10 @@ async function teardownAudio(): Promise<void> {
   resetChannelMeasurement();
   stopFreqCapture();
   state.freq.result = null;
+  stopThdCapture();
+  state.thd.result = null;
+  stopResonanceCapture();
+  state.resonance.result = null;
   if (state.selfTestOscillator) {
     try { state.selfTestOscillator.stop(); } catch { /* already stopped */ }
     try { state.selfTestOscillator.disconnect(); } catch { /* not connected */ }
@@ -1399,6 +1794,8 @@ async function connectMeasurementLab(els: Elements): Promise<void> {
   renderSpeedPanel(els);
   renderChannelPanel(els);
   renderFreqPanel(els);
+  renderThdPanel(els);
+  renderResonancePanel(els);
 }
 
 async function disconnectMeasurementLab(els: Elements): Promise<void> {
@@ -1412,6 +1809,8 @@ async function disconnectMeasurementLab(els: Elements): Promise<void> {
   renderSpeedPanel(els);
   renderChannelPanel(els);
   renderFreqPanel(els);
+  renderThdPanel(els);
+  renderResonancePanel(els);
 }
 
 async function refreshDeviceList(els: Elements): Promise<void> {
@@ -1446,6 +1845,8 @@ export function enableMeasurementLabInteractions(): void {
   renderSpeedPanel(els);
   renderChannelPanel(els);
   renderFreqPanel(els);
+  renderThdPanel(els);
+  renderResonancePanel(els);
   clearMeterDom(els);
 
   void refreshDeviceList(els);
