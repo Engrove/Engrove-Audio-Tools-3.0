@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://engrove-toolbox.pages.dev/sitemap.xml
