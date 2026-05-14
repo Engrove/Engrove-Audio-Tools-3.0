@@ -42,9 +42,30 @@ S30B adds:
   filter before the level meter. The toggle is disabled while capture
   is live; the user must Disconnect before changing the signal path.
 
-Out of scope here — speed, wow & flutter, channel balance, crosstalk,
-frequency response, THD and resonance peak measurements all arrive in
-S30C onwards, sharing this same capture pipeline. See
+S30C adds:
+
+- `engine/speedFlutter.ts` — pure Speed & W&F engine. Exports
+  `demodulateInstantaneousFrequency` (upward zero-crossing detection
+  with linear interpolation), `computeSpeedFlutterMetrics` and the
+  convenience wrapper `analyseSpeedFlutter`. IEC flutter-weighting is
+  a first-order approximation (HP 0.5 Hz + LP 200 Hz bilinear);
+  the dominant flutter band (1–10 Hz) is covered accurately.
+- `dsp/speedFlutterNode.ts` — `createSpeedFlutterCapture` wraps a
+  `ScriptProcessorNode` to collect contiguous audio over a fixed
+  duration without an AudioWorklet build step (worklet migration is
+  deferred). Progress and done callbacks drive the UI.
+- **Speed & W&F panel** in the source workbench (panel 03). When a
+  source is live the user picks 3150 Hz or 3000 Hz as the reference
+  frequency and starts a 30-second capture. Results show speed
+  deviation (%), unweighted W&F (AES6) and IEC-weighted W&F with a
+  five-tier classification.
+- `check-measurement-lab.mjs` extended with three S30C assertions:
+  0.2 % FM signal → 0.20 ± 0.01 % unweighted W&F; FM speed deviation
+  ≈ 0 %; pure tone noise floor < 0.01 %.
+
+Out of scope here — channel balance, crosstalk, frequency response,
+THD and resonance peak measurements arrive in S30D onwards, sharing
+this same capture pipeline. See
 `docs/release/S30_MEASUREMENT_LAB_PLAN.md` for the full plan.
 
 The level-metric helpers in `shared/audio-io/levelMetrics.ts` are pure

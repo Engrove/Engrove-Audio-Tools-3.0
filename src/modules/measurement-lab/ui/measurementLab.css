@@ -256,6 +256,95 @@
   text-transform: uppercase;
 }
 
+/* Speed & W&F measurement panel */
+.mlab-progress-track {
+  height: 8px;
+  border-radius: var(--ea-radius-sm);
+  background: var(--ea-bg-panel-alt);
+  border: 1px solid var(--ea-border-soft);
+  overflow: hidden;
+  margin: var(--ea-space-2) 0;
+}
+
+.mlab-progress-fill {
+  height: 100%;
+  background: var(--ea-interactive-accent);
+  transition: width 0.4s linear;
+}
+
+.mlab-progress-label {
+  color: var(--ea-text-medium);
+  font-family: var(--ea-font-data);
+  font-size: var(--ea-font-size-small);
+  font-variant-numeric: tabular-nums;
+  margin: 0 0 var(--ea-space-2);
+}
+
+.mlab-wf-result {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: var(--ea-space-2);
+}
+
+.mlab-wf-result-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ea-space-2);
+  padding: var(--ea-space-1) 0;
+  border-bottom: 1px solid var(--ea-border-soft);
+}
+
+.mlab-wf-result-row--grade {
+  border-bottom: none;
+  padding-top: var(--ea-space-2);
+}
+
+.mlab-wf-result-label {
+  color: var(--ea-text-medium);
+  font-size: var(--ea-font-size-small);
+}
+
+.mlab-wf-approx {
+  margin-left: 2px;
+  opacity: 0.6;
+}
+
+.mlab-wf-result-value {
+  color: var(--ea-text-high);
+  font-family: var(--ea-font-data);
+  font-variant-numeric: tabular-nums;
+  font-size: 1.1rem;
+}
+
+.mlab-wf-note {
+  color: var(--ea-text-low);
+  font-size: var(--ea-font-size-micro);
+  font-family: var(--ea-font-data);
+  margin: var(--ea-space-1) 0 0;
+}
+
+.mlab-wf-grade--excellent {
+  background: var(--ea-status-success);
+  color: #14161a;
+}
+
+.mlab-wf-grade--good {
+  background: var(--ea-interactive-accent);
+  color: #14161a;
+}
+
+.mlab-wf-grade--marginal {
+  background: var(--ea-status-warning);
+  color: #14161a;
+}
+
+.mlab-wf-grade--poor {
+  background: var(--ea-status-error);
+  color: #fff;
+}
+
 @media (max-width: 1180px) {
   .mlab-workbench-grid {
     grid-template-columns: 1fr;

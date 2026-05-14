@@ -1,19 +1,23 @@
 #!/usr/bin/env node
 /*
- * S30B CI gate for the Measurement Lab.
+ * S30B/S30C CI gate for the Measurement Lab.
  *
- * Validates the pure-function engine modules against the canonical
- * RIAA playback curve. Two assertions:
- *
- *   1. The analog reference math reproduces the canonical 3-time-constant
- *      RIAA playback table (0 dB at 1 kHz, +19.27 dB at 20 Hz,
+ * S30B — iRIAA filter (three assertions):
+ *   1. Analog reference reproduces the canonical 3-time-constant RIAA
+ *      playback table (0 dB at 1 kHz, +19.27 dB at 20 Hz,
  *      -19.62 dB at 20 kHz, no Neumann extension) within 0.05 dB.
+ *   2. Bilinear-transformed discrete coefficients lie within an
+ *      honest frequency-dependent envelope of the analog reference.
+ *   3. Time-domain applyIirFilter agrees with the closed-form z-transform
+ *      within 0.1 dB (catches indexing / accumulator errors).
  *
- *   2. The bilinear-transformed discrete-time coefficients, run by
- *      hand through applyIirFilter() over a synthesised sine of 8192
- *      samples at 96 kHz, produce an output RMS matching the analog
- *      reference within 0.5 dB over 20 Hz - 20 kHz. That tolerance
- *      covers bilinear distortion near Nyquist plus settling time.
+ * S30C — Speed & W&F engine (three assertions):
+ *   4. Zero-crossing demodulation of a synthesised 3150 Hz + 0.2 %
+ *      sinusoidal FM at 3 Hz gives unweightedWfPercent = 0.20 ± 0.01 %.
+ *   5. Speed deviation of the FM signal is 0.00 ± 0.01 % (mean of
+ *      f_inst equals the carrier frequency).
+ *   6. Pure 3150 Hz (no FM) gives unweightedWfPercent < 0.01 %
+ *      (noise floor of zero-crossing demodulation).
  */
 
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
@@ -72,11 +76,15 @@ function assertWithin(label, actual, expected, toleranceDb) {
 
 async function runChecks() {
   copySource('src/modules/measurement-lab/engine/iriaaFilter.ts');
+  copySource('src/modules/measurement-lab/engine/speedFlutter.ts');
   copySource('src/shared/audio-io/levelMetrics.ts');
   compileTempSources();
 
   const iriaaModule = await import(
     pathToFileURL(join(tempRoot, 'dist/modules/measurement-lab/engine/iriaaFilter.js')).href
+  );
+  const speedFlutterModule = await import(
+    pathToFileURL(join(tempRoot, 'dist/modules/measurement-lab/engine/speedFlutter.js')).href
   );
   const levelMetricsModule = await import(
     pathToFileURL(join(tempRoot, 'dist/shared/audio-io/levelMetrics.js')).href
@@ -88,6 +96,7 @@ async function runChecks() {
     computeIriaaDiscreteMagnitudeDb,
     applyIirFilter,
   } = iriaaModule;
+  const { analyseSpeedFlutter } = speedFlutterModule;
   const { computeRmsLinear } = levelMetricsModule;
 
   // 1. Analog reference matches the canonical 3-time-constant RIAA
@@ -147,6 +156,49 @@ async function runChecks() {
     assertWithin(`time-domain matches z-transform at ${freq} Hz`, measured, expected, 0.1);
   }
   console.log('- applyIirFilter time-domain matches closed-form z-transform: PASS');
+
+  // --- S30C: Speed & W&F engine checks ---
+  //
+  // Synthesise a 5-second FM signal at 96 kHz:
+  //   x(t) = sin(2π·fc·t − (fdev/fm)·cos(2π·fm·t))
+  // giving f_inst(t) = fc + fdev·sin(2π·fm·t).
+  // With fc=3150, fdev=6.3 (= 0.2 % of fc), fm=3 Hz:
+  //   AES6 unweighted W&F = sqrt(2)·RMS(fdev·sin/fc) = fdev/fc·100 = 0.20 %.
+  const wfSampleRate = 96_000;
+  const wfDuration = 5;
+  const wfNsamples = wfSampleRate * wfDuration;
+  const wfFc = 3150;
+  const wfFdev = wfFc * 0.002;    // 0.2 % of carrier
+  const wfFm = 3;
+  const wfBeta = wfFdev / wfFm;   // modulation index = 2.1
+
+  const fmSignal = new Float32Array(wfNsamples);
+  for (let n = 0; n < wfNsamples; n += 1) {
+    const t = n / wfSampleRate;
+    fmSignal[n] = Math.sin(2 * Math.PI * wfFc * t - wfBeta * Math.cos(2 * Math.PI * wfFm * t));
+  }
+
+  // 4. Unweighted W&F from FM signal = 0.20 ± 0.01 %
+  const fmResult = analyseSpeedFlutter(fmSignal, wfSampleRate, wfFc, 0.5);
+  assertWithin('W&F (FM 0.2 % at 3 Hz) unweighted', fmResult.unweightedWfPercent, 0.20, 0.01);
+  console.log('- speed flutter: 0.2 % FM unweighted W&F: PASS');
+
+  // 5. Speed deviation for FM signal = 0.00 ± 0.01 % (mean f_inst = fc)
+  assertWithin('W&F (FM 0.2 %) speed deviation', fmResult.speedDeviationPercent, 0, 0.01);
+  console.log('- speed flutter: FM speed deviation ≈ 0 %: PASS');
+
+  // 6. Pure 3150 Hz (no FM) → noise floor < 0.01 %
+  const pureSignal = new Float32Array(wfNsamples);
+  for (let n = 0; n < wfNsamples; n += 1) {
+    pureSignal[n] = Math.sin(2 * Math.PI * wfFc * n / wfSampleRate);
+  }
+  const pureResult = analyseSpeedFlutter(pureSignal, wfSampleRate, wfFc, 0.5);
+  if (!(pureResult.unweightedWfPercent < 0.01)) {
+    throw new Error(
+      `W&F noise floor: expected < 0.01 %, got ${pureResult.unweightedWfPercent.toFixed(4)} %.`,
+    );
+  }
+  console.log('- speed flutter: pure-tone W&F noise floor < 0.01 %: PASS');
 
   console.log('PASS measurement lab engine checks');
 }

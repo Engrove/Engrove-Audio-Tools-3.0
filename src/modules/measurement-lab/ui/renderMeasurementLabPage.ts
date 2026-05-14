@@ -21,6 +21,7 @@ import {
   type StrictAudioStream,
 } from '../../../shared/audio-io';
 import { createIriaaFilterNode, type IriaaFilterNode } from '../dsp/iriaaNode';
+import { createSpeedFlutterCapture, type SpeedFlutterCapture, type SpeedFlutterResult } from '../dsp/speedFlutterNode';
 
 type SourceMode = 'live' | 'self-test';
 type CaptureState = 'idle' | 'connecting' | 'live' | 'error';
@@ -36,6 +37,14 @@ type ChannelLevel = {
 
 type ChannelKey = 'L' | 'R';
 
+type SpeedState = {
+  referenceHz: number;
+  active: boolean;
+  elapsedSeconds: number;
+  result: SpeedFlutterResult | null;
+  capture: SpeedFlutterCapture | null;
+};
+
 type LabState = {
   sourceMode: SourceMode;
   captureState: CaptureState;
@@ -50,12 +59,14 @@ type LabState = {
   analysers: { L: AnalyserNode; R: AnalyserNode } | null;
   splitter: ChannelSplitterNode | null;
   sourceNode: AudioNode | null;
+  preSplitterNode: AudioNode | null;
   iriaaNode: IriaaFilterNode | null;
   silentSink: GainNode | null;
   meterFrame: number | null;
   meterLastTimestamp: number | null;
   channelLevels: Record<ChannelKey, ChannelLevel>;
   channelCount: number;
+  speed: SpeedState;
 };
 
 /*
@@ -66,8 +77,11 @@ type LabState = {
  * site below; it has no runtime effect.
  */
 const tokenLayoutGeneratedClassNames =
-  'mlab-segmented-option--active mlab-meter-clip--active';
+  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor';
 void tokenLayoutGeneratedClassNames;
+
+const speedMeasurementDurationSeconds = 30;
+const defaultSpeedReferenceHz = 3150;
 
 const defaultRequestedSampleRateHz = 96_000;
 const defaultRequestedChannelCount = 2;
@@ -100,12 +114,20 @@ const state: LabState = {
   analysers: null,
   splitter: null,
   sourceNode: null,
+  preSplitterNode: null,
   iriaaNode: null,
   silentSink: null,
   meterFrame: null,
   meterLastTimestamp: null,
   channelLevels: { L: initialChannelLevel(), R: initialChannelLevel() },
   channelCount: 0,
+  speed: {
+    referenceHz: defaultSpeedReferenceHz,
+    active: false,
+    elapsedSeconds: 0,
+    result: null,
+    capture: null,
+  },
 };
 
 function readStoredDeviceId(): string | null {
@@ -253,24 +275,15 @@ function sessionPanelMarkup(): string {
   `;
 }
 
-function scopePanelMarkup(): string {
+function speedPanelMarkup(): string {
   return `
-    <section class="ea-panel" aria-labelledby="mlab-scope-title">
+    <section class="ea-panel" aria-labelledby="mlab-speed-title">
       <div class="ea-panel-header">
         <span class="ea-panel-header-id">03</span>
-        <span id="mlab-scope-title">Slice scope</span>
+        <span id="mlab-speed-title">Speed &amp; Wow·Flutter</span>
       </div>
-      <div class="ea-panel-body">
-        <p class="ea-muted">
-          S30A ships the audio I/O foundation only. Speed, wow &amp; flutter, channel
-          balance, frequency response, THD and resonance peak measurements arrive
-          in later slices and will share this same capture pipeline.
-        </p>
-        <ul class="mlab-scope-list">
-          <li>Strict capture constraints — no echo cancellation, noise suppression or AGC.</li>
-          <li>Device selection persists between sessions per browser.</li>
-          <li>Self-test injects a deterministic 1&nbsp;kHz sine so the meter can be verified without a test record.</li>
-        </ul>
+      <div class="ea-panel-body" data-mlab-speed-body>
+        <p class="ea-muted">Connect a source to begin a Speed &amp; W&amp;F measurement.</p>
       </div>
     </section>
   `;
@@ -345,7 +358,7 @@ export function renderMeasurementLabPage(): string {
           <div class="mlab-workbench-main">
             ${audioSourcePanelMarkup()}
             ${sessionPanelMarkup()}
-            ${scopePanelMarkup()}
+            ${speedPanelMarkup()}
           </div>
           ${visualizationMarkup()}
         </div>
@@ -374,6 +387,7 @@ function elements(root: ParentNode) {
     actionStatusDot: root.querySelector<HTMLElement>('[data-mlab-action-status] .ea-dot'),
     actionStatusText: root.querySelector<HTMLElement>('[data-mlab-action-status-text]'),
     meterGrid: root.querySelector<HTMLElement>('[data-mlab-meter-grid]'),
+    speedBody: root.querySelector<HTMLElement>('[data-mlab-speed-body]'),
   };
 }
 
@@ -382,6 +396,117 @@ type Elements = ReturnType<typeof elements>;
 function setActionStatus(els: Elements, kind: 'planned' | 'active' | 'done' | 'error', text: string): void {
   if (els.actionStatusDot) els.actionStatusDot.className = `ea-dot ea-dot--${kind}`;
   if (els.actionStatusText) els.actionStatusText.textContent = text;
+}
+
+type WfGrade = { label: string; cssClass: string };
+
+function classifyWf(wfPercent: number): WfGrade {
+  if (wfPercent < 0.03) return { label: 'Excellent', cssClass: 'mlab-wf-grade--excellent' };
+  if (wfPercent < 0.10) return { label: 'Good', cssClass: 'mlab-wf-grade--good' };
+  if (wfPercent < 0.20) return { label: 'Acceptable', cssClass: 'mlab-wf-grade--good' };
+  if (wfPercent < 0.30) return { label: 'Marginal', cssClass: 'mlab-wf-grade--marginal' };
+  return { label: 'Poor', cssClass: 'mlab-wf-grade--poor' };
+}
+
+function renderSpeedPanel(els: Elements): void {
+  const body = els.speedBody;
+  if (!body) return;
+
+  if (state.captureState !== 'live') {
+    body.innerHTML = '<p class="ea-muted">Connect a source to begin a Speed &amp; W&amp;F measurement.</p>';
+    return;
+  }
+
+  if (state.speed.active) {
+    const pct = Math.min(100, (state.speed.elapsedSeconds / speedMeasurementDurationSeconds) * 100);
+    const remaining = Math.max(0, speedMeasurementDurationSeconds - state.speed.elapsedSeconds);
+    body.innerHTML = `
+      <p class="ea-muted">Recording ${state.speed.referenceHz} Hz reference tone&hellip;</p>
+      <div class="mlab-progress-track" role="progressbar" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100" aria-label="Recording progress">
+        <div class="mlab-progress-fill" style="width:${pct.toFixed(1)}%"></div>
+      </div>
+      <p class="mlab-progress-label">${remaining.toFixed(1)}&nbsp;s remaining</p>
+      <div class="mlab-session-controls">
+        <button class="ea-button ea-button--ghost" type="button" data-mlab-speed-cancel>Cancel</button>
+      </div>
+    `;
+    body.querySelector<HTMLButtonElement>('[data-mlab-speed-cancel]')?.addEventListener('click', () => {
+      stopSpeedMeasurement();
+      renderSpeedPanel(els);
+    });
+    return;
+  }
+
+  if (state.speed.result) {
+    const r = state.speed.result;
+    const grade = classifyWf(r.unweightedWfPercent);
+    body.innerHTML = `
+      <div class="mlab-wf-result">
+        <div class="mlab-wf-result-row">
+          <span class="mlab-wf-result-label">Speed deviation</span>
+          <span class="mlab-wf-result-value">${r.speedDeviationPercent >= 0 ? '+' : ''}${r.speedDeviationPercent.toFixed(3)}&nbsp;%</span>
+        </div>
+        <div class="mlab-wf-result-row">
+          <span class="mlab-wf-result-label">W&amp;F unweighted</span>
+          <span class="mlab-wf-result-value">${r.unweightedWfPercent.toFixed(3)}&nbsp;%</span>
+        </div>
+        <div class="mlab-wf-result-row">
+          <span class="mlab-wf-result-label">W&amp;F IEC-weighted<span class="mlab-wf-approx">&#x2248;</span></span>
+          <span class="mlab-wf-result-value">${r.weightedWfPercent.toFixed(3)}&nbsp;%</span>
+        </div>
+        <div class="mlab-wf-result-row mlab-wf-result-row--grade">
+          <span class="mlab-wf-result-label">Classification</span>
+          <span class="ea-badge ${grade.cssClass}">${grade.label}</span>
+        </div>
+        <p class="mlab-wf-note">${r.sampleCount.toLocaleString('en-US')} cycles analysed &middot; mean ${r.meanFrequencyHz.toFixed(2)}&nbsp;Hz</p>
+      </div>
+      <div class="mlab-session-controls">
+        <button class="ea-button ea-button--primary" type="button" data-mlab-speed-start>Measure again</button>
+      </div>
+    `;
+    body.querySelector<HTMLButtonElement>('[data-mlab-speed-start]')?.addEventListener('click', () => {
+      state.speed.result = null;
+      startSpeedMeasurement(els);
+    });
+    return;
+  }
+
+  // Idle — ready to measure
+  body.innerHTML = `
+    <table class="ea-form-table" aria-label="Speed and W&F setup">
+      <tbody>
+        <tr>
+          <td class="ea-col-status">${statusDot('planned')}</td>
+          <td class="ea-col-label">Reference frequency
+            <span class="ea-form-table-sublabel">From speed band on test record</span>
+          </td>
+          <td class="ea-col-value">
+            <select class="ea-input" data-mlab-speed-refhz aria-label="Reference frequency">
+              <option value="3150" ${state.speed.referenceHz === 3150 ? 'selected' : ''}>3150 Hz (DIN 45&thinsp;545, common)</option>
+              <option value="3000" ${state.speed.referenceHz === 3000 ? 'selected' : ''}>3000 Hz (AES alternative)</option>
+            </select>
+          </td>
+          <td class="ea-col-meta"><span class="ea-badge">Hz</span></td>
+        </tr>
+        <tr>
+          <td class="ea-col-status">${statusDot('done')}</td>
+          <td class="ea-col-label">Duration</td>
+          <td class="ea-col-value mlab-requested">${speedMeasurementDurationSeconds}&nbsp;s</td>
+          <td class="ea-col-meta"><span class="ea-badge">Fixed</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="mlab-session-controls">
+      <button class="ea-button ea-button--primary" type="button" data-mlab-speed-start>Start measurement</button>
+    </div>
+  `;
+  body.querySelector<HTMLSelectElement>('[data-mlab-speed-refhz]')?.addEventListener('change', (event) => {
+    const val = parseInt((event.currentTarget as HTMLSelectElement).value, 10);
+    if (val === 3150 || val === 3000) state.speed.referenceHz = val;
+  });
+  body.querySelector<HTMLButtonElement>('[data-mlab-speed-start]')?.addEventListener('click', () => {
+    startSpeedMeasurement(els);
+  });
 }
 
 function renderIriaaToggle(els: Elements): void {
@@ -612,8 +737,50 @@ function startMeterLoop(els: Elements): void {
   state.meterFrame = requestAnimationFrame(step);
 }
 
+function stopSpeedMeasurement(): void {
+  if (state.speed.capture) {
+    state.speed.capture.stop();
+    state.speed.capture = null;
+  }
+  state.speed.active = false;
+  state.speed.elapsedSeconds = 0;
+}
+
+function startSpeedMeasurement(els: Elements): void {
+  const context = state.audioHandle?.context;
+  const source = state.preSplitterNode;
+  if (!context || !source || state.captureState !== 'live') return;
+
+  stopSpeedMeasurement();
+  state.speed.active = true;
+  state.speed.elapsedSeconds = 0;
+  state.speed.result = null;
+  renderSpeedPanel(els);
+
+  state.speed.capture = createSpeedFlutterCapture(
+    context,
+    source,
+    state.speed.referenceHz,
+    speedMeasurementDurationSeconds,
+    {
+      onProgress: (elapsed) => {
+        state.speed.elapsedSeconds = elapsed;
+        renderSpeedPanel(els);
+      },
+      onDone: (result) => {
+        state.speed.active = false;
+        state.speed.result = result;
+        state.speed.capture = null;
+        renderSpeedPanel(els);
+      },
+    },
+  );
+}
+
 async function teardownAudio(): Promise<void> {
   stopMeterLoop();
+  stopSpeedMeasurement();
+  state.speed.result = null;
   if (state.selfTestOscillator) {
     try { state.selfTestOscillator.stop(); } catch { /* already stopped */ }
     try { state.selfTestOscillator.disconnect(); } catch { /* not connected */ }
@@ -640,6 +807,7 @@ async function teardownAudio(): Promise<void> {
     try { state.sourceNode.disconnect(); } catch { /* not connected */ }
     state.sourceNode = null;
   }
+  state.preSplitterNode = null;
   releaseStrictAudioStream(state.stream);
   state.stream = null;
   await disposeMeasurementAudioContext(state.audioHandle);
@@ -687,6 +855,7 @@ async function startLiveCapture(els: Elements): Promise<void> {
   splitter.connect(analysers.L, 0);
   splitter.connect(analysers.R, 1);
   state.sourceNode = sourceNode;
+  state.preSplitterNode = iriaa?.node ?? sourceNode;
   state.iriaaNode = iriaa;
   state.splitter = splitter;
   state.analysers = analysers;
@@ -734,6 +903,7 @@ async function startSelfTest(els: Elements): Promise<void> {
   silentSink.connect(audioHandle.context.destination);
   oscillator.start();
   state.selfTestOscillator = oscillator;
+  state.preSplitterNode = iriaa?.node ?? gain;
   state.iriaaNode = iriaa;
   state.analysers = analysers;
   state.silentSink = silentSink;
@@ -786,6 +956,7 @@ async function connectMeasurementLab(els: Elements): Promise<void> {
   renderIriaaToggle(els);
   renderSessionStatus(els);
   renderActualFormat(els);
+  renderSpeedPanel(els);
 }
 
 async function disconnectMeasurementLab(els: Elements): Promise<void> {
@@ -796,6 +967,7 @@ async function disconnectMeasurementLab(els: Elements): Promise<void> {
   renderIriaaToggle(els);
   renderSessionStatus(els);
   renderActualFormat(els);
+  renderSpeedPanel(els);
 }
 
 async function refreshDeviceList(els: Elements): Promise<void> {
@@ -827,6 +999,7 @@ export function enableMeasurementLabInteractions(): void {
   renderActualFormat(els);
   renderConnectionButtons(els);
   renderSessionStatus(els);
+  renderSpeedPanel(els);
   clearMeterDom(els);
 
   void refreshDeviceList(els);
