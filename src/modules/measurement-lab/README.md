@@ -63,10 +63,28 @@ S30C adds:
   0.2 % FM signal → 0.20 ± 0.01 % unweighted W&F; FM speed deviation
   ≈ 0 %; pure tone noise floor < 0.01 %.
 
-Out of scope here — channel balance, crosstalk, frequency response,
-THD and resonance peak measurements arrive in S30D onwards, sharing
-this same capture pipeline. See
-`docs/release/S30_MEASUREMENT_LAB_PLAN.md` for the full plan.
+S30D adds:
+
+- `engine/crosstalk.ts` — pure channel-balance & crosstalk engine.
+  Exports `computeRms`, `analyseChannelCapture` (per-channel RMS plus
+  on-to-off-channel ratio in dB) and `summariseChannelBalance` (R vs L
+  balance dB plus bidirectional crosstalk).
+- `dsp/stereoCaptureNode.ts` — `createStereoChannelCapture` collects
+  10 seconds of stereo audio via `ScriptProcessorNode(buf, 2, 2)`,
+  preserving L and R as separate Float32Arrays.
+- **Channel balance & crosstalk panel** (panel 04) — two-step wizard:
+  cue the L-channel reference band, capture 10 s, then cue the
+  R-channel band, capture 10 s. Step 1 result is shown before step 2.
+  After both steps the panel reports L/R RMS in dBFS, channel balance
+  (R − L in dB) and both directions of crosstalk.
+- `check-measurement-lab.mjs` extended with three S30D assertions:
+  L → R crosstalk = -40 dB ± 0.3 dB; matched balance = 0 dB ± 0.05 dB;
+  mismatched balance (R at -6 dB) = -6.02 dB ± 0.05 dB.
+
+Out of scope here — frequency response, THD and resonance peak
+measurements arrive in S30E onwards, sharing this same capture
+pipeline. See `docs/release/S30_MEASUREMENT_LAB_PLAN.md` for the full
+plan.
 
 The level-metric helpers in `shared/audio-io/levelMetrics.ts` are pure
 functions and are testable without a browser; later slices will gate

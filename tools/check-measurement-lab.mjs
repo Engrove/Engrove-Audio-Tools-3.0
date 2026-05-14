@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
- * S30B/S30C CI gate for the Measurement Lab.
+ * S30B/S30C/S30D CI gate for the Measurement Lab.
  *
  * S30B — iRIAA filter (three assertions):
  *   1. Analog reference reproduces the canonical 3-time-constant RIAA
@@ -18,6 +18,14 @@
  *      f_inst equals the carrier frequency).
  *   6. Pure 3150 Hz (no FM) gives unweightedWfPercent < 0.01 %
  *      (noise floor of zero-crossing demodulation).
+ *
+ * S30D — Channel balance & crosstalk (three assertions):
+ *   7. Stereo 1 kHz with L at 0 dBFS and R at -40 dB yields
+ *      crosstalkDb = -40.00 ± 0.3 dB when on-channel is left.
+ *   8. Matched on-channel levels across L and R captures yield
+ *      balanceDb = 0.00 ± 0.05 dB.
+ *   9. Mismatched on-channel levels (R signal at -6 dB relative to L)
+ *      yield balanceDb = -6.02 ± 0.05 dB.
  */
 
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
@@ -77,6 +85,7 @@ function assertWithin(label, actual, expected, toleranceDb) {
 async function runChecks() {
   copySource('src/modules/measurement-lab/engine/iriaaFilter.ts');
   copySource('src/modules/measurement-lab/engine/speedFlutter.ts');
+  copySource('src/modules/measurement-lab/engine/crosstalk.ts');
   copySource('src/shared/audio-io/levelMetrics.ts');
   compileTempSources();
 
@@ -85,6 +94,9 @@ async function runChecks() {
   );
   const speedFlutterModule = await import(
     pathToFileURL(join(tempRoot, 'dist/modules/measurement-lab/engine/speedFlutter.js')).href
+  );
+  const crosstalkModule = await import(
+    pathToFileURL(join(tempRoot, 'dist/modules/measurement-lab/engine/crosstalk.js')).href
   );
   const levelMetricsModule = await import(
     pathToFileURL(join(tempRoot, 'dist/shared/audio-io/levelMetrics.js')).href
@@ -97,6 +109,7 @@ async function runChecks() {
     applyIirFilter,
   } = iriaaModule;
   const { analyseSpeedFlutter } = speedFlutterModule;
+  const { analyseChannelCapture, summariseChannelBalance } = crosstalkModule;
   const { computeRmsLinear } = levelMetricsModule;
 
   // 1. Analog reference matches the canonical 3-time-constant RIAA
@@ -199,6 +212,44 @@ async function runChecks() {
     );
   }
   console.log('- speed flutter: pure-tone W&F noise floor < 0.01 %: PASS');
+
+  // --- S30D: Channel balance & crosstalk checks ---
+  //
+  // Synthesise 2 s of 1 kHz at 96 kHz on two stereo "captures":
+  //   L band: left = sin (amp 1.0), right = sin (amp 0.01) → crosstalk = -40 dB
+  //   R band: left = sin (amp 0.01), right = sin (amp 1.0) → crosstalk = -40 dB
+  const ctSampleRate = 96_000;
+  const ctSeconds = 2;
+  const ctN = ctSampleRate * ctSeconds;
+  const ctSettling = 0.1;
+  const fullSig = new Float32Array(ctN);
+  const bleedSig = new Float32Array(ctN);
+  const halfSig = new Float32Array(ctN);
+  const halfBleedSig = new Float32Array(ctN);
+  for (let n = 0; n < ctN; n += 1) {
+    const v = Math.sin(2 * Math.PI * 1000 * n / ctSampleRate);
+    fullSig[n] = v;             // 0 dBFS
+    bleedSig[n] = v * 0.01;     // -40 dB
+    halfSig[n] = v * 0.5;       // -6 dB
+    halfBleedSig[n] = v * 0.005; // -46 dB (still -40 dB below halfSig)
+  }
+
+  // 7. Crosstalk L → R at -40 dB
+  const lBand = analyseChannelCapture(fullSig, bleedSig, 'left', ctSampleRate, ctSettling);
+  assertWithin('crosstalk L → R at -40 dB', lBand.crosstalkDb, -40, 0.3);
+  console.log('- channel: L → R crosstalk -40 dB: PASS');
+
+  // 8. Balance = 0 dB when both bands have matched on-channel levels
+  const rBandMatched = analyseChannelCapture(bleedSig, fullSig, 'right', ctSampleRate, ctSettling);
+  const matchedSummary = summariseChannelBalance(lBand, rBandMatched);
+  assertWithin('channel balance (matched)', matchedSummary.balanceDb ?? 0, 0, 0.05);
+  console.log('- channel: matched balance ≈ 0 dB: PASS');
+
+  // 9. Balance = -6.02 dB when R band signal is at -6 dB vs L band signal
+  const rBandQuiet = analyseChannelCapture(halfBleedSig, halfSig, 'right', ctSampleRate, ctSettling);
+  const mismatchedSummary = summariseChannelBalance(lBand, rBandQuiet);
+  assertWithin('channel balance (R at -6 dB)', mismatchedSummary.balanceDb ?? 0, -6.0206, 0.05);
+  console.log('- channel: mismatched balance ≈ -6.02 dB: PASS');
 
   console.log('PASS measurement lab engine checks');
 }

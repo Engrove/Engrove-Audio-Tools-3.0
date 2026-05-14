@@ -22,6 +22,8 @@ import {
 } from '../../../shared/audio-io';
 import { createIriaaFilterNode, type IriaaFilterNode } from '../dsp/iriaaNode';
 import { createSpeedFlutterCapture, type SpeedFlutterCapture, type SpeedFlutterResult } from '../dsp/speedFlutterNode';
+import { createStereoChannelCapture, type StereoCapture, type ChannelCaptureMetrics } from '../dsp/stereoCaptureNode';
+import { summariseChannelBalance } from '../engine/crosstalk';
 
 type SourceMode = 'live' | 'self-test';
 type CaptureState = 'idle' | 'connecting' | 'live' | 'error';
@@ -43,6 +45,15 @@ type SpeedState = {
   elapsedSeconds: number;
   result: SpeedFlutterResult | null;
   capture: SpeedFlutterCapture | null;
+};
+
+type ChannelStep = 'idle' | 'left-recording' | 'left-done' | 'right-recording' | 'done';
+type ChannelStateBag = {
+  step: ChannelStep;
+  elapsedSeconds: number;
+  leftCapture: ChannelCaptureMetrics | null;
+  rightCapture: ChannelCaptureMetrics | null;
+  capture: StereoCapture | null;
 };
 
 type LabState = {
@@ -67,6 +78,7 @@ type LabState = {
   channelLevels: Record<ChannelKey, ChannelLevel>;
   channelCount: number;
   speed: SpeedState;
+  channel: ChannelStateBag;
 };
 
 /*
@@ -82,6 +94,7 @@ void tokenLayoutGeneratedClassNames;
 
 const speedMeasurementDurationSeconds = 30;
 const defaultSpeedReferenceHz = 3150;
+const channelMeasurementDurationSeconds = 10;
 
 const defaultRequestedSampleRateHz = 96_000;
 const defaultRequestedChannelCount = 2;
@@ -126,6 +139,13 @@ const state: LabState = {
     active: false,
     elapsedSeconds: 0,
     result: null,
+    capture: null,
+  },
+  channel: {
+    step: 'idle',
+    elapsedSeconds: 0,
+    leftCapture: null,
+    rightCapture: null,
     capture: null,
   },
 };
@@ -289,6 +309,20 @@ function speedPanelMarkup(): string {
   `;
 }
 
+function channelPanelMarkup(): string {
+  return `
+    <section class="ea-panel" aria-labelledby="mlab-channel-title">
+      <div class="ea-panel-header">
+        <span class="ea-panel-header-id">04</span>
+        <span id="mlab-channel-title">Channel balance &amp; crosstalk</span>
+      </div>
+      <div class="ea-panel-body" data-mlab-channel-body>
+        <p class="ea-muted">Connect a source to begin a channel measurement.</p>
+      </div>
+    </section>
+  `;
+}
+
 function meterChannelMarkup(channel: ChannelKey, label: string): string {
   return `
     <div class="mlab-meter-channel" data-mlab-meter-channel="${channel}">
@@ -313,7 +347,7 @@ function visualizationMarkup(): string {
   return `
     <aside class="ea-panel mlab-viz-panel" aria-labelledby="mlab-viz-title">
       <div class="ea-panel-header">
-        <span class="ea-panel-header-id">04</span>
+        <span class="ea-panel-header-id">05</span>
         <span id="mlab-viz-title">Level meter</span>
       </div>
       <div class="ea-panel-body mlab-viz-body">
@@ -359,6 +393,7 @@ export function renderMeasurementLabPage(): string {
             ${audioSourcePanelMarkup()}
             ${sessionPanelMarkup()}
             ${speedPanelMarkup()}
+            ${channelPanelMarkup()}
           </div>
           ${visualizationMarkup()}
         </div>
@@ -388,6 +423,7 @@ function elements(root: ParentNode) {
     actionStatusText: root.querySelector<HTMLElement>('[data-mlab-action-status-text]'),
     meterGrid: root.querySelector<HTMLElement>('[data-mlab-meter-grid]'),
     speedBody: root.querySelector<HTMLElement>('[data-mlab-speed-body]'),
+    channelBody: root.querySelector<HTMLElement>('[data-mlab-channel-body]'),
   };
 }
 
@@ -507,6 +543,191 @@ function renderSpeedPanel(els: Elements): void {
   body.querySelector<HTMLButtonElement>('[data-mlab-speed-start]')?.addEventListener('click', () => {
     startSpeedMeasurement(els);
   });
+}
+
+function fmtDb(value: number | null | undefined, digits = 1): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return '—';
+  return `${value >= 0 ? '+' : ''}${value.toFixed(digits)} dB`;
+}
+
+function fmtCrosstalk(value: number | null): string {
+  if (value === null || !Number.isFinite(value)) return '—';
+  return `${value.toFixed(1)} dB`;
+}
+
+function captureRowMarkup(label: string, capture: ChannelCaptureMetrics): string {
+  return `
+    <tr>
+      <td class="ea-col-status">${statusDot('done')}</td>
+      <td class="ea-col-label">${label}</td>
+      <td class="ea-col-value">
+        <span class="mlab-wf-result-value">L ${capture.leftRmsDbFs.toFixed(1)}&nbsp;dBFS &middot; R ${capture.rightRmsDbFs.toFixed(1)}&nbsp;dBFS</span>
+      </td>
+      <td class="ea-col-meta"><span class="ea-badge">${capture.crosstalkDb.toFixed(1)}&nbsp;dB</span></td>
+    </tr>
+  `;
+}
+
+function renderChannelPanel(els: Elements): void {
+  const body = els.channelBody;
+  if (!body) return;
+
+  if (state.captureState !== 'live') {
+    body.innerHTML = '<p class="ea-muted">Connect a source to begin a channel measurement.</p>';
+    return;
+  }
+
+  const ch = state.channel;
+
+  const recordingStep = ch.step === 'left-recording' || ch.step === 'right-recording';
+  if (recordingStep) {
+    const which = ch.step === 'left-recording' ? 'L' : 'R';
+    const pct = Math.min(100, (ch.elapsedSeconds / channelMeasurementDurationSeconds) * 100);
+    const remaining = Math.max(0, channelMeasurementDurationSeconds - ch.elapsedSeconds);
+    body.innerHTML = `
+      <p class="ea-muted">Recording ${which}-channel band &hellip;</p>
+      <div class="mlab-progress-track" role="progressbar" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100" aria-label="${renderText(`${which} channel capture progress`)}">
+        <div class="mlab-progress-fill" style="width:${pct.toFixed(1)}%"></div>
+      </div>
+      <p class="mlab-progress-label">${remaining.toFixed(1)}&nbsp;s remaining</p>
+      <div class="mlab-session-controls">
+        <button class="ea-button ea-button--ghost" type="button" data-mlab-channel-cancel>Cancel</button>
+      </div>
+    `;
+    body.querySelector<HTMLButtonElement>('[data-mlab-channel-cancel]')?.addEventListener('click', () => {
+      stopChannelMeasurement();
+      // From left-recording → reset to idle; from right-recording → keep left
+      state.channel.step = state.channel.leftCapture && state.channel.rightCapture === null
+        ? 'left-done'
+        : 'idle';
+      if (state.channel.step === 'idle') {
+        state.channel.leftCapture = null;
+        state.channel.rightCapture = null;
+      }
+      renderChannelPanel(els);
+    });
+    return;
+  }
+
+  if (ch.step === 'done' && ch.leftCapture && ch.rightCapture) {
+    const summary = summariseChannelBalance(ch.leftCapture, ch.rightCapture);
+    body.innerHTML = `
+      <table class="ea-form-table" aria-label="Channel measurement summary">
+        <tbody>
+          ${captureRowMarkup('L-band capture', ch.leftCapture)}
+          ${captureRowMarkup('R-band capture', ch.rightCapture)}
+        </tbody>
+      </table>
+      <div class="mlab-wf-result">
+        <div class="mlab-wf-result-row">
+          <span class="mlab-wf-result-label">Channel balance (R − L)</span>
+          <span class="mlab-wf-result-value">${fmtDb(summary.balanceDb)}</span>
+        </div>
+        <div class="mlab-wf-result-row">
+          <span class="mlab-wf-result-label">Crosstalk L → R</span>
+          <span class="mlab-wf-result-value">${fmtCrosstalk(summary.leftToRightCrosstalkDb)}</span>
+        </div>
+        <div class="mlab-wf-result-row">
+          <span class="mlab-wf-result-label">Crosstalk R → L</span>
+          <span class="mlab-wf-result-value">${fmtCrosstalk(summary.rightToLeftCrosstalkDb)}</span>
+        </div>
+        <p class="mlab-wf-note">Negative crosstalk values are better; well-set-up cartridges land at -25 to -35 dB across the audio band.</p>
+      </div>
+      <div class="mlab-session-controls">
+        <button class="ea-button ea-button--ghost" type="button" data-mlab-channel-reset>Start over</button>
+      </div>
+    `;
+    body.querySelector<HTMLButtonElement>('[data-mlab-channel-reset]')?.addEventListener('click', () => {
+      resetChannelMeasurement();
+      renderChannelPanel(els);
+    });
+    return;
+  }
+
+  if (ch.step === 'left-done' && ch.leftCapture) {
+    body.innerHTML = `
+      <p class="ea-muted">Step 1 of 2 complete. Cue the R-channel reference band on the test record.</p>
+      <table class="ea-form-table" aria-label="Step 1 result">
+        <tbody>
+          ${captureRowMarkup('L-band capture', ch.leftCapture)}
+        </tbody>
+      </table>
+      <div class="mlab-session-controls">
+        <button class="ea-button ea-button--primary" type="button" data-mlab-channel-start-r>Start R-band capture</button>
+        <button class="ea-button ea-button--ghost" type="button" data-mlab-channel-reset>Start over</button>
+      </div>
+    `;
+    body.querySelector<HTMLButtonElement>('[data-mlab-channel-start-r]')?.addEventListener('click', () => {
+      startChannelCapture(els, 'right');
+    });
+    body.querySelector<HTMLButtonElement>('[data-mlab-channel-reset]')?.addEventListener('click', () => {
+      resetChannelMeasurement();
+      renderChannelPanel(els);
+    });
+    return;
+  }
+
+  // Idle (no captures yet)
+  body.innerHTML = `
+    <p class="ea-muted">Step 1 of 2: cue the L-channel reference band on the test record (typically 1&nbsp;kHz, L only). Each capture is ${channelMeasurementDurationSeconds}&nbsp;seconds.</p>
+    <div class="mlab-session-controls">
+      <button class="ea-button ea-button--primary" type="button" data-mlab-channel-start-l>Start L-band capture</button>
+    </div>
+  `;
+  body.querySelector<HTMLButtonElement>('[data-mlab-channel-start-l]')?.addEventListener('click', () => {
+    startChannelCapture(els, 'left');
+  });
+}
+
+function resetChannelMeasurement(): void {
+  stopChannelMeasurement();
+  state.channel.step = 'idle';
+  state.channel.elapsedSeconds = 0;
+  state.channel.leftCapture = null;
+  state.channel.rightCapture = null;
+}
+
+function stopChannelMeasurement(): void {
+  if (state.channel.capture) {
+    state.channel.capture.stop();
+    state.channel.capture = null;
+  }
+  state.channel.elapsedSeconds = 0;
+}
+
+function startChannelCapture(els: Elements, which: 'left' | 'right'): void {
+  const context = state.audioHandle?.context;
+  const source = state.preSplitterNode;
+  if (!context || !source || state.captureState !== 'live') return;
+
+  stopChannelMeasurement();
+  state.channel.step = which === 'left' ? 'left-recording' : 'right-recording';
+  state.channel.elapsedSeconds = 0;
+  renderChannelPanel(els);
+
+  state.channel.capture = createStereoChannelCapture(
+    context,
+    source,
+    which,
+    channelMeasurementDurationSeconds,
+    {
+      onProgress: (elapsed) => {
+        state.channel.elapsedSeconds = elapsed;
+        renderChannelPanel(els);
+      },
+      onDone: (result) => {
+        state.channel.capture = null;
+        if (which === 'left') {
+          state.channel.leftCapture = result;
+          state.channel.step = 'left-done';
+        } else {
+          state.channel.rightCapture = result;
+          state.channel.step = 'done';
+        }
+        renderChannelPanel(els);
+      },
+    },
+  );
 }
 
 function renderIriaaToggle(els: Elements): void {
@@ -781,6 +1002,7 @@ async function teardownAudio(): Promise<void> {
   stopMeterLoop();
   stopSpeedMeasurement();
   state.speed.result = null;
+  resetChannelMeasurement();
   if (state.selfTestOscillator) {
     try { state.selfTestOscillator.stop(); } catch { /* already stopped */ }
     try { state.selfTestOscillator.disconnect(); } catch { /* not connected */ }
@@ -957,6 +1179,7 @@ async function connectMeasurementLab(els: Elements): Promise<void> {
   renderSessionStatus(els);
   renderActualFormat(els);
   renderSpeedPanel(els);
+  renderChannelPanel(els);
 }
 
 async function disconnectMeasurementLab(els: Elements): Promise<void> {
@@ -968,6 +1191,7 @@ async function disconnectMeasurementLab(els: Elements): Promise<void> {
   renderSessionStatus(els);
   renderActualFormat(els);
   renderSpeedPanel(els);
+  renderChannelPanel(els);
 }
 
 async function refreshDeviceList(els: Elements): Promise<void> {
@@ -1000,6 +1224,7 @@ export function enableMeasurementLabInteractions(): void {
   renderConnectionButtons(els);
   renderSessionStatus(els);
   renderSpeedPanel(els);
+  renderChannelPanel(els);
   clearMeterDom(els);
 
   void refreshDeviceList(els);
