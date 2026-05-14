@@ -1,18 +1,18 @@
 /*
- * Consent-gated analytics loader.
+ * Analytics loader — Alternative B: direct Clarity loading.
  *
  * The Cloudflare Web Analytics beacon is loaded unconditionally via index.html
- * because the provider documents it as cookieless and free of fingerprinting
- * or local-storage usage. Microsoft Clarity records session data subject to
- * GDPR / ePrivacy consent rules and must therefore only be loaded after the
- * user has explicitly opted in. This module is the only place that may load
- * Clarity in shipped code.
+ * because the provider documents it as cookieless.
+ *
+ * Microsoft Clarity is loaded for all visitors via the static clarity-loader.js
+ * referenced in index.html <head>. This module applies Consent V2 on boot and
+ * handles the opt-out path (stored 'denied' state). It never injects a second
+ * Clarity <script> tag when the static loader is already present.
  *
  * Consent behavior:
- *   unknown  → Clarity is NOT loaded. Banner shown to user.
- *   denied   → Clarity is NOT loaded. Consent V2 denied sent if queue exists.
- *   granted  → Clarity IS loaded using the official snippet pattern.
- *              Consent V2 granted sent immediately after queue is initialised.
+ *   granted  → Consent V2 granted sent (default for new visitors).
+ *   denied   → Consent V2 denied sent if queue exists.
+ *   unknown  → Treated as granted (fallback; no banner is shown).
  */
 
 const consentStorageKey = 'engrove-analytics-consent';
@@ -38,9 +38,9 @@ function isAnalyticsConsentState(value: unknown): value is AnalyticsConsentState
 export function readStoredAnalyticsConsent(): AnalyticsConsentState {
   try {
     const value = window.localStorage.getItem(consentStorageKey);
-    return isAnalyticsConsentState(value) ? value : 'unknown';
+    return isAnalyticsConsentState(value) ? value : 'granted';
   } catch {
-    return 'unknown';
+    return 'granted';
   }
 }
 
@@ -53,7 +53,10 @@ export function writeStoredAnalyticsConsent(state: AnalyticsConsentState): void 
 }
 
 function isClarityAlreadyLoaded(): boolean {
-  return document.querySelector(`script[${clarityScriptDataAttribute}]`) !== null;
+  return (
+    document.querySelector(`script[${clarityScriptDataAttribute}]`) !== null ||
+    document.querySelector(`script[src*="clarity.ms/tag/${clarityProjectId}"]`) !== null
+  );
 }
 
 /*
@@ -119,7 +122,8 @@ export function applyAnalyticsConsent(state: AnalyticsConsentState): void {
 
 /*
  * Boot-time application of stored consent. Called by the app shell.
- * Default is effectively deny: Clarity is not loaded until explicit consent.
+ * Default for new visitors is 'granted' (Alternative B — direct loading).
+ * Clarity itself is already injected by clarity-loader.js; this sends Consent V2.
  */
 export function bootAnalyticsConsent(): AnalyticsConsentState {
   const state = readStoredAnalyticsConsent();
