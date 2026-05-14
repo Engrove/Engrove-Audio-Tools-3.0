@@ -26,10 +26,20 @@
   gap: var(--ea-space-3);
 }
 
+.mlab-viz-col {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ea-space-3);
+  align-self: start;
+}
+
 .mlab-viz-panel {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  position: sticky;
+  top: var(--ea-space-4);
 }
 
 .mlab-viz-body {
@@ -419,6 +429,33 @@
 .mlab-freq-legend-swatch--dashed {
   background: transparent;
   border-top: 1.5px dashed var(--ea-text-muted, #888);
+}
+
+.mlab-log-panel {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.mlab-log-body {
+  height: 200px;
+  overflow-y: auto;
+  padding: var(--ea-space-2) var(--ea-space-3);
+  font-family: var(--ea-font-data);
+  font-size: var(--ea-font-size-small);
+  color: var(--ea-text-medium);
+}
+
+.mlab-log-entry {
+  padding: 1px 0;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.mlab-log-empty {
+  color: var(--ea-text-low);
+  font-style: italic;
 }
 
 @media (max-width: 1180px) {

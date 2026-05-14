@@ -47,7 +47,8 @@ const tools: readonly ToolCard[] = [
     icon: '◉',
     title: 'Measurement Lab',
     summary: 'Capture audio from a test record via your ADC under strict measurement constraints. S30A foundation: device selection, sample-rate honesty and live peak/RMS metering.',
-    ariaLabel: 'Measurement Lab — coming soon',
+    href: '/measurement-lab',
+    ariaLabel: 'Open Measurement Lab',
   },
   {
     id: 'Reference data',
