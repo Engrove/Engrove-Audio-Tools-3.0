@@ -5,7 +5,9 @@ import './modules/vta-sra-lab/ui/vtaSraLab.css';
 import './modules/measurement-lab/ui/measurementLab.css';
 
 import { bootAnalyticsConsent } from './shared/privacy/analytics';
+import { mountConsentBanner } from './shared/privacy/renderConsentBanner';
 import { startRouter } from './app/router';
 
 bootAnalyticsConsent();
 startRouter('#app');
+mountConsentBanner();

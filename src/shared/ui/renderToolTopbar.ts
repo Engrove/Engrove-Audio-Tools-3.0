@@ -14,7 +14,7 @@ const navItems: readonly NavItem[] = [
   { key: 'estimator', label: 'Estimator', href: '/compliance' },
   { key: 'geometry', label: 'Geometry Lab', href: '/geometry-lab' },
   { key: 'vta', label: 'VTA Lab', href: '/vta-sra-lab' },
-  { key: 'measurement', label: 'Measurement Lab', href: '/measurement-lab' },
+  // measurement-lab is accessible via /measurement-lab but not listed in nav yet
 ];
 
 function navLink(item: NavItem, active: ToolRouteKey): string {

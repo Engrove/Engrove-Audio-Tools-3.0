@@ -10,7 +10,7 @@
  */
 
 const consentStorageKey = 'engrove-analytics-consent';
-const clarityProjectId = 'wpyhxqzalt';
+const clarityProjectId = 'wqtsdirx06';
 const clarityScriptSrc = `https://www.clarity.ms/tag/${clarityProjectId}`;
 const clarityScriptDataAttribute = 'data-engrove-clarity';
 
