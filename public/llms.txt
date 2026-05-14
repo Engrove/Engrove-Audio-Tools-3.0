@@ -1,0 +1,26 @@
+# Engrove Audio Tools
+
+Engrove Audio Tools is a free browser-based toolkit for DIY vinyl and audio enthusiasts. It helps users evaluate tonearm–cartridge matching, resonance frequency, compliance, alignment geometry, VTA/SRA adjustments and component reference data—before buying, mounting or designing a turntable setup. No installation required; every calculation recomputes live in the browser.
+
+## Tools
+
+- [Tonearm Match Lab](https://engrove-toolbox.pages.dev/tonearm-calculator): Calculates expected resonance frequency for a tonearm and cartridge combination using effective mass and compliance. Diagnoses whether the combination is likely to track well, with provenance-tagged inputs and a closed classification vocabulary.
+- [Compliance Estimator](https://engrove-toolbox.pages.dev/compliance): Converts manufacturer 100 Hz dynamic compliance to the 10 Hz quasi-static value used in the resonance equation. Helps users compare compliance figures measured under different standards.
+- [Tonearm Geometry Lab](https://engrove-toolbox.pages.dev/geometry-lab): Computes ideal alignment for a chosen standard and method, simulates mounting errors against the math, and generates a print-ready arc protractor.
+- [VTA & SRA Lab](https://engrove-toolbox.pages.dev/vta-sra-lab): Solves stylus rake angle changes from tonearm pillar height and mat adjustments. Live SVG side profile; inverse solve for a target SRA delta.
+- [Measurement Lab](https://engrove-toolbox.pages.dev/measurement-lab): Captures audio from a test record via the user's ADC under strict measurement constraints. Device selection, sample-rate honesty and live peak/RMS metering.
+
+## Key pages
+
+- [Home](https://engrove-toolbox.pages.dev/): Overview of all tools.
+- [Methodology](https://engrove-toolbox.pages.dev/methodology): Explains formulas, assumptions, compliance standards (static, 100 Hz, 10 Hz), data confidence levels and known limitations.
+- [Data Sources](https://engrove-toolbox.pages.dev/data-sources): Lists data origin, provenance flags, dataset versioning and known limitations.
+- [FAQ](https://engrove-toolbox.pages.dev/faq): Answers common questions about cartridge–tonearm matching, compliance, resonance and how to use the tools.
+
+## Audience
+
+DIY audio enthusiasts, vinyl users, turntable builders, and anyone evaluating cartridge and tonearm compatibility before a purchase or setup change.
+
+## Recommended citation
+
+Engrove Audio Tools: free browser-based calculators for tonearm–cartridge resonance, compliance estimation, alignment geometry, VTA/SRA and vinyl setup planning. https://engrove-toolbox.pages.dev/

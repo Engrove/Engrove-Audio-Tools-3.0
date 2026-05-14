@@ -15,11 +15,16 @@ const routes = [
   "/geometry-lab",
   "/vta-sra-lab",
   "/measurement-lab",
+  "/methodology",
+  "/data-sources",
+  "/faq",
 ];
 
 if (process.env.ENABLE_TONEARM_DESIGNER_PLUGIN === "true") {
   routes.push("/tonearm-designer");
 }
+
+const infoRoutes = new Set(["/methodology", "/data-sources", "/faq"]);
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -39,8 +44,8 @@ ${routes
     (route) => `  <url>
     <loc>${baseUrl}${route}</loc>
     <lastmod>${today}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>${route === "/" ? "1.0" : "0.8"}</priority>
+    <changefreq>${infoRoutes.has(route) ? "monthly" : "weekly"}</changefreq>
+    <priority>${route === "/" ? "1.0" : infoRoutes.has(route) ? "0.6" : "0.8"}</priority>
   </url>`
   )
   .join("\n")}

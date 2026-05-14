@@ -6,6 +6,59 @@
     <meta name="description" content="Browser-based DIY audio calculators for checking tonearm-cartridge resonance, estimating compliance, comparing cartridge and tonearm data, and planning better vinyl setups.">
     <meta name="google-site-verification" content="C4OHUNtGMXPGSItpFcGUZWc0G92JOZibfM2-hESg1I0" />
     <title>Engrove Audio Tools 3.0</title>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Engrove Audio Tools",
+      "url": "https://engrove-toolbox.pages.dev/",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Any modern web browser",
+      "isAccessibleForFree": true,
+      "description": "Free browser-based DIY audio tools for checking tonearm-cartridge resonance, estimating compliance, simulating alignment geometry, solving VTA and SRA adjustments, and planning better vinyl setups.",
+      "audience": {
+        "@type": "Audience",
+        "audienceType": "DIY audio enthusiasts, vinyl users, turntable builders and cartridge/tonearm matchers"
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "EUR"
+      },
+      "hasPart": [
+        {
+          "@type": "WebApplication",
+          "name": "Tonearm Match Lab",
+          "url": "https://engrove-toolbox.pages.dev/tonearm-calculator",
+          "description": "Calculates the expected resonance frequency of a tonearm and cartridge combination from effective mass and compliance, with provenance tracking and a closed classification vocabulary."
+        },
+        {
+          "@type": "WebApplication",
+          "name": "Compliance Estimator",
+          "url": "https://engrove-toolbox.pages.dev/compliance",
+          "description": "Converts manufacturer 100 Hz dynamic compliance to the 10 Hz quasi-static value used in the resonance equation."
+        },
+        {
+          "@type": "WebApplication",
+          "name": "Tonearm Geometry Lab",
+          "url": "https://engrove-toolbox.pages.dev/geometry-lab",
+          "description": "Computes ideal alignment for a chosen standard and method, simulates mounting errors, and generates a print-ready arc protractor."
+        },
+        {
+          "@type": "WebApplication",
+          "name": "VTA & SRA Lab",
+          "url": "https://engrove-toolbox.pages.dev/vta-sra-lab",
+          "description": "Solves stylus rake angle changes from tonearm pillar height and mat adjustments, with live SVG side profile and inverse solving."
+        },
+        {
+          "@type": "WebApplication",
+          "name": "Measurement Lab",
+          "url": "https://engrove-toolbox.pages.dev/measurement-lab",
+          "description": "Captures audio from a test record via the user's ADC with device selection, sample-rate honesty and live peak/RMS metering."
+        }
+      ]
+    }
+    </script>
     <!-- Cloudflare Web Analytics — cookieless per provider documentation. -->
     <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "9d70c0fd9ea34376bdd986ff2ceb0734"}'></script>
     <!-- Microsoft Clarity — external loader; Consent V2 is applied by analytics.ts on boot. -->

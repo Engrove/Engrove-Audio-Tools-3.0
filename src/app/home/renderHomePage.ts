@@ -101,17 +101,28 @@ export function renderHomePage(): string {
       ${renderToolTopbar('tools')}
 
       <main class="ea-home-main" aria-labelledby="home-title">
-        <section class="ea-home-header">
+        <section class="ea-home-header" aria-labelledby="home-title">
           <h1 id="home-title">Engrove Audio Tools</h1>
           <p class="ea-home-header-sub">
-            Precision tools and reference data for analog optimization. Select a tool to begin.
-            Every tool is a workspace, not a page; every result is provenance-tagged and recomputes live.
+            Engrove Audio Tools is a free browser-based toolkit for DIY vinyl and audio enthusiasts.
+            It helps users check tonearm and cartridge compatibility, calculate resonance frequency,
+            estimate cartridge compliance, simulate alignment geometry, solve VTA and SRA adjustments,
+            and capture audio measurements—before buying, mounting or designing a turntable setup.
+            No install required; every result recomputes live and is provenance-tagged.
           </p>
         </section>
 
         <section class="ea-tool-grid" aria-label="Audio tools">
           ${tools.map(renderToolCard).join('')}
         </section>
+
+        <footer class="ea-home-footer">
+          <nav class="ea-home-footer-nav" aria-label="Site information">
+            <a href="/methodology">Methodology</a>
+            <a href="/data-sources">Data Sources</a>
+            <a href="/faq">FAQ</a>
+          </nav>
+        </footer>
       </main>
     </div>
   `;
