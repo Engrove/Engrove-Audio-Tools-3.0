@@ -5,9 +5,9 @@
  * Validates the pure-function engine modules against the canonical
  * RIAA playback curve. Two assertions:
  *
- *   1. The analog reference math reproduces the standard table
- *      (0 dB at 1 kHz, +19.27 dB at 20 Hz, -19.62 dB at 20 kHz with
- *      the Neumann extension) within 0.05 dB.
+ *   1. The analog reference math reproduces the canonical 3-time-constant
+ *      RIAA playback table (0 dB at 1 kHz, +19.27 dB at 20 Hz,
+ *      -19.62 dB at 20 kHz, no Neumann extension) within 0.05 dB.
  *
  *   2. The bilinear-transformed discrete-time coefficients, run by
  *      hand through applyIirFilter() over a synthesised sine of 8192
@@ -48,6 +48,7 @@ function compileTempSources() {
     skipLibCheck: true,
     declaration: false,
     sourceMap: false,
+    rootDir: './src',
     outDir: './dist',
   };
   writeFileSync(join(tempRoot, 'package.json'), JSON.stringify({ type: 'module' }, null, 2), 'utf8');
@@ -116,10 +117,10 @@ async function runChecks() {
   const sampleRate = 96_000;
   const coefficients = computeIriaaIirCoefficients(sampleRate);
   function envelopeForFrequency(frequencyHz) {
-    if (frequencyHz <= 1000) return 0.05;
-    if (frequencyHz <= 5000) return 0.15;
-    if (frequencyHz <= 10000) return 0.5;
-    return 1.6;
+    if (frequencyHz <= 1000) return 0.01;
+    if (frequencyHz <= 5000) return 0.1;
+    if (frequencyHz <= 10000) return 0.35;
+    return 1.5;
   }
   for (const { freq, db } of analogReferences) {
     const discrete = computeIriaaDiscreteMagnitudeDb(coefficients, freq, sampleRate);

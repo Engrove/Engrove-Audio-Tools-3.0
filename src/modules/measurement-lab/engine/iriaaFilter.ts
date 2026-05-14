@@ -19,7 +19,7 @@
  * applied at playback / analysis time, i.e. the standard RIAA
  * playback de-emphasis. The reference values produced by the helpers
  * below match the canonical RIAA playback table (0 dB at 1 kHz,
- * +19.27 dB at 20 Hz, -19.62 dB at 20 kHz with the Neumann extension).
+ * +19.27 dB at 20 Hz, -19.62 dB at 20 kHz, no Neumann extension).
  *
  * Implementation. The analog transfer function is the canonical
  * 3-time-constant RIAA playback curve
