@@ -108,6 +108,16 @@
   line-height: 1.45;
 }
 
+.ea-home-footer {
+  width: min(100%, var(--ea-size-page-max));
+  margin: 0 auto;
+  padding: var(--ea-space-6) var(--ea-page-padding);
+  color: var(--ea-text-low);
+  font-size: 11px;
+  letter-spacing: var(--ea-letter-label);
+  text-align: center;
+}
+
 @media (max-width: 760px) {
   .ea-home-main {
     padding-top: var(--ea-space-6);

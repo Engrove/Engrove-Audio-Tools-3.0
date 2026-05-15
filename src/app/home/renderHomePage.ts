@@ -113,6 +113,9 @@ export function renderHomePage(): string {
           ${tools.map(renderToolCard).join('')}
         </section>
       </main>
+      <footer class="ea-home-footer">
+        Engrove Audio Tools 3.0 · Public work-in-progress · Reference data is best-effort
+      </footer>
     </div>
   `;
 }
