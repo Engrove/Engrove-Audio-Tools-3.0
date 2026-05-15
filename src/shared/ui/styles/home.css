@@ -77,11 +77,12 @@
 
 .ea-tool-card-icon {
   width: 22px;
+  height: 22px;
   display: inline-flex;
   justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
   color: currentColor;
-  font-family: var(--ea-font-data);
-  font-size: 16px;
 }
 
 .ea-tool-card-id {

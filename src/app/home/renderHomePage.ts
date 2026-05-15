@@ -1,5 +1,14 @@
 import { renderToolTopbar } from '../../shared/ui/renderToolTopbar';
 
+const icons = {
+  match: `<svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="1" y1="18" x2="21" y2="18" stroke-width="1"/><path d="M1 17C5 17 7 17 9 11C10 8 10.5 6 11 6C11.5 6 12 8 13 11C15 17 17 17 21 17"/><line x1="8" y1="9" x2="8" y2="18" stroke-dasharray="2 1.5" stroke-width="1"/><line x1="14" y1="9" x2="14" y2="18" stroke-dasharray="2 1.5" stroke-width="1"/></svg>`,
+  compliance: `<svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="11" y1="2" x2="11" y2="4.5"/><polyline points="11,4.5 15.5,6.5 6.5,9.5 15.5,12.5 6.5,15.5 11,17.5"/><line x1="11" y1="17.5" x2="11" y2="20"/><line x1="8" y1="20" x2="14" y2="20"/></svg>`,
+  geometry: `<svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="4" cy="19" r="1.5" fill="currentColor" stroke="none"/><line x1="4" y1="19" x2="17" y2="5"/><path d="M11 3A17 17 0 0 1 20 13"/><line x1="4" y1="19" x2="21" y2="19" stroke-width="1"/></svg>`,
+  vta: `<svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="1" y1="18" x2="21" y2="18"/><line x1="15" y1="4" x2="7" y2="18"/><path d="M10 18A4 4 0 0 0 9 14" stroke-width="1"/></svg>`,
+  measurement: `<svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><line x1="1" y1="19" x2="21" y2="19" stroke-width="1"/><line x1="3" y1="19" x2="3" y2="15"/><line x1="6.5" y1="19" x2="6.5" y2="7"/><line x1="10" y1="19" x2="10" y2="11"/><line x1="13.5" y1="19" x2="13.5" y2="5"/><line x1="17" y1="19" x2="17" y2="9"/><line x1="20.5" y1="19" x2="20.5" y2="14"/></svg>`,
+  data: `<svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="18" height="16" rx="1.5"/><line x1="2" y1="8" x2="20" y2="8"/><line x1="8" y1="8" x2="8" y2="19"/><line x1="2" y1="13" x2="20" y2="13"/></svg>`,
+};
+
 type ToolCard = {
   id: string;
   icon: string;
@@ -12,7 +21,7 @@ type ToolCard = {
 const tools: readonly ToolCard[] = [
   {
     id: 'System matching',
-    icon: '∿',
+    icon: icons.match,
     title: 'Tonearm Match Lab',
     summary: 'Estimate cartridge–tonearm resonance and see whether the combination falls within a practical setup range.',
     href: '/tonearm-calculator',
@@ -20,7 +29,7 @@ const tools: readonly ToolCard[] = [
   },
   {
     id: 'Conversion',
-    icon: '⇄',
+    icon: icons.compliance,
     title: 'Compliance Estimator',
     summary: 'Estimate the 10 Hz compliance value needed for cartridge–tonearm resonance calculations.',
     href: '/compliance',
@@ -28,7 +37,7 @@ const tools: readonly ToolCard[] = [
   },
   {
     id: 'Geometry',
-    icon: '◎',
+    icon: icons.geometry,
     title: 'Tonearm Geometry Lab',
     summary: 'Calculate alignment geometry, null points, overhang and offset angle for a pivoted tonearm.',
     href: '/geometry-lab',
@@ -36,7 +45,7 @@ const tools: readonly ToolCard[] = [
   },
   {
     id: 'VTA / SRA',
-    icon: '⌞',
+    icon: icons.vta,
     title: 'VTA & SRA Lab',
     summary: 'Estimate stylus rake angle changes caused by tonearm height or mat thickness adjustments.',
     href: '/vta-sra-lab',
@@ -44,7 +53,7 @@ const tools: readonly ToolCard[] = [
   },
   {
     id: 'Audio capture',
-    icon: '◉',
+    icon: icons.measurement,
     title: 'Measurement Lab',
     summary: 'Inspect speed, wow & flutter, channel balance and signal levels from test-record measurements.',
     href: '/measurement-lab',
@@ -52,7 +61,7 @@ const tools: readonly ToolCard[] = [
   },
   {
     id: 'Reference data',
-    icon: '▤',
+    icon: icons.data,
     title: 'Data Explorer',
     summary: 'Browse cartridge and tonearm reference data to find useful setup values, compare specifications and support your calculations across the tools.',
     ariaLabel: 'Data Explorer — coming soon',
