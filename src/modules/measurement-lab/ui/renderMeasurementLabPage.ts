@@ -432,6 +432,7 @@ function meterChannelMarkup(channel: ChannelKey, label: string): string {
         <span class="mlab-meter-channel-label">${renderText(label)}</span>
         <span class="mlab-meter-channel-readout" data-mlab-meter-readout="${channel}">— dBFS</span>
       </div>
+      <canvas class="mlab-waveform-canvas" data-mlab-waveform="${channel}" aria-hidden="true"></canvas>
       <div class="mlab-meter-bar" role="img" aria-label="${renderText(`${label} channel level`)}">
         <div class="mlab-meter-bar-rms" data-mlab-meter-rms="${channel}"></div>
         <div class="mlab-meter-bar-peak" data-mlab-meter-peak="${channel}"></div>
@@ -830,6 +831,8 @@ function elements(root: ParentNode) {
     logResetBtn: root.querySelector<HTMLButtonElement>('[data-mlab-log-reset]'),
     logExportBtn: root.querySelector<HTMLButtonElement>('[data-mlab-log-export]'),
     selfTestBtn: root.querySelector<HTMLButtonElement>('[data-mlab-run-self-test]'),
+    waveformL: root.querySelector<HTMLCanvasElement>('[data-mlab-waveform="L"]'),
+    waveformR: root.querySelector<HTMLCanvasElement>('[data-mlab-waveform="R"]'),
   };
 }
 
@@ -1773,6 +1776,9 @@ function clearMeterDom(els: Elements): void {
       clip.classList.remove('mlab-meter-clip--active');
     }
   });
+  for (const canvas of [els.waveformL, els.waveformR]) {
+    if (canvas) canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height);
+  }
 }
 
 function levelPercentFromDb(db: number): number {
@@ -1849,6 +1855,43 @@ function createScratchBuffer(size: number): Float32Array<ArrayBuffer> {
   return new Float32Array(new ArrayBuffer(size * Float32Array.BYTES_PER_ELEMENT));
 }
 
+function drawWaveform(canvas: HTMLCanvasElement | null, data: Float32Array, clipped: boolean): void {
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = canvas.clientWidth;
+  const cssH = canvas.clientHeight;
+  if (cssW === 0 || cssH === 0) return;
+  const pixW = Math.round(cssW * dpr);
+  const pixH = Math.round(cssH * dpr);
+  if (canvas.width !== pixW || canvas.height !== pixH) {
+    canvas.width = pixW;
+    canvas.height = pixH;
+  }
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cssW, cssH);
+  ctx.beginPath();
+  ctx.moveTo(0, cssH * 0.5);
+  ctx.lineTo(cssW, cssH * 0.5);
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  const len = data.length;
+  if (len < 2) return;
+  ctx.beginPath();
+  for (let i = 0; i < len; i++) {
+    const x = (i / (len - 1)) * cssW;
+    const y = (0.5 - data[i] * 0.45) * cssH;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.strokeStyle = clipped ? 'rgba(208, 80, 80, 0.9)' : 'rgba(242, 184, 55, 0.8)';
+  ctx.lineWidth = 1.5;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+}
+
 function startMeterLoop(els: Elements): void {
   stopMeterLoop();
   if (!state.analysers) return;
@@ -1867,6 +1910,8 @@ function startMeterLoop(els: Elements): void {
     }
     renderChannelLevel(els, 'L');
     renderChannelLevel(els, 'R');
+    drawWaveform(els.waveformL, scratchL, state.channelLevels.L.clipped);
+    drawWaveform(els.waveformR, state.channelCount > 1 ? scratchR : scratchL, state.channelLevels.R.clipped);
     state.meterFrame = requestAnimationFrame(step);
   };
   state.meterFrame = requestAnimationFrame(step);
