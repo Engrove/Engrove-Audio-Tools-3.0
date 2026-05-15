@@ -1,0 +1,101 @@
+name: Missing data
+description: Submit a missing value for an existing Engrove database item.
+title: "[Missing data] "
+labels:
+  - data-enrichment
+  - missing-data
+  - needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form when an item already exists in Engrove Audio Tools, but one or more useful fields are missing, unknown, or incomplete.
+
+        Example: a tonearm exists, but effective mass is missing.
+
+  - type: dropdown
+    id: database
+    attributes:
+      label: Database
+      description: Which database contains the existing item?
+      options:
+        - Cartridges
+        - Tonearms
+        - Null points
+        - Test records
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: item_name
+    attributes:
+      label: Existing item name
+      placeholder: "Example: SME 3009 Series II Improved"
+    validations:
+      required: true
+
+  - type: input
+    id: missing_field
+    attributes:
+      label: Missing field
+      description: Which missing field are you submitting?
+      placeholder: "Example: effective_mass_g, compliance, mounting_distance_mm"
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggested_value
+    attributes:
+      label: Suggested value
+      description: Enter the missing value and unit.
+      placeholder: |
+        Field:
+        Value:
+        Unit:
+      render: yaml
+    validations:
+      required: true
+
+  - type: input
+    id: source_url
+    attributes:
+      label: Source URL
+      description: Manufacturer page, manual, datasheet, distributor page, or other source.
+      placeholder: "https://..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: source_type
+    attributes:
+      label: Source type
+      description: What kind of source supports this value?
+      options:
+        - Manufacturer / official
+        - Manual / datasheet
+        - Distributor / retailer
+        - User measurement
+        - Forum / community
+        - Unknown
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Add context, uncertainty, variant information, or conflicting-source notes.
+      placeholder: "Explain anything that helps review this missing value."
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: submitter_check
+    attributes:
+      label: Submission check
+      options:
+        - label: I understand that submitted values are reviewed before they are added to the Engrove dataset.
+          required: true
+        - label: I have included the best source I could find.
+          required: true
