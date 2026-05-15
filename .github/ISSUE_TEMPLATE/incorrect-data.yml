@@ -1,0 +1,113 @@
+name: Incorrect data
+description: Report a wrong value in an existing Engrove database item.
+title: "[Incorrect data] "
+labels:
+  - data-correction
+  - incorrect-data
+  - needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form when an item already exists in Engrove Audio Tools, but one or more values appear to be wrong.
+
+        Please include the current value, the proposed correct value, and a source URL.
+
+  - type: dropdown
+    id: database
+    attributes:
+      label: Database
+      description: Which database contains the incorrect value?
+      options:
+        - Cartridges
+        - Tonearms
+        - Null points
+        - Test records
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: item_name
+    attributes:
+      label: Existing item name
+      placeholder: "Example: Ortofon 2M Black, SME 3009 Series II Improved"
+    validations:
+      required: true
+
+  - type: input
+    id: field_name
+    attributes:
+      label: Field name
+      description: Which field or value appears to be wrong?
+      placeholder: "Example: compliance, effective_mass_g, tracking_force_g, effective_length_mm"
+    validations:
+      required: true
+
+  - type: textarea
+    id: current_value
+    attributes:
+      label: Current value in Engrove
+      description: Copy the value currently shown in Engrove Audio Tools, if available.
+      placeholder: |
+        Field:
+        Current value:
+      render: yaml
+    validations:
+      required: false
+
+  - type: textarea
+    id: correct_value
+    attributes:
+      label: Correct value
+      description: Enter the value you believe is correct.
+      placeholder: |
+        Field:
+        Correct value:
+        Unit:
+      render: yaml
+    validations:
+      required: true
+
+  - type: input
+    id: source_url
+    attributes:
+      label: Source URL
+      description: Manufacturer page, manual, datasheet, distributor page, or other source.
+      placeholder: "https://..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: source_type
+    attributes:
+      label: Source type
+      description: What kind of source supports the correction?
+      options:
+        - Manufacturer / official
+        - Manual / datasheet
+        - Distributor / retailer
+        - User measurement
+        - Forum / community
+        - Unknown
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Add context, uncertainty, variant information, or conflicting-source notes.
+      placeholder: "Explain why the current value appears to be wrong."
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: submitter_check
+    attributes:
+      label: Submission check
+      options:
+        - label: I understand that corrections are reviewed before they are added to the Engrove dataset.
+          required: true
+        - label: I have included the best source I could find.
+          required: true
