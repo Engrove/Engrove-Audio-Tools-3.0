@@ -1,0 +1,119 @@
+name: Missing gear
+description: Submit a missing cartridge, tonearm, or related audio item.
+title: "[Missing gear] "
+labels:
+  - data-submission
+  - missing-gear
+  - needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve Engrove Audio Tools.
+
+        Use this form when a cartridge, tonearm, turntable, test record, or related item is missing from the database.
+
+        Please include a source URL whenever possible. Manufacturer pages, manuals, datasheets, and official distributor pages are preferred.
+
+  - type: dropdown
+    id: gear_type
+    attributes:
+      label: Gear type
+      description: What kind of item is missing?
+      options:
+        - Cartridge / Tonhuvud
+        - Tonearm / Tonarm
+        - Turntable
+        - Test record
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: brand
+    attributes:
+      label: Brand
+      placeholder: "Example: Ortofon, SME, Technics, Dynavector"
+    validations:
+      required: true
+
+  - type: input
+    id: model
+    attributes:
+      label: Model
+      placeholder: "Example: 2M Black, Series V, SL-1200GR2"
+    validations:
+      required: true
+
+  - type: input
+    id: variant
+    attributes:
+      label: Variant / version
+      description: Add version, length, output level, stylus version, generation, or other variant details if known.
+      placeholder: "Example: MkII, 9 inch, low output, 12 inch, Improved"
+    validations:
+      required: false
+
+  - type: input
+    id: source_url
+    attributes:
+      label: Source URL
+      description: Manufacturer page, manual, datasheet, distributor page, or other source.
+      placeholder: "https://..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: source_type
+    attributes:
+      label: Source type
+      description: What kind of source supports this submission?
+      options:
+        - Manufacturer / official
+        - Manual / datasheet
+        - Distributor / retailer
+        - User measurement
+        - Forum / community
+        - Unknown
+    validations:
+      required: true
+
+  - type: textarea
+    id: known_specs
+    attributes:
+      label: Known specs
+      description: Add any known values. Leave unknown values blank.
+      placeholder: |
+        effective_mass_g:
+        compliance:
+        compliance_frequency_hz:
+        tracking_force_g:
+        cartridge_weight_g:
+        mounting_distance_mm:
+        effective_length_mm:
+        overhang_mm:
+        offset_angle_deg:
+        stylus_type:
+        output_mv:
+      render: yaml
+    validations:
+      required: false
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Anything else that helps review this item.
+      placeholder: "Add context, caveats, variant notes, or duplicate risks."
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: submitter_check
+    attributes:
+      label: Submission check
+      options:
+        - label: I understand that submitted data will be reviewed before it is added to the Engrove dataset.
+          required: true
+        - label: I have included the best source I could find.
+          required: true
