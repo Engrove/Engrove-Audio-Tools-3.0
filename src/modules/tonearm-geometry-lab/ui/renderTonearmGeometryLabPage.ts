@@ -646,7 +646,7 @@ function draw(els: Elements): void {
     drawGraph(els);
   } else if (state.tab === 'behavior') {
     if (bctxEls && state.reference) {
-      recomputeBehaviorContext(bctxEls, bctxState, state.reference);
+      recomputeBehaviorContext(bctxEls, bctxState, state.reference, state.simulated);
     }
   } else {
     drawProtractor(els, state.tab === 'prot-sim');
@@ -1118,7 +1118,7 @@ function bindResize(els: Elements): void {
     timer = window.setTimeout(() => {
       draw(els);
       if (state.tab === 'behavior' && bctxEls && state.reference) {
-        recomputeBehaviorContext(bctxEls, bctxState, state.reference);
+        recomputeBehaviorContext(bctxEls, bctxState, state.reference, state.simulated);
       }
     }, 100);
   };
@@ -1259,7 +1259,7 @@ export function enableTonearmGeometryLabInteractions(): void {
 
   const onBctxChange = () => {
     if (bctxEls && state.reference) {
-      recomputeBehaviorContext(bctxEls, bctxState, state.reference);
+      recomputeBehaviorContext(bctxEls, bctxState, state.reference, state.simulated);
     }
   };
 
@@ -1294,7 +1294,7 @@ export function enableTonearmGeometryLabInteractions(): void {
     }
     if (state.tab === 'behavior') {
       requestAnimationFrame(() => {
-        if (bctxEls && state.reference) recomputeBehaviorContext(bctxEls, bctxState, state.reference);
+        if (bctxEls && state.reference) recomputeBehaviorContext(bctxEls, bctxState, state.reference, state.simulated);
       });
     }
   });

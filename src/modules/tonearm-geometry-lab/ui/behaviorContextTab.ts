@@ -16,7 +16,7 @@ import {
   classifyRisk,
   buildBehaviorInterpretation,
 } from '../engine/behaviorScoring';
-import type { ReferenceGeometry } from '../engine/geometry';
+import type { ReferenceGeometry, SimulatedGeometry } from '../engine/geometry';
 
 export type BehaviorContextState = {
   eccentricityMm: number;
@@ -247,8 +247,10 @@ function setupBctxCanvas(
 ): { ctx: CanvasRenderingContext2D; w: number; h: number } | null {
   if (!canvas || !canvas.parentElement) return null;
   const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  // Read only clientWidth — never clientHeight, which creates a feedback loop
+  // when canvas.style.height is written back each frame.
   const w = Math.max(1, canvas.parentElement.clientWidth);
-  const h = Math.max(1, canvas.parentElement.clientHeight);
+  const h = Math.max(240, Math.round(w * 0.42));
   canvas.width = Math.round(w * dpr);
   canvas.height = Math.round(h * dpr);
   canvas.style.width = `${w}px`;
@@ -612,12 +614,15 @@ export function recomputeBehaviorContext(
   bctxEls: BctxElements,
   bctxState: BehaviorContextState,
   reference: ReferenceGeometry,
+  simulated?: SimulatedGeometry | null,
 ): void {
+  // Prefer simulated geometry when valid so the tab reacts to what-if inputs
+  const geom = (simulated && simulated.valid) ? simulated : reference;
   const input: BehaviorContextInput = {
-    pivotToSpindleMm: reference.pivotToSpindleMm,
-    effectiveLengthMm: reference.effectiveLengthMm,
-    overhangMm: reference.overhangMm,
-    offsetAngleDeg: reference.offsetAngleDeg,
+    pivotToSpindleMm: geom.pivotToSpindleMm,
+    effectiveLengthMm: geom.effectiveLengthMm,
+    overhangMm: geom.overhangMm,
+    offsetAngleDeg: geom.offsetAngleDeg,
     innerGrooveMm: bctxState.innerGrooveMm,
     outerGrooveMm: bctxState.outerGrooveMm,
     eccentricityMm: bctxState.eccentricityMm,
@@ -662,16 +667,16 @@ export function recomputeBehaviorContext(
   setBar(bctxEls.barEccwarp, bctxEls.valEccwarp, avgEccWarp, avgEccWarp.toFixed(2));
 
   const geoSamples = sampleTrackingGeometry({
-    pivotToSpindleMm: reference.pivotToSpindleMm,
-    effectiveLengthMm: reference.effectiveLengthMm,
-    offsetAngleDeg: reference.offsetAngleDeg,
+    pivotToSpindleMm: geom.pivotToSpindleMm,
+    effectiveLengthMm: geom.effectiveLengthMm,
+    offsetAngleDeg: geom.offsetAngleDeg,
     innerGrooveMm: bctxState.innerGrooveMm,
     outerGrooveMm: bctxState.outerGrooveMm,
   });
   const rms = calcRmsTrackingError(geoSamples);
   const maxErr = calcMaxTrackingError(geoSamples);
   const hasNulls = findNullPoints(geoSamples).length > 0;
-  const offsetBurden = calcOffsetBurden(reference.offsetAngleDeg);
+  const offsetBurden = calcOffsetBurden(geom.offsetAngleDeg);
 
   const interp = buildBehaviorInterpretation({
     rmsTrackingErrorDeg: rms,
@@ -679,7 +684,7 @@ export function recomputeBehaviorContext(
     offsetBurden,
     totalRisk,
     hasNulls,
-    overhangMm: reference.overhangMm,
+    overhangMm: geom.overhangMm,
   });
 
   if (bctxEls.interpretation) {
