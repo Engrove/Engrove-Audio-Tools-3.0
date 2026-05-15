@@ -290,8 +290,9 @@ function audioSourcePanelMarkup(): string {
               <td class="ea-col-value">
                 <div class="mlab-segmented" role="radiogroup" aria-label="Audio source mode">
                   <button class="mlab-segmented-option" role="radio" aria-checked="true" type="button" data-mlab-source-mode="live">Live capture</button>
-                  <button class="mlab-segmented-option" role="radio" aria-checked="false" type="button" data-mlab-source-mode="self-test">Self-test</button>
+                  <button class="mlab-segmented-option mlab-segmented-option--demo" role="radio" aria-checked="false" type="button" data-mlab-source-mode="self-test">Self-test</button>
                 </div>
+                <p class="ea-form-table-sublabel mlab-self-test-hint">No interface connected? Run a simulated test record to see how the lab works.</p>
               </td>
               <td class="ea-col-meta"><span class="ea-badge">Mode</span></td>
             </tr>
@@ -1734,8 +1735,8 @@ function renderSessionStatus(els: Elements): void {
       ? 'Self-test signal running.'
       : 'Live audio capture running.');
   } else if (state.captureState === 'connecting') {
-    els.sessionStatus.textContent = 'Requesting audio access…';
-    setActionStatus(els, 'active', 'Requesting microphone permission.');
+    els.sessionStatus.textContent = 'Waiting for browser audio permission...';
+    setActionStatus(els, 'active', 'Waiting for browser audio permission...');
   } else if (state.captureState === 'error') {
     els.sessionStatus.textContent = state.errorMessage ?? 'Audio capture failed.';
     setActionStatus(els, 'error', state.errorMessage ?? 'Audio capture failed.');

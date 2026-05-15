@@ -468,3 +468,13 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+.mlab-segmented-option--demo {
+  border-left: 1px solid var(--ea-border-soft);
+}
+
+.mlab-self-test-hint {
+  margin-top: var(--ea-space-2);
+  display: block;
+}

@@ -311,3 +311,18 @@
   gap: var(--ea-space-3);
   align-items: center;
 }
+
+
+.ea-help-toggle {
+  position: relative;
+}
+
+.ea-help-indicator {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ea-interactive-accent);
+}
