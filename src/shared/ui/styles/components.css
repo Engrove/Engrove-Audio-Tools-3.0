@@ -311,3 +311,171 @@
   gap: var(--ea-space-3);
   align-items: center;
 }
+
+/* ── Global cursor / interaction rules ── */
+button:not(:disabled),
+[role='button'],
+.clickable,
+.toggle,
+.schema-option,
+.manual-entry-link {
+  cursor: pointer;
+}
+
+button:not(:disabled):hover,
+[role='button']:hover,
+.clickable:hover,
+.toggle:hover,
+.schema-option:hover,
+.manual-entry-link:hover {
+  background: var(--ea-interactive-accent-soft);
+}
+
+button:focus-visible,
+a:focus-visible,
+[role='button']:focus-visible,
+.toggle:focus-visible,
+.schema-option:focus-visible {
+  outline: 2px solid var(--ea-interactive-accent);
+  outline-offset: 3px;
+}
+
+/* ── Data submission links ── */
+.data-submission-link {
+  font: inherit;
+  color: var(--ea-text-link, currentColor);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.data-submission-link:hover,
+.data-submission-link:focus-visible {
+  text-decoration-thickness: 0.12em;
+}
+
+.data-submission-link:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* ── Footer ── */
+.app-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-footer-separator {
+  opacity: 0.65;
+}
+
+/* ── Record actions (report/submit links on dataset cards) ── */
+.record-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+/* ── Empty states ── */
+.empty-state .data-submission-link {
+  display: inline-flex;
+  margin-top: 0.5rem;
+}
+
+.empty-state--instructional {
+  border: 1px dashed var(--ea-border-soft);
+  border-radius: var(--ea-radius-md, 6px);
+  padding: 1rem;
+  background: var(--ea-bg-panel-alt);
+}
+
+/* ── Manual entry link (button styled as inline link) ── */
+.manual-entry-link {
+  border: 0;
+  padding: 0;
+  color: var(--ea-text-link, currentColor);
+  background: transparent;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.manual-entry-link:hover,
+.manual-entry-link:focus-visible {
+  background: transparent;
+  text-decoration-thickness: 0.12em;
+}
+
+/* ── Missing / null value indicators ── */
+.input--missing-data {
+  border-color: var(--ea-status-warning, #d97706);
+  box-shadow: 0 0 0 1px var(--ea-status-warning, #d97706);
+}
+
+.field-warning {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  color: var(--ea-status-warning, #d97706);
+}
+
+/* ── Help indicator dot ── */
+.ea-help-toggle {
+  position: relative;
+}
+
+.ea-help-indicator-dot {
+  position: absolute;
+  top: 0.2rem;
+  right: 0.2rem;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: var(--ea-interactive-accent);
+  pointer-events: none;
+}
+
+/* ── Welcome banner ── */
+.welcome-banner {
+  width: min(100%, var(--ea-size-page-max));
+  margin: 0 auto var(--ea-space-4);
+  padding: var(--ea-space-3) var(--ea-page-padding);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ea-space-3);
+  border: 1px solid var(--ea-border-primary);
+  border-radius: var(--ea-radius-md);
+  background: var(--ea-bg-panel-alt);
+  font-size: var(--ea-font-size-body);
+  color: var(--ea-text-medium);
+}
+
+.welcome-banner__text {
+  flex: 1;
+  margin: 0;
+  min-width: 0;
+}
+
+.welcome-banner__actions {
+  display: flex;
+  gap: var(--ea-space-2);
+  flex-shrink: 0;
+}
+
+/* ── Self-test callout in Measurement Lab ── */
+.mlab-self-test-callout {
+  border: 1px solid var(--ea-border-soft);
+  border-radius: var(--ea-radius-md, 6px);
+  padding: 1rem;
+  background: var(--ea-bg-panel-alt);
+  margin-top: var(--ea-space-3);
+}
+
+.mlab-self-test-callout p {
+  margin: 0 0 var(--ea-space-2);
+  color: var(--ea-text-medium);
+  font-size: var(--ea-font-size-body);
+}

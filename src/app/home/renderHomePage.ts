@@ -1,4 +1,6 @@
 import { renderToolTopbar } from '../../shared/ui/renderToolTopbar';
+import { renderDataSubmissionLink } from '../../shared/ui/dataSubmissionLinks';
+import { openHelpModal } from '../../shared/ui/helpModal';
 
 const icons = {
   match: `<svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="1" y1="18" x2="21" y2="18" stroke-width="1"/><path d="M1 17C5 17 7 17 9 11C10 8 10.5 6 11 6C11.5 6 12 8 13 11C15 17 17 17 21 17"/><line x1="8" y1="9" x2="8" y2="18" stroke-dasharray="2 1.5" stroke-width="1"/><line x1="14" y1="9" x2="14" y2="18" stroke-dasharray="2 1.5" stroke-width="1"/></svg>`,
@@ -104,12 +106,25 @@ function toggleTheme(): void {
   localStorage.setItem('engrove-theme', next);
 }
 
+function renderWelcomeBanner(): string {
+  return `
+    <div class="welcome-banner" data-welcome-banner aria-label="Welcome message" role="note">
+      <p class="welcome-banner__text">New here? Start with the help guide or choose a tool below.</p>
+      <div class="welcome-banner__actions">
+        <button class="ea-button ea-button--ghost" type="button" data-welcome-help>Open help</button>
+        <button class="ea-button ea-button--ghost" type="button" data-welcome-dismiss>Dismiss</button>
+      </div>
+    </div>
+  `;
+}
+
 export function renderHomePage(): string {
   return `
     <div class="ea-site-shell">
       ${renderToolTopbar('tools')}
 
       <main class="ea-home-main" aria-labelledby="home-title">
+        ${renderWelcomeBanner()}
         <section class="ea-home-header">
           <h1 id="home-title">Engrove Audio Tools</h1>
           <p class="ea-home-header-sub">
@@ -122,11 +137,36 @@ export function renderHomePage(): string {
           ${tools.map(renderToolCard).join('')}
         </section>
       </main>
-      <footer class="ea-home-footer">
-        Engrove Audio Tools 3.0 · Public work-in-progress · Reference data is best-effort
+      <footer class="ea-home-footer app-footer">
+        <span>Engrove Audio Tools 3.0</span>
+        <span class="app-footer-separator" aria-hidden="true">·</span>
+        <span>Public work-in-progress</span>
+        <span class="app-footer-separator" aria-hidden="true">·</span>
+        <span>Reference data is best-effort</span>
+        <span class="app-footer-separator" aria-hidden="true">·</span>
+        ${renderDataSubmissionLink({ kind: 'choose', label: 'Missing your gear? Submit data here' })}
       </footer>
     </div>
   `;
+}
+
+const WELCOME_BANNER_KEY = 'engrove.welcomeBanner.dismissed';
+
+function shouldShowWelcomeBanner(): boolean {
+  try {
+    return localStorage.getItem(WELCOME_BANNER_KEY) !== 'true';
+  } catch {
+    return false;
+  }
+}
+
+function dismissWelcomeBanner(): void {
+  try {
+    localStorage.setItem(WELCOME_BANNER_KEY, 'true');
+  } catch {
+    /* localStorage may be unavailable */
+  }
+  document.querySelector<HTMLElement>('[data-welcome-banner]')?.remove();
 }
 
 export function enableHomePageInteractions(): void {
@@ -135,4 +175,18 @@ export function enableHomePageInteractions(): void {
   document.querySelector<HTMLButtonElement>('[data-theme-toggle]')?.addEventListener('click', () => {
     toggleTheme();
   });
+
+  const banner = document.querySelector<HTMLElement>('[data-welcome-banner]');
+  if (banner) {
+    if (!shouldShowWelcomeBanner()) {
+      banner.remove();
+    } else {
+      document.querySelector<HTMLButtonElement>('[data-welcome-help]')?.addEventListener('click', () => {
+        openHelpModal();
+      });
+      document.querySelector<HTMLButtonElement>('[data-welcome-dismiss]')?.addEventListener('click', () => {
+        dismissWelcomeBanner();
+      });
+    }
+  }
 }

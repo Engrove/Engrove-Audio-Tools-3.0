@@ -117,6 +117,7 @@
   font-size: 11px;
   letter-spacing: var(--ea-letter-label);
   text-align: center;
+  justify-content: center;
 }
 
 @media (max-width: 760px) {

@@ -281,6 +281,8 @@ function setFieldSourceState(state: WorkbenchState, fieldName: QuickMatchFieldNa
   const sourceCell = document.querySelector<HTMLElement>(`[data-field-source="${fieldName}"]`);
   const row = document.querySelector<HTMLElement>(`[data-resonance-field="${fieldName}"]`);
   const statusCell = row?.querySelector<HTMLElement>('.ea-col-status');
+  const inputEl = row?.querySelector<HTMLInputElement>('.tm-lab-field__input');
+  let warningEl = row?.querySelector<HTMLElement>('.field-warning');
 
   if (sourceCell) {
     sourceCell.innerHTML = badgeMarkup(descriptor.label, descriptor.className);
@@ -293,6 +295,22 @@ function setFieldSourceState(state: WorkbenchState, fieldName: QuickMatchFieldNa
   if (statusCell) {
     const statusClass = source === 'unavailable' ? 'planned' : 'done';
     statusCell.innerHTML = statusDotMarkup(statusClass);
+  }
+
+  if (inputEl) {
+    const isUnavailable = source === 'unavailable' || isMissingValue(inputEl.value);
+    inputEl.classList.toggle('input--missing-data', isUnavailable);
+    if (isUnavailable) {
+      if (!warningEl) {
+        const container = inputEl.parentElement ?? row?.querySelector('.ea-col-value');
+        if (container) {
+          container.insertAdjacentHTML('beforeend', missingValueWarning());
+          warningEl = container.querySelector<HTMLElement>('.field-warning');
+        }
+      }
+    } else if (warningEl) {
+      warningEl.remove();
+    }
   }
 }
 
@@ -326,6 +344,14 @@ function normalizedSnapshotFieldSources(value: unknown): FieldSourceState {
     trackingForceG: normalizedSnapshotFieldSource(record.trackingForceG, 'restored-local'),
     compliance10HzCu: normalizedSnapshotFieldSource(record.compliance10HzCu, 'restored-local'),
   };
+}
+
+function isMissingValue(value: unknown): boolean {
+  return value === null || value === undefined || value === '' || Number.isNaN(value);
+}
+
+function missingValueWarning(): string {
+  return `<div class="field-warning">Data missing – please enter manually</div>`;
 }
 
 function statusDotMarkup(statusClass: string): string {
@@ -703,6 +729,20 @@ export function resultMarkup(result: ResonanceResult, diagnosis: ResonanceDiagno
           </div>
         </dl>
         <ul class="tm-lab-result__suggestions">${suggestionItems}</ul>
+      </div>
+      <div class="record-actions" aria-label="Dataset feedback">
+        <a
+          class="data-submission-link data-submission-link--record-action"
+          href="https://github.com/Engrove/Engrove-Audio-Tools-3.0/issues/new?template=incorrect-data.yml"
+          target="_blank"
+          rel="noopener noreferrer"
+        >Report incorrect data</a>
+        <a
+          class="data-submission-link data-submission-link--record-action"
+          href="https://github.com/Engrove/Engrove-Audio-Tools-3.0/issues/new?template=missing-data.yml"
+          target="_blank"
+          rel="noopener noreferrer"
+        >Submit missing data</a>
       </div>
     </section>
   `;

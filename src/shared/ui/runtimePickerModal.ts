@@ -479,8 +479,21 @@ export function filterRuntimePickerItems(
   return filtered.slice(0, limit);
 }
 
+const MISSING_GEAR_URL =
+  'https://github.com/Engrove/Engrove-Audio-Tools-3.0/issues/new?template=missing-gear.yml';
+
 export function runtimePickerEmptyMarkup(message: unknown): string {
-  return `<p class="runtime-picker-empty">${renderText(message)}</p>`;
+  return `
+    <div class="runtime-picker-empty">
+      <p>${renderText(message)}</p>
+      <a
+        class="data-submission-link"
+        href="${MISSING_GEAR_URL}"
+        target="_blank"
+        rel="noopener noreferrer"
+      >Missing your gear? Submit data here</a>
+    </div>
+  `;
 }
 
 export function runtimePickerResultListMarkup(

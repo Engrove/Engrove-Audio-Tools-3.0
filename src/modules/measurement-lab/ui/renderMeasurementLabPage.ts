@@ -345,6 +345,10 @@ function audioSourcePanelMarkup(): string {
           <button class="ea-button ea-button--primary" type="button" data-mlab-connect>Connect</button>
           <button class="ea-button ea-button--ghost" type="button" data-mlab-disconnect disabled>Disconnect</button>
         </div>
+        <div class="mlab-self-test-callout" aria-label="Self-test option">
+          <p>No interface connected? Run a simulated test record to see how the lab works.</p>
+          <button class="ea-button ea-button--secondary" type="button" data-mlab-run-self-test>Run self-test</button>
+        </div>
         <p class="ea-muted mlab-honesty" data-mlab-honesty>Sample-rate honesty report will appear after the audio context is running.</p>
       </div>
     </section>
@@ -825,6 +829,7 @@ function elements(root: ParentNode) {
     logBody: root.querySelector<HTMLElement>('[data-mlab-log-body]'),
     logResetBtn: root.querySelector<HTMLButtonElement>('[data-mlab-log-reset]'),
     logExportBtn: root.querySelector<HTMLButtonElement>('[data-mlab-log-export]'),
+    selfTestBtn: root.querySelector<HTMLButtonElement>('[data-mlab-run-self-test]'),
   };
 }
 
@@ -1723,19 +1728,23 @@ function renderConnectionButtons(els: Elements): void {
   }
 }
 
+function setSessionStatusText(els: Elements, text: string): void {
+  if (els.sessionStatus) els.sessionStatus.textContent = text;
+}
+
 function renderSessionStatus(els: Elements): void {
   if (!els.sessionStatus) return;
   if (state.captureState === 'live') {
     const sourceLabel = state.sourceMode === 'self-test'
       ? `Self-test sine at ${selfTestFrequencyHz} Hz.`
       : `Live capture from ${describeDevice(state.devices.find((d) => d.deviceId === state.selectedDeviceId) ?? null)}.`;
-    els.sessionStatus.textContent = `Capture active. ${sourceLabel}`;
+    els.sessionStatus.textContent = `Audio input connected. ${sourceLabel}`;
     setActionStatus(els, 'active', state.sourceMode === 'self-test'
       ? 'Self-test signal running.'
       : 'Live audio capture running.');
   } else if (state.captureState === 'connecting') {
-    els.sessionStatus.textContent = 'Requesting audio access…';
-    setActionStatus(els, 'active', 'Requesting microphone permission.');
+    els.sessionStatus.textContent = 'Connecting to audio input…';
+    setActionStatus(els, 'active', 'Requesting audio access.');
   } else if (state.captureState === 'error') {
     els.sessionStatus.textContent = state.errorMessage ?? 'Audio capture failed.';
     setActionStatus(els, 'error', state.errorMessage ?? 'Audio capture failed.');
@@ -2056,10 +2065,16 @@ async function connectMeasurementLab(els: Elements): Promise<void> {
   state.errorMessage = null;
   renderConnectionButtons(els);
   renderIriaaToggle(els);
-  renderSessionStatus(els);
+  if (state.sourceMode === 'live') {
+    setSessionStatusText(els, 'Waiting for browser audio permission…');
+  } else {
+    setSessionStatusText(els, 'Starting self-test…');
+  }
+  setActionStatus(els, 'active', 'Requesting audio access.');
   try {
     await teardownAudio();
     if (state.sourceMode === 'live') {
+      setSessionStatusText(els, 'Connecting to audio input…');
       await startLiveCapture(els);
       try {
         const devices = await listAudioInputDevices();
@@ -2079,11 +2094,19 @@ async function connectMeasurementLab(els: Elements): Promise<void> {
     appendLog(`Connected — ${state.sourceMode === 'live' ? 'live capture' : 'self-test'} @ ${state.honesty?.contextActualHz?.toLocaleString() ?? '?'} Hz`);
   } catch (error) {
     state.captureState = 'error';
-    state.errorMessage = error instanceof AudioStreamUnavailableError
-      ? error.message
-      : error instanceof Error
+    const isPermissionDenied = error instanceof Error && (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError');
+    const isNoDevice = error instanceof Error && (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError');
+    if (isPermissionDenied) {
+      state.errorMessage = 'Permission denied. Enable microphone/audio input access in the browser.';
+    } else if (isNoDevice) {
+      state.errorMessage = 'No audio input found. Connect an audio interface and try again.';
+    } else {
+      state.errorMessage = error instanceof AudioStreamUnavailableError
         ? error.message
-        : 'Audio capture failed.';
+        : error instanceof Error
+          ? error.message
+          : 'Audio capture failed.';
+    }
     appendLog(`Connection failed: ${state.errorMessage ?? 'unknown error'}`);
     await teardownAudio();
     clearMeterDom(els);
@@ -2187,6 +2210,13 @@ export function enableMeasurementLabInteractions(): void {
 
   els.disconnect?.addEventListener('click', () => {
     void disconnectMeasurementLab(els);
+  });
+
+  els.selfTestBtn?.addEventListener('click', () => {
+    if (state.captureState === 'live' || state.captureState === 'connecting') return;
+    state.sourceMode = 'self-test';
+    renderSourceMode(els);
+    void connectMeasurementLab(els);
   });
 
   els.exportBtn?.addEventListener('click', () => {

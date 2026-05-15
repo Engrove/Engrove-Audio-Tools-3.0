@@ -1,5 +1,24 @@
 const styleElementId = 'engrove-help-modal-styles';
 
+const HELP_DOT_KEY = 'engrove.helpDot.seen';
+
+function shouldShowHelpDot(): boolean {
+  try {
+    return localStorage.getItem(HELP_DOT_KEY) !== 'true';
+  } catch {
+    return false;
+  }
+}
+
+function markHelpDotSeen(): void {
+  try {
+    localStorage.setItem(HELP_DOT_KEY, 'true');
+  } catch {
+    /* localStorage may be unavailable */
+  }
+  document.querySelectorAll<HTMLElement>('[data-help-dot]').forEach((dot) => dot.remove());
+}
+
 const helpModalCss = `
 .ea-help-backdrop {
   position: fixed;
@@ -562,8 +581,15 @@ export function openHelpModal(): void {
 }
 
 export function mountHelpModal(): void {
+  document.querySelectorAll<HTMLElement>('[data-help-dot]').forEach((dot) => {
+    if (!shouldShowHelpDot()) dot.remove();
+  });
+
   document.addEventListener('click', (event) => {
     const button = (event.target as Element | null)?.closest('[data-help-toggle]');
-    if (button) openHelpModal();
+    if (button) {
+      markHelpDotSeen();
+      openHelpModal();
+    }
   });
 }
