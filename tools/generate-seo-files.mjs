@@ -3,7 +3,6 @@ import { resolve } from "node:path";
 
 const siteUrl =
   process.env.PUBLIC_SITE_URL ||
-  process.env.CF_PAGES_URL ||
   "https://engrove-toolbox.pages.dev";
 
 const baseUrl = siteUrl.replace(/\/$/, "");
