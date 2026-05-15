@@ -440,7 +440,8 @@ function drawStackGraph(
 
 function drawInnerMicroscope(
   canvas: HTMLCanvasElement | null,
-  innerMm: number,
+  samples: BehaviorSample[],
+  innerGrooveMm: number,
 ): void {
   const setup = setupBctxCanvas(canvas);
   if (!setup) return;
@@ -448,16 +449,108 @@ function drawInnerMicroscope(
   const dark = isDark();
   const cGrid = dark ? '#2a2f37' : '#e6e8ec';
   const cText = dark ? '#9098a3' : '#5a606b';
+
+  const zoneInner = innerGrooveMm;
+  const zoneOuter = Math.min(innerGrooveMm + 20, samples[0]?.radiusMm ?? innerGrooveMm + 20);
+  const zone = samples.filter((s) => s.radiusMm >= zoneInner && s.radiusMm <= zoneOuter);
+
   const padX = 56, padY = 40;
+  const gW = Math.max(0, w - padX * 2);
+  const gH = Math.max(0, h - padY * 2);
+
   ctx.clearRect(0, 0, w, h);
+
+  if (zone.length === 0) {
+    ctx.fillStyle = cText;
+    ctx.font = '11px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('No inner-groove samples in range.', w / 2, h / 2);
+    return;
+  }
+
+  const rMin = zoneInner;
+  const rMax = zoneOuter;
+  const mapX = (r: number) => padX + ((r - rMin) / Math.max(rMax - rMin, 1)) * gW;
+
+  const maxErr = Math.max(...zone.map((s) => Math.abs(s.angularErrorDeg)), 0.5);
+  const maxVel = Math.max(...zone.map((s) => s.velocityPenalty), 1.5);
+  const maxScrub = Math.max(...zone.map((s) => s.scrubProxy), 0.5);
+
+  const scale = Math.max(maxErr, maxVel, maxScrub, 1);
+  const mapY = (v: number) => padY + gH - (v / scale) * gH;
+
   ctx.strokeStyle = cGrid;
+  ctx.lineWidth = 1;
+  ctx.font = '10px JetBrains Mono, monospace';
   ctx.fillStyle = cText;
-  ctx.font = '11px Inter, sans-serif';
   ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  for (let r = Math.ceil(rMin / 5) * 5; r <= rMax + 0.5; r += 5) {
+    const x = mapX(r);
+    ctx.beginPath();
+    ctx.moveTo(x, padY);
+    ctx.lineTo(x, h - padY);
+    ctx.stroke();
+    ctx.fillStyle = cText;
+    ctx.fillText(`${r.toFixed(0)}`, x, h - padY + 4);
+  }
+  ctx.textAlign = 'right';
   ctx.textBaseline = 'middle';
-  ctx.fillText('Inner-groove microscope — data renders when behavior context is computed.', w / 2, h / 2);
-  void padX; void cGrid;
-  void innerMm;
+  for (let i = 0; i <= 4; i++) {
+    const v = (i / 4) * scale;
+    const y = mapY(v);
+    ctx.strokeStyle = cGrid;
+    ctx.beginPath();
+    ctx.moveTo(padX, y);
+    ctx.lineTo(w - padX, y);
+    ctx.stroke();
+    ctx.fillStyle = cText;
+    ctx.fillText(v.toFixed(1), padX - 4, y);
+  }
+
+  const drawLine = (
+    pts: BehaviorSample[],
+    pick: (s: BehaviorSample) => number,
+    color: string,
+    width: number,
+    dashed = false,
+  ) => {
+    if (pts.length === 0) return;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.setLineDash(dashed ? [4, 3] : []);
+    ctx.beginPath();
+    pts.forEach((s, i) => {
+      const x = mapX(s.radiusMm);
+      const y = mapY(pick(s));
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    ctx.setLineDash([]);
+  };
+
+  drawLine(zone, (s) => Math.abs(s.angularErrorDeg), '#f2b837', 2);
+  drawLine(zone, (s) => s.velocityPenalty, '#5a98e0', 2, true);
+  drawLine(zone, (s) => s.eccentricityPenalty / 100 * scale, '#4ab86a', 1.5, true);
+  drawLine(zone, (s) => s.scrubProxy, '#9b59b6', 2);
+  drawLine(zone, (s) => s.totalBehaviorRisk * scale, '#d05050', 2, true);
+
+  ctx.font = '10px Inter, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  const legend = [
+    ['Angular error (FORMULA)', '#f2b837'],
+    ['Velocity penalty (MODEL)', '#5a98e0'],
+    ['Eccentricity (MODEL)', '#4ab86a'],
+    ['Scrub proxy (MODEL)', '#9b59b6'],
+    ['Total risk (MODEL)', '#d05050'],
+  ] as const;
+  legend.forEach(([lbl, col], i) => {
+    ctx.fillStyle = col;
+    ctx.fillText(lbl, padX + 8, padY + 4 + i * 14);
+  });
 }
 
 export type BctxElements = {
@@ -601,5 +694,5 @@ export function recomputeBehaviorContext(
 
   drawOverlayGraph(bctxEls.canvasOverlay, samples, bctxState.innerGrooveMm, bctxState.outerGrooveMm);
   drawStackGraph(bctxEls.canvasStack, samples, bctxState.innerGrooveMm, bctxState.outerGrooveMm);
-  drawInnerMicroscope(bctxEls.canvasInner, bctxState.innerGrooveMm);
+  drawInnerMicroscope(bctxEls.canvasInner, samples, bctxState.innerGrooveMm);
 }
