@@ -14,7 +14,7 @@ const tools: readonly ToolCard[] = [
     id: 'System matching',
     icon: '∿',
     title: 'Tonearm Match Lab',
-    summary: 'Compute cantilever-arm resonance from cartridge compliance and tonearm effective mass, with provenance tracking and a closed classification vocabulary.',
+    summary: 'Estimate cartridge–tonearm resonance and see whether the combination falls within a practical setup range.',
     href: '/tonearm-calculator',
     ariaLabel: 'Open Tonearm Match Lab',
   },
@@ -22,7 +22,7 @@ const tools: readonly ToolCard[] = [
     id: 'Conversion',
     icon: '⇄',
     title: 'Compliance Estimator',
-    summary: 'Convert manufacturer 100 Hz dynamic compliance to the 10 Hz quasi-static value used in the resonance equation.',
+    summary: 'Estimate the 10 Hz compliance value needed for cartridge–tonearm resonance calculations.',
     href: '/compliance',
     ariaLabel: 'Open Compliance Estimator',
   },
@@ -30,7 +30,7 @@ const tools: readonly ToolCard[] = [
     id: 'Geometry',
     icon: '◎',
     title: 'Tonearm Geometry Lab',
-    summary: 'Compute ideal alignment for a chosen standard and method, then simulate mounting errors against the math. Print-ready arc protractor.',
+    summary: 'Calculate alignment geometry, null points, overhang and offset angle for a pivoted tonearm.',
     href: '/geometry-lab',
     ariaLabel: 'Open Tonearm Geometry Lab',
   },
@@ -38,7 +38,7 @@ const tools: readonly ToolCard[] = [
     id: 'VTA / SRA',
     icon: '⌞',
     title: 'VTA & SRA Lab',
-    summary: 'Solve stylus rake angle changes from pillar and mat adjustments. Live SVG side profile; inverse solve for a target SRA delta.',
+    summary: 'Estimate stylus rake angle changes caused by tonearm height or mat thickness adjustments.',
     href: '/vta-sra-lab',
     ariaLabel: 'Open VTA and SRA Lab',
   },
@@ -46,7 +46,7 @@ const tools: readonly ToolCard[] = [
     id: 'Audio capture',
     icon: '◉',
     title: 'Measurement Lab',
-    summary: 'Capture audio from a test record via your ADC under strict measurement constraints. S30A foundation: device selection, sample-rate honesty and live peak/RMS metering.',
+    summary: 'Inspect speed, wow & flutter, channel balance and signal levels from test-record measurements.',
     href: '/measurement-lab',
     ariaLabel: 'Open Measurement Lab',
   },
@@ -54,8 +54,8 @@ const tools: readonly ToolCard[] = [
     id: 'Reference data',
     icon: '▤',
     title: 'Data Explorer',
-    summary: 'Browse the cartridge and tonearm reference dataset with provenance flags and dataset-version pinning.',
-    ariaLabel: 'Data Explorer is not routed in this build',
+    summary: 'Browse cartridge and tonearm reference data to find useful setup values, compare specifications and support your calculations across the tools.',
+    ariaLabel: 'Data Explorer — coming soon',
   },
 ];
 
@@ -104,8 +104,8 @@ export function renderHomePage(): string {
         <section class="ea-home-header">
           <h1 id="home-title">Engrove Audio Tools</h1>
           <p class="ea-home-header-sub">
-            Precision tools and reference data for analog optimization. Select a tool to begin.
-            Every tool is a workspace, not a page; every result is provenance-tagged and recomputes live.
+            Precision setup tools for turntable, tonearm and cartridge optimisation.
+            Use these tools to estimate cartridge–tonearm resonance, convert compliance figures, calculate tonearm alignment, understand VTA/SRA changes and inspect measurements from test records.
           </p>
         </section>
 

@@ -165,6 +165,31 @@ body {
   outline: none;
 }
 
+.ea-help-toggle {
+  width: 26px;
+  height: 26px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--ea-border-topbar);
+  border-radius: var(--ea-radius-sm);
+  background: transparent;
+  color: var(--ea-text-on-dark);
+  font-family: var(--ea-font-data);
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+
+.ea-help-toggle:hover,
+.ea-help-toggle:focus-visible {
+  border-color: var(--ea-interactive-accent);
+  color: var(--ea-interactive-accent);
+  background: var(--ea-interactive-accent-soft);
+  outline: none;
+}
+
 .ea-maintainer-avatar {
   width: 24px;
   height: 24px;

@@ -36,6 +36,7 @@ export function renderToolTopbar(active: ToolRouteKey): string {
       <div class="ea-topbar-meta">
         <span class="ea-build-status">${buildVersionLabel()}</span>
         <button class="ea-theme-toggle" type="button" data-theme-toggle aria-label="Toggle light and dark theme">&#9788;</button>
+        <button class="ea-help-toggle" type="button" data-help-toggle aria-label="Open help">?</button>
         <img class="ea-maintainer-avatar" src="/images/engrove.webp" alt="" aria-hidden="true" />
       </div>
     </header>
