@@ -28,8 +28,17 @@ import {
   openRuntimePickerModal,
   type RuntimePickerItem,
 } from '../../../shared/ui/runtimePickerModal';
+import {
+  behaviorContextTabMarkup,
+  bctxElements,
+  recomputeBehaviorContext,
+  defaultBehaviorState,
+  type BehaviorContextState,
+  type BctxElements,
+} from './behaviorContextTab';
+import type { StylusProfile, WarpSeverity } from '../engine/behaviorContext';
 
-type GeometryTab = 'graph' | 'prot-ideal' | 'prot-sim';
+type GeometryTab = 'graph' | 'behavior' | 'prot-ideal' | 'prot-sim';
 type PivotSource = 'manual' | 'dataset-derived' | 'default';
 
 type SelectedTonearm = {
@@ -72,6 +81,8 @@ const defaultState = (): GeometryState => ({
 });
 
 const state: GeometryState = defaultState();
+const bctxState: BehaviorContextState = defaultBehaviorState();
+let bctxEls: BctxElements | null = null;
 
 let tonearmPickerItemsPromise: Promise<RuntimePickerItem[]> | null = null;
 
@@ -321,6 +332,7 @@ function visualizationMarkup(): string {
         <span class="ea-panel-header-spacer"></span>
         <div class="ea-tabs" role="tablist" aria-label="Visualization tabs" data-geo-tabs>
           <button class="ea-tab" role="tab" type="button" data-geo-tab="graph" aria-selected="true" tabindex="0">Tracking error</button>
+          <button class="ea-tab" role="tab" type="button" data-geo-tab="behavior" aria-selected="false" tabindex="-1">Behavior Context</button>
           <button class="ea-tab" role="tab" type="button" data-geo-tab="prot-ideal" aria-selected="false" tabindex="-1">Ideal protractor</button>
           <button class="ea-tab" role="tab" type="button" data-geo-tab="prot-sim" aria-selected="false" tabindex="-1">Simulated protractor</button>
         </div>
@@ -329,6 +341,7 @@ function visualizationMarkup(): string {
         <div class="geo-viz-container" data-geo-view="graph">
           <canvas data-geo-canvas="graph" role="img" aria-label="Tracking error and estimated weighted distortion vs groove radius"></canvas>
         </div>
+        ${behaviorContextTabMarkup()}
         <div class="geo-viz-container geo-viz-container--print" data-geo-view="prot" hidden>
           <canvas data-geo-canvas="prot" role="img" aria-label="Arc protractor preview"></canvas>
         </div>
@@ -408,6 +421,7 @@ function elements(root: ParentNode) {
     canvasGraph: root.querySelector<HTMLCanvasElement>('[data-geo-canvas="graph"]'),
     canvasProt: root.querySelector<HTMLCanvasElement>('[data-geo-canvas="prot"]'),
     viewGraph: root.querySelector<HTMLElement>('[data-geo-view="graph"]'),
+    viewBehavior: root.querySelector<HTMLElement>('[data-geo-view="behavior"]'),
     viewProt: root.querySelector<HTMLElement>('[data-geo-view="prot"]'),
     vizStatus: root.querySelector<HTMLElement>('[data-geo-viz-status]'),
     resetSim: root.querySelector<HTMLButtonElement>('[data-geo-reset-sim]'),
@@ -630,6 +644,10 @@ function draw(els: Elements): void {
   }
   if (state.tab === 'graph') {
     drawGraph(els);
+  } else if (state.tab === 'behavior') {
+    if (bctxEls && state.reference) {
+      recomputeBehaviorContext(bctxEls, bctxState, state.reference);
+    }
   } else {
     drawProtractor(els, state.tab === 'prot-sim');
   }
@@ -989,7 +1007,8 @@ function setActiveTab(els: Elements, tab: GeometryTab): void {
     button.tabIndex = matches ? 0 : -1;
   });
   if (els.viewGraph) els.viewGraph.hidden = tab !== 'graph';
-  if (els.viewProt) els.viewProt.hidden = tab === 'graph';
+  if (els.viewBehavior) els.viewBehavior.hidden = tab !== 'behavior';
+  if (els.viewProt) els.viewProt.hidden = tab !== 'prot-ideal' && tab !== 'prot-sim';
   draw(els);
 }
 
@@ -1096,7 +1115,12 @@ function bindResize(els: Elements): void {
   let timer: number | undefined;
   const handler = () => {
     if (timer !== undefined) window.clearTimeout(timer);
-    timer = window.setTimeout(() => draw(els), 100);
+    timer = window.setTimeout(() => {
+      draw(els);
+      if (state.tab === 'behavior' && bctxEls && state.reference) {
+        recomputeBehaviorContext(bctxEls, bctxState, state.reference);
+      }
+    }, 100);
   };
   window.addEventListener('resize', handler);
 }
@@ -1111,6 +1135,9 @@ export function enableTonearmGeometryLabInteractions(): void {
     .then((data) => {
       state.nullPoints = data;
       state.loadError = null;
+      const radii = radiiFor(data, state.standard);
+      bctxState.innerGrooveMm = radii.innerMm;
+      bctxState.outerGrooveMm = radii.outerMm;
       recompute(els);
       refreshSimulationFromReference(els);
       recomputeSimulation(els);
@@ -1123,6 +1150,11 @@ export function enableTonearmGeometryLabInteractions(): void {
 
   els.standard?.addEventListener('change', () => {
     if (els.standard) state.standard = els.standard.value as AlignmentStandard;
+    if (state.nullPoints) {
+      const radii = radiiFor(state.nullPoints, state.standard);
+      bctxState.innerGrooveMm = radii.innerMm;
+      bctxState.outerGrooveMm = radii.outerMm;
+    }
     applySelectedTonearm(els);
     recompute(els);
     refreshSimulationFromReference(els);
@@ -1223,6 +1255,35 @@ export function enableTonearmGeometryLabInteractions(): void {
     window.print();
   });
 
+  bctxEls = bctxElements(document);
+
+  const onBctxChange = () => {
+    if (bctxEls && state.reference) {
+      recomputeBehaviorContext(bctxEls, bctxState, state.reference);
+    }
+  };
+
+  bctxEls.eccentricity?.addEventListener('input', () => {
+    const v = parseFloat(bctxEls?.eccentricity?.value ?? '');
+    if (Number.isFinite(v) && v >= 0) bctxState.eccentricityMm = v;
+    onBctxChange();
+  });
+  bctxEls.warp?.addEventListener('change', () => {
+    const v = bctxEls?.warp?.value as WarpSeverity | undefined;
+    if (v === 'low' || v === 'medium' || v === 'high') bctxState.warpSeverity = v;
+    onBctxChange();
+  });
+  bctxEls.stylus?.addEventListener('change', () => {
+    const v = bctxEls?.stylus?.value as StylusProfile | undefined;
+    if (v) bctxState.stylusProfile = v;
+    onBctxChange();
+  });
+  bctxEls.threshold?.addEventListener('input', () => {
+    const v = parseFloat(bctxEls?.threshold?.value ?? '');
+    if (Number.isFinite(v) && v >= 0) bctxState.angularErrorThresholdDeg = v;
+    onBctxChange();
+  });
+
   bindTabsKeyboard(els);
   bindResize(els);
 
@@ -1230,6 +1291,11 @@ export function enableTonearmGeometryLabInteractions(): void {
     toggleTheme();
     if (state.tab === 'graph') {
       requestAnimationFrame(() => draw(els));
+    }
+    if (state.tab === 'behavior') {
+      requestAnimationFrame(() => {
+        if (bctxEls && state.reference) recomputeBehaviorContext(bctxEls, bctxState, state.reference);
+      });
     }
   });
 }

@@ -173,6 +173,76 @@ export function computeTrackingErrorCurve(
   return points;
 }
 
+export type GeometrySample = {
+  radiusMm: number;
+  trackingErrorDeg: number;
+  absTrackingErrorDeg: number;
+};
+
+export function sampleTrackingGeometry(args: {
+  pivotToSpindleMm: number;
+  effectiveLengthMm: number;
+  offsetAngleDeg: number;
+  innerGrooveMm: number;
+  outerGrooveMm: number;
+  sampleCount?: number;
+}): GeometrySample[] {
+  const { pivotToSpindleMm, effectiveLengthMm, offsetAngleDeg, innerGrooveMm, outerGrooveMm } = args;
+  const count = args.sampleCount ?? 200;
+  if (
+    !Number.isFinite(pivotToSpindleMm) ||
+    !Number.isFinite(effectiveLengthMm) ||
+    !Number.isFinite(offsetAngleDeg) ||
+    pivotToSpindleMm <= 0 ||
+    effectiveLengthMm <= 0 ||
+    innerGrooveMm >= outerGrooveMm
+  ) {
+    return [];
+  }
+  const step = (outerGrooveMm - innerGrooveMm) / Math.max(1, count - 1);
+  const samples: GeometrySample[] = [];
+  for (let i = 0; i < count; i++) {
+    const r = innerGrooveMm + i * step;
+    const cosArg =
+      (effectiveLengthMm * effectiveLengthMm + r * r - pivotToSpindleMm * pivotToSpindleMm) /
+      (2 * effectiveLengthMm * r);
+    const clamped = Math.max(-1, Math.min(1, cosArg));
+    const trackingErrorDeg = (Math.asin(clamped) * 180) / Math.PI - offsetAngleDeg;
+    samples.push({ radiusMm: r, trackingErrorDeg, absTrackingErrorDeg: Math.abs(trackingErrorDeg) });
+  }
+  return samples;
+}
+
+export function findNullPoints(samples: GeometrySample[]): number[] {
+  const nulls: number[] = [];
+  for (let i = 1; i < samples.length; i++) {
+    const prev = samples[i - 1];
+    const curr = samples[i];
+    if (prev.trackingErrorDeg * curr.trackingErrorDeg < 0) {
+      const t = Math.abs(prev.trackingErrorDeg) / (Math.abs(prev.trackingErrorDeg) + Math.abs(curr.trackingErrorDeg));
+      nulls.push(prev.radiusMm + t * (curr.radiusMm - prev.radiusMm));
+    } else if (curr.trackingErrorDeg === 0) {
+      nulls.push(curr.radiusMm);
+    }
+  }
+  return nulls;
+}
+
+export function calcRmsTrackingError(samples: GeometrySample[]): number {
+  if (samples.length === 0) return 0;
+  const sumSq = samples.reduce((acc, s) => acc + s.trackingErrorDeg * s.trackingErrorDeg, 0);
+  return Math.sqrt(sumSq / samples.length);
+}
+
+export function calcMaxTrackingError(samples: GeometrySample[]): number {
+  if (samples.length === 0) return 0;
+  return samples.reduce((acc, s) => Math.max(acc, s.absTrackingErrorDeg), 0);
+}
+
+export function calcGrooveVelocityMmPerSec(radiusMm: number, rpm = 33.333): number {
+  return 2 * Math.PI * radiusMm * rpm / 60;
+}
+
 export function methodLabel(method: AlignmentMethod): string {
   switch (method) {
     case 'Baerwald':
