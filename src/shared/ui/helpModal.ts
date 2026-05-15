@@ -534,8 +534,15 @@ function onKeydown(event: KeyboardEvent): void {
   }
 }
 
+const helpIndicatorStorageKey = 'engrove-help-indicator-dismissed';
+
 export function openHelpModal(): void {
   if (activeBackdrop) return;
+  try {
+    localStorage.setItem(helpIndicatorStorageKey, '1');
+  } catch {
+    // Ignore storage access issues.
+  }
   injectStyles();
 
   const backdrop = createBackdrop();

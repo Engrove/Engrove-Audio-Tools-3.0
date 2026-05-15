@@ -17,6 +17,17 @@ const navItems: readonly NavItem[] = [
   { key: 'measurement', label: 'Measurement Lab', href: '/measurement-lab' },
 ];
 
+
+const helpIndicatorStorageKey = 'engrove-help-indicator-dismissed';
+
+function shouldShowHelpIndicator(): boolean {
+  try {
+    return localStorage.getItem(helpIndicatorStorageKey) !== '1';
+  } catch {
+    return true;
+  }
+}
+
 function navLink(item: NavItem, active: ToolRouteKey): string {
   const current = item.key === active ? ' aria-current="page"' : '';
   return `<a class="ea-topnav-link" href="${item.href}"${current}>${item.label}</a>`;
@@ -36,7 +47,7 @@ export function renderToolTopbar(active: ToolRouteKey): string {
       <div class="ea-topbar-meta">
         <a class="ea-build-status" href="https://github.com/Engrove/Engrove-Audio-Tools-3.0" target="_blank" rel="noopener noreferrer">${buildVersionLabel()}</a>
         <button class="ea-theme-toggle" type="button" data-theme-toggle aria-label="Toggle light and dark theme">&#9788;</button>
-        <button class="ea-help-toggle" type="button" data-help-toggle aria-label="Open help">?</button>
+        <button class="ea-help-toggle" type="button" data-help-toggle aria-label="Open help">?${shouldShowHelpIndicator() ? '<span class="ea-help-indicator" aria-hidden="true"></span>' : ''}</button>
         <img class="ea-maintainer-avatar" src="/images/engrove.webp" alt="" aria-hidden="true" />
       </div>
     </header>

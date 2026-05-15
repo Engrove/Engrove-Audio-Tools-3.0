@@ -495,7 +495,7 @@ export function runtimePickerResultListMarkup(
 
   if (visible.length === 0) {
     return {
-      markup: runtimePickerEmptyMarkup('No matching dataset items found.'),
+      markup: runtimePickerEmptyMarkup('Cartridge/Tonearm not found. Enter specifications manually in Quick Match fields.'),
       total: matches.length,
       shown: 0,
     };
