@@ -386,18 +386,22 @@ function helpContent(): string {
       <p>The match score is a UI summary derived from the classification band and distance from the 10&nbsp;Hz centre. It is not a separate physical measurement.</p>
 
       <h3>Tonearm Response Sweep</h3>
-      <p>The response sweep is a MODEL layer. It shows how the selected mass/compliance combination behaves as a base-excited resonant system. It plots displacement at the headshell and acceleration at the headshell across the low-frequency region.</p>
+      <p>The response sweep is a MODEL layer. It implements the full transmissibility function of a <strong>base-excited, damped single-degree-of-freedom system</strong> where the output is <strong>absolute headshell displacement</strong> X, not a relative deflection. Vertical record modulation Y(t) drives the tonearm mass, and the model solves for the absolute motion of that mass at every frequency in the sweep.</p>
+      <p>The transmissibility is:</p>
+      <p><strong>T = √(1 + (β/Q)²) / √((1 − β²)² + (β/Q)²)</strong></p>
+      <p>where β = f/f₀ and Q is the quality factor. Displacement at the headshell = stylus amplitude × T. Acceleration is derived from the same displacement variable so both outputs are internally consistent.</p>
+      <p>Because the model solves for <em>absolute</em> mass motion and uses a lightly damped default (Q&nbsp;=&nbsp;3.33, ζ&nbsp;≈&nbsp;0.150), peak values near resonance are larger than tools using a reduced or more heavily damped resonance model. This is not an overestimate — it reflects the physical definition of absolute headshell displacement under base excitation at that damping level.</p>
       <table class="ea-help-table">
-        <thead><tr><th>Assumption</th><th>Current value</th></tr></thead>
+        <thead><tr><th>Assumption</th><th>Current value</th><th>Notes</th></tr></thead>
         <tbody>
-          <tr><td>Model</td><td>Absolute base-excited response</td></tr>
-          <tr><td>Q factor</td><td>3.33</td></tr>
-          <tr><td>Stylus amplitude</td><td>0.1&nbsp;mm</td></tr>
-          <tr><td>Acceleration threshold</td><td>0.05&nbsp;g</td></tr>
-          <tr><td>Frequency range</td><td>0.016–31.5&nbsp;Hz</td></tr>
+          <tr><td>Model</td><td>Absolute base-excited response (SDOF)</td><td>Full transmissibility; output is absolute mass displacement.</td></tr>
+          <tr><td>Q factor</td><td>3.33 (ζ ≈ 0.150)</td><td>Q = 1 / (2ζ). Relates to the sharpness of the resonance peak.</td></tr>
+          <tr><td>Stylus amplitude</td><td>0.1&nbsp;mm</td><td>Representative groove modulation amplitude for LF excitation.</td></tr>
+          <tr><td>Acceleration threshold</td><td>0.05&nbsp;g</td><td>Safe-zone reference shown on the acceleration chart.</td></tr>
+          <tr><td>Frequency range</td><td>0.016–31.5&nbsp;Hz</td><td>240 evenly spaced points across the subsonic and LF region.</td></tr>
         </tbody>
       </table>
-      <p>Use the response sweep to compare combinations and spot risk regions. Do not read it as a measured test-record result.</p>
+      <p>Use the response sweep to compare combinations and spot risk regions near resonance. Do not read it as a measured test-record result. Combinations that push the peak acceleration above the threshold warrant extra attention — especially when warped records or high-compliance cartridges are involved.</p>
 
       <h3>Reports and data feedback</h3>
       <p><strong>Export report</strong> downloads a text report. <strong>Save local</strong> stores the current setup in browser localStorage. <strong>Load local</strong> restores the latest local snapshot. Data feedback buttons open GitHub issue templates for incorrect or missing tonearm/cartridge data.</p>

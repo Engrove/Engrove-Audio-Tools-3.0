@@ -284,11 +284,13 @@ export function responseSweepPanelMarkup(input: ResonanceInput): string {
     safeLimit: sweep.accelerationLimitG,
   });
 
+  const dampingRatio = 1 / (2 * sweep.qFactor);
+
   return `
 <section class="tm-response-sweep" data-sweep-section aria-label="Tonearm response sweep">
   <div class="tm-response-sweep__header">
     <h3>${renderText('Tonearm Response Sweep')}</h3>
-    <p>${renderText('Predicted low-frequency displacement and acceleration from total moving mass, compliance, stylus amplitude and damping assumptions.')}</p>
+    <p>${renderText('Predicted absolute displacement and acceleration at the headshell, modelled as a base-excited single-degree-of-freedom system. Peak values near resonance reflect absolute mass motion, not just relative deflection.')}</p>
   </div>
 
   <div class="tm-response-sweep__metrics">
@@ -312,8 +314,8 @@ export function responseSweepPanelMarkup(input: ResonanceInput): string {
   <details class="tm-response-sweep__assumptions">
     <summary>${renderText('Advanced response assumptions')}</summary>
     <dl>
-      <div><dt>Model</dt><dd>${renderText('Absolute base-excited response')}</dd></div>
-      <div><dt>Q factor</dt><dd>${renderText(compact(sweep.qFactor, 2))}</dd></div>
+      <div><dt>Model</dt><dd>${renderText('Absolute base-excited response (SDOF)')}</dd></div>
+      <div><dt>Q factor</dt><dd>${renderText(`${compact(sweep.qFactor, 2)} (ζ ≈ ${compact(dampingRatio, 3)})`)}</dd></div>
       <div><dt>Stylus amplitude</dt><dd>${renderText(`${compact(sweep.stylusAmplitudeMm, 3)} mm`)}</dd></div>
       <div><dt>Acceleration threshold</dt><dd>${renderText(`${compact(sweep.accelerationLimitG, 3)} g`)}</dd></div>
     </dl>

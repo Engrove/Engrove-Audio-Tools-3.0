@@ -1835,6 +1835,7 @@ export function renderTonearmMatchLabPage(): string {
                 <li>T = √(1 + (β/Q)²) / √((1 − β²)² + (β/Q)²)</li>
                 <li>displacement = stylusAmplitude × T</li>
                 <li>accelerationG = ((2πf)² × displacementMm) / 9806.65</li>
+                <li>Q = 1 / (2ζ) — default Q 3.33 corresponds to ζ ≈ 0.150</li>
               </ul>
             </div>
           </section>
