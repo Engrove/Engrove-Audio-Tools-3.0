@@ -6,7 +6,6 @@
 }
 
 .ea-home-header {
-  max-width: 70ch;
   margin-bottom: var(--ea-space-6);
   padding-bottom: var(--ea-space-4);
   border-bottom: 1px solid var(--ea-border-primary);
@@ -22,7 +21,6 @@
 }
 
 .ea-home-header-sub {
-  max-width: 70ch;
   margin: var(--ea-space-2) 0 0;
   color: var(--ea-text-medium);
   font-size: var(--ea-font-size-prose);
@@ -107,6 +105,32 @@
   color: var(--ea-text-medium);
   font-size: var(--ea-font-size-body);
   line-height: 1.45;
+}
+
+.ea-home-tech-note {
+  margin-top: var(--ea-space-6);
+  padding-top: var(--ea-space-4);
+  border-top: 1px solid var(--ea-border-primary);
+}
+
+.ea-home-tech-note h2 {
+  margin: 0 0 var(--ea-space-4);
+  color: var(--ea-text-high);
+  font-size: var(--ea-font-size-title);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.ea-home-tech-note p {
+  margin: 0 0 var(--ea-space-3);
+  color: var(--ea-text-medium);
+  font-size: var(--ea-font-size-prose);
+  line-height: 1.6;
+}
+
+.ea-home-tech-note p:last-child {
+  margin-bottom: 0;
 }
 
 .ea-home-footer {
