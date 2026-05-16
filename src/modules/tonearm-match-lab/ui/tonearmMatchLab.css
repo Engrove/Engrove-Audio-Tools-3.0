@@ -113,6 +113,7 @@
 /* Structural route hooks: styled by shared ea-* primitives; kept explicit for token/layout drift checks. */
 .tm-lab-field__input,
 .tm-lab-setup-panel,
+.tm-lab-panel--sweep,
 .tm-lab-workbench,
 .tm-resonance-table,
 .tm-runtime-picker-row,
@@ -739,6 +740,11 @@
   border-block-start: 1px solid var(--ea-border-soft);
 }
 
+/* When sweep lives in its own panel, the panel border provides separation. */
+.tm-lab-panel--sweep .tm-response-sweep {
+  border-block-start: none;
+}
+
 .tm-response-sweep__header {
   margin-block-end: var(--ea-space-3);
 }
@@ -817,7 +823,7 @@
 .tm-response-chart__svg {
   display: block;
   width: 100%;
-  height: 190px;
+  height: 210px;
   background: var(--ea-surface-secondary);
   border: 1px solid var(--ea-border-soft);
   border-radius: var(--ea-radius-sm);
@@ -879,20 +885,20 @@
 
 .tm-chart-tick-label {
   font-family: var(--ea-font-data);
-  font-size: 8.5px;
+  font-size: 10.5px;
   fill: var(--ea-text-low);
 }
 
 .tm-chart-unit-label {
   font-family: var(--ea-font-data);
-  font-size: 8px;
+  font-size: 10px;
   fill: var(--ea-text-low);
   font-style: italic;
 }
 
 .tm-chart-x-unit {
   font-family: var(--ea-font-data);
-  font-size: 8px;
+  font-size: 10px;
   fill: var(--ea-text-low);
   font-style: italic;
 }
@@ -912,7 +918,7 @@
 
 .tm-chart-peak-label {
   font-family: var(--ea-font-data);
-  font-size: 8.5px;
+  font-size: 10.5px;
   fill: var(--ea-text-medium);
 }
 
@@ -940,7 +946,7 @@
   display: none;
   position: absolute;
   z-index: 10;
-  padding: 6px 10px;
+  padding: 8px 12px;
   background: var(--ea-bg-panel-header);
   border: 1px solid var(--ea-border-soft);
   border-radius: var(--ea-radius-md);
@@ -961,7 +967,7 @@
 }
 
 .tm-tooltip-label {
-  font-size: 9px;
+  font-size: 11px;
   font-family: var(--ea-font-data);
   color: var(--ea-text-low);
   letter-spacing: 0.02em;
@@ -969,7 +975,7 @@
 }
 
 .tm-tooltip-value {
-  font-size: 10px;
+  font-size: 12px;
   font-family: var(--ea-font-data);
   font-weight: 600;
   color: var(--ea-text-high);
@@ -977,7 +983,7 @@
 
 .tm-tooltip-status {
   margin-block-start: 4px;
-  font-size: 9px;
+  font-size: 11px;
   font-family: var(--ea-font-data);
   color: rgba(52, 168, 104, 0.85);
   letter-spacing: 0.02em;

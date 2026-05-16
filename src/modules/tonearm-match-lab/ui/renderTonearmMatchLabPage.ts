@@ -706,7 +706,6 @@ export function resultMarkup(result: ResonanceResult, diagnosis: ResonanceDiagno
         <span>${renderText(classification.label)}</span>
       </div>
       ${resonanceGaugeMarkup(result, classification)}
-      ${responseSweepPanelMarkup(input)}
       <div class="tm-lab-result__details">
         <div class="tm-lab-scoreline" title="UI match score derived from the existing resonance classification band. It does not change the resonance calculation.">
           <span
@@ -1006,6 +1005,11 @@ function updateResultView(form: HTMLFormElement, resultElement: HTMLElement): Ev
       resultElement.dataset.diagnosisLevel = evaluated.classification.group;
       resultElement.dataset.resonanceBand = evaluated.classification.key;
       resultElement.innerHTML = resultMarkup(evaluated.result, evaluated.diagnosis, evaluated.input);
+
+      const sweepBody = document.querySelector<HTMLElement>('[data-sweep-panel-body]');
+      if (sweepBody) {
+        sweepBody.innerHTML = responseSweepPanelMarkup(evaluated.input);
+      }
     } else {
       resultElement.dataset.diagnosisLevel = 'poor';
       resultElement.dataset.resonanceBand = 'error';
@@ -1815,6 +1819,18 @@ export function renderTonearmMatchLabPage(): string {
             </section>
           </form>
 
+          <section class="ea-panel tm-lab-panel--sweep" aria-label="Tonearm response sweep">
+            <div class="ea-panel-header">
+              <span class="ea-panel-header-id">03</span>
+              <span>Response Sweep</span>
+              <span class="ea-panel-header-spacer"></span>
+              <span class="ea-panel-header-action">Model</span>
+            </div>
+            <div class="ea-panel-body--flush" data-sweep-panel-body>
+              ${responseSweepPanelMarkup(defaultInput)}
+            </div>
+          </section>
+
           <section class="ea-panel tm-lab-panel--assumptions" id="assumptions" aria-labelledby="assumptions-title">
             <div class="ea-panel-header">
               <span class="ea-panel-header-id">05</span>
@@ -1898,7 +1914,10 @@ export function enableTonearmMatchLabInteractions(): void {
     return;
   }
 
-  enableSweepChartHover(resultElement);
+  const sweepPanelElement = document.querySelector<HTMLElement>('.tm-lab-panel--sweep');
+  if (sweepPanelElement) {
+    enableSweepChartHover(sweepPanelElement);
+  }
   bindRuntimePickers(form, resultElement, state);
 
   document.querySelector<HTMLButtonElement>('[data-reset-tonearm-defaults]')?.addEventListener('click', () => {
