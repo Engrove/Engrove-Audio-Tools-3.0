@@ -242,11 +242,11 @@ function simulationTableMarkup(): string {
         <table class="ea-form-table ea-form-table--two-column geo-sim-table" aria-label="Reference and simulated alignment values">
           <thead>
             <tr>
-              <th></th>
-              <th></th>
-              <th class="ea-table-header">Reference (math)</th>
-              <th class="ea-table-header ea-table-header--strong">Simulated (what if)</th>
-              <th></th>
+              <th class="ea-col-status"></th>
+              <th class="ea-col-label"></th>
+              <th class="ea-table-header ea-col-value">Reference (math)</th>
+              <th class="ea-table-header ea-table-header--strong ea-col-whatif">Simulated (what if)</th>
+              <th class="ea-col-meta"></th>
             </tr>
           </thead>
           <tbody>
