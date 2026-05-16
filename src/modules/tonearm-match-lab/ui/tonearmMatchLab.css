@@ -250,6 +250,26 @@
   font-size: var(--ea-font-size-small);
 }
 
+.tm-lab-notes--formulas {
+  font-family: var(--ea-font-data);
+  list-style: none;
+  padding-left: 0;
+}
+
+.tm-lab-notes-heading {
+  margin: var(--ea-space-4) 0 var(--ea-space-2);
+  font-size: var(--ea-font-size-small);
+  font-weight: 700;
+  color: var(--ea-text-high);
+}
+
+.tm-lab-notes-body {
+  margin: 0 0 var(--ea-space-2);
+  font-size: var(--ea-font-size-small);
+  color: var(--ea-text-medium);
+  line-height: 1.5;
+}
+
 .tm-lab-output {
   overflow: visible;
 }
@@ -709,6 +729,173 @@
 
 .ce-scoreline {
   padding-inline-end: var(--ea-space-3);
+}
+
+/* ── Tonearm Response Sweep ─────────────────────────────────────────────── */
+
+.tm-response-sweep {
+  padding: var(--ea-space-4);
+  border-block-start: 1px solid var(--ea-border-soft);
+}
+
+.tm-response-sweep__header {
+  margin-block-end: var(--ea-space-3);
+}
+
+.tm-response-sweep__header h3 {
+  margin: 0 0 var(--ea-space-1);
+  font-size: var(--ea-font-size-small);
+  font-weight: 700;
+  letter-spacing: var(--ea-letter-label);
+  text-transform: uppercase;
+  color: var(--ea-text-high);
+}
+
+.tm-response-sweep__header p {
+  margin: 0;
+  font-size: var(--ea-font-size-small);
+  color: var(--ea-text-medium);
+  line-height: 1.4;
+}
+
+.tm-response-sweep__metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ea-space-3) var(--ea-space-5);
+  margin-block-end: var(--ea-space-4);
+}
+
+.tm-response-sweep__metrics span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tm-response-sweep__metrics strong {
+  font-family: var(--ea-font-data);
+  font-size: var(--ea-font-size-small);
+  font-weight: 700;
+  color: var(--ea-text-high);
+}
+
+.tm-response-sweep__metrics small {
+  font-size: 10px;
+  letter-spacing: var(--ea-letter-label);
+  text-transform: uppercase;
+  color: var(--ea-text-low);
+}
+
+.tm-response-sweep__charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--ea-space-3);
+  margin-block-end: var(--ea-space-3);
+}
+
+/* ── SVG chart figures ──────────────────────────────────────────────────── */
+
+.tm-response-chart {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ea-space-2);
+}
+
+.tm-response-chart figcaption {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tm-response-chart figcaption strong {
+  font-size: var(--ea-font-size-small);
+  font-weight: 600;
+  color: var(--ea-text-high);
+}
+
+.tm-response-chart figcaption span {
+  font-family: var(--ea-font-data);
+  font-size: 10px;
+  color: var(--ea-text-medium);
+}
+
+.tm-response-chart svg {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: var(--ea-surface-secondary);
+  border: 1px solid var(--ea-border-soft);
+  border-radius: var(--ea-radius-sm);
+  overflow: hidden;
+}
+
+.tm-response-chart__curve {
+  fill: none;
+  stroke: var(--ea-interactive-accent);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.tm-response-chart--displacement .tm-response-chart__curve {
+  stroke: var(--ea-interactive-accent);
+}
+
+.tm-response-chart--acceleration .tm-response-chart__curve {
+  stroke: var(--ea-status-warning);
+}
+
+.tm-response-chart__axis {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--ea-font-data);
+  font-size: 9px;
+  color: var(--ea-text-low);
+}
+
+/* ── Advanced assumptions disclosure ───────────────────────────────────── */
+
+.tm-response-sweep__assumptions {
+  margin-block-start: var(--ea-space-2);
+}
+
+.tm-response-sweep__assumptions summary {
+  cursor: pointer;
+  font-size: var(--ea-font-size-small);
+  color: var(--ea-text-medium);
+  user-select: none;
+}
+
+.tm-response-sweep__assumptions summary:hover {
+  color: var(--ea-text-high);
+}
+
+.tm-response-sweep__assumptions dl {
+  margin: var(--ea-space-2) 0 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--ea-space-1) var(--ea-space-3);
+}
+
+.tm-response-sweep__assumptions dl div {
+  display: contents;
+}
+
+.tm-response-sweep__assumptions dt {
+  font-size: var(--ea-font-size-small);
+  color: var(--ea-text-low);
+}
+
+.tm-response-sweep__assumptions dd {
+  margin: 0;
+  font-family: var(--ea-font-data);
+  font-size: var(--ea-font-size-small);
+  color: var(--ea-text-high);
+}
+
+@media (max-width: 480px) {
+  .tm-response-sweep__charts {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 980px) {

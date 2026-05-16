@@ -12,6 +12,11 @@ const localTsc = process.platform === 'win32'
 
 const tsc = existsSync(localTsc) ? localTsc : 'tsc';
 
+const testFiles = [
+  'src/modules/tonearm-match-lab/tests/resonanceEngineCheck.ts',
+  'src/modules/tonearm-match-lab/tests/responseSweepCheck.ts',
+];
+
 try {
   writeFileSync(
     join(tempDir, 'package.json'),
@@ -22,6 +27,7 @@ try {
   const compile = spawnSync(
     tsc,
     [
+      '--ignoreConfig',
       '--target',
       'ES2022',
       '--module',
@@ -34,7 +40,7 @@ try {
       'src',
       '--outDir',
       tempDir,
-      'src/modules/tonearm-match-lab/tests/resonanceEngineCheck.ts',
+      ...testFiles,
     ],
     {
       stdio: 'inherit',
@@ -49,6 +55,12 @@ try {
   await import(
     pathToFileURL(
       join(tempDir, 'modules/tonearm-match-lab/tests/resonanceEngineCheck.js'),
+    ).href
+  );
+
+  await import(
+    pathToFileURL(
+      join(tempDir, 'modules/tonearm-match-lab/tests/responseSweepCheck.js'),
     ).href
   );
 } finally {
