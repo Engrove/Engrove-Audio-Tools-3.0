@@ -35,6 +35,10 @@ const supportedTestBandPurposes = new Set([
   'imd',
   'resonance',
   'tracking_ability',
+  'vta_optimization',
+  'pink_noise',
+  'vertical_modulation',
+  'rumble',
 ]);
 const supportedTestBandChannels = new Set([
   'mono',

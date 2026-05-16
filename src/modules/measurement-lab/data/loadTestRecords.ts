@@ -14,7 +14,11 @@ export type TestBandPurpose =
   | 'thd'
   | 'imd'
   | 'resonance'
-  | 'tracking_ability';
+  | 'tracking_ability'
+  | 'vta_optimization'
+  | 'pink_noise'
+  | 'vertical_modulation'
+  | 'rumble';
 
 export type TestBandChannel =
   | 'mono'
@@ -137,6 +141,7 @@ function expectMember<T extends string>(value: unknown, set: ReadonlySet<T>, loc
 
 const bandPurposes: ReadonlySet<TestBandPurpose> = new Set([
   'speed', 'freq_response', 'crosstalk', 'thd', 'imd', 'resonance', 'tracking_ability',
+  'vta_optimization', 'pink_noise', 'vertical_modulation', 'rumble',
 ]);
 const sourceStatuses: ReadonlySet<TestRecordSourceStatus> = new Set([
   'publisher_listing', 'publisher_verified', 'user_verified', 'incomplete', 'candidate',

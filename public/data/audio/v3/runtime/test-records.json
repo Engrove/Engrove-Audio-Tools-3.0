@@ -337,7 +337,8 @@
               "channel": "L",
               "frequency_hz": 1000,
               "duration_seconds": 30,
-              "purpose": "crosstalk"
+              "purpose": "crosstalk",
+              "notes": "Tone present on the left channel only. Used for channel identity, reversed-channel detection and crosstalk measurement."
             },
             {
               "index": "1-2",
@@ -346,7 +347,8 @@
               "channel": "R",
               "frequency_hz": 1000,
               "duration_seconds": 30,
-              "purpose": "crosstalk"
+              "purpose": "crosstalk",
+              "notes": "Tone present on the right channel only."
             },
             {
               "index": "1-3",
@@ -367,7 +369,7 @@
               "to_hz": 20000,
               "duration_seconds": 90,
               "purpose": "freq_response",
-              "notes": "RIAA-encoded logarithmic sweep for cartridge frequency-response analysis."
+              "notes": "RIAA-encoded logarithmic sweep for cartridge frequency-response analysis. Measures full chain: test record → cartridge → tonearm → cable/loading → phono stage → ADC."
             },
             {
               "index": "1-5",
@@ -377,7 +379,7 @@
               "frequency_hz": 1000,
               "duration_seconds": 30,
               "purpose": "thd",
-              "notes": "Pure 1 kHz sine tone for total harmonic distortion measurement."
+              "notes": "1 kHz lateral mono sine tone for total harmonic distortion measurement and reference level calibration."
             },
             {
               "index": "1-6",
@@ -386,7 +388,57 @@
               "channel": "both",
               "duration_seconds": 30,
               "purpose": "imd",
-              "notes": "SMPTE dual-tone intermodulation distortion test (60 Hz low-frequency + 7 kHz high-frequency)."
+              "notes": "SMPTE dual-tone intermodulation distortion test (60 Hz + 7 kHz)."
+            },
+            {
+              "index": "1-7",
+              "label": "1 kHz reference -20 dB",
+              "type": "sine",
+              "channel": "both",
+              "frequency_hz": 1000,
+              "duration_seconds": 30,
+              "purpose": "freq_response",
+              "notes": "1 kHz reference tone at -20 dB relative to standard groove level. Used for ADC headroom check and pre-calibration without risk of clipping."
+            },
+            {
+              "index": "1-8",
+              "label": "10 kHz reference -20 dB",
+              "type": "sine",
+              "channel": "both",
+              "frequency_hz": 10000,
+              "duration_seconds": 30,
+              "purpose": "freq_response",
+              "notes": "10 kHz tone at -20 dB. Used to assess high-frequency tracking and HF channel balance relative to the 1 kHz reference."
+            },
+            {
+              "index": "1-9",
+              "label": "100 Hz mono lateral reference",
+              "type": "sine",
+              "channel": "both",
+              "frequency_hz": 100,
+              "duration_seconds": 30,
+              "purpose": "freq_response",
+              "notes": "100 Hz lateral reference tone for low-frequency calibration and LF channel balance check."
+            },
+            {
+              "index": "1-10",
+              "label": "Frequency sweep 1 kHz to 20 Hz",
+              "type": "sweep",
+              "channel": "both",
+              "from_hz": 1000,
+              "to_hz": 20,
+              "duration_seconds": 60,
+              "purpose": "freq_response",
+              "notes": "Descending sweep from 1 kHz to 20 Hz for low-frequency response and sub-bass resonance region analysis."
+            },
+            {
+              "index": "1-11",
+              "label": "VTA/SRA adjust dual-tone IMD",
+              "type": "dual_tone",
+              "channel": "both",
+              "duration_seconds": 30,
+              "purpose": "vta_optimization",
+              "notes": "Dual-tone IMD reference for VTA/SRA optimization. Measure IMD at several tonearm-height settings; the position giving minimum IMD indicates optimal SRA. Source status: publisher listing only — verify exact frequency pair against physical insert before automated analysis."
             }
           ]
         },
@@ -402,17 +454,65 @@
               "to_hz": 30,
               "duration_seconds": 30,
               "purpose": "resonance",
-              "notes": "Slow sweep through the cartridge-arm fundamental resonance region."
+              "notes": "Slow sweep through the cartridge-tonearm fundamental resonance region. Compare detected peak with calculated resonance from Tonearm Match Lab."
             },
             {
               "index": "2-2",
-              "label": "Tracking ability 300 Hz",
+              "label": "Anti-skating 315 Hz amplitude sweep to +12 dB",
               "type": "sine",
-              "channel": "mono",
-              "frequency_hz": 300,
+              "channel": "both",
+              "frequency_hz": 315,
               "duration_seconds": 60,
               "purpose": "tracking_ability",
-              "notes": "Escalating tracking ability test tones for stylus tracking and anti-skate assessment."
+              "notes": "315 Hz lateral tone at escalating amplitude up to +12 dB above standard groove level. Adjust anti-skating force until inner and outer groove-wall distortion are balanced across both channels."
+            },
+            {
+              "index": "2-3",
+              "label": "Pink noise lateral",
+              "type": "noise",
+              "channel": "both",
+              "duration_seconds": 60,
+              "purpose": "pink_noise",
+              "notes": "Broadband pink noise, lateral modulation (L+R in phase). Used for spectral balance verification, phono chain noise floor diagnostics and left/right spectral tilt comparison."
+            },
+            {
+              "index": "2-4",
+              "label": "Pink noise vertical",
+              "type": "noise",
+              "channel": "out_of_phase",
+              "duration_seconds": 60,
+              "purpose": "pink_noise",
+              "notes": "Broadband pink noise, vertical modulation (L+R out of phase). Used for vertical compliance response, vertical/lateral noise ratio and channel phase diagnostics."
+            },
+            {
+              "index": "2-5",
+              "label": "Vertical 1 kHz",
+              "type": "sine",
+              "channel": "out_of_phase",
+              "frequency_hz": 1000,
+              "duration_seconds": 30,
+              "purpose": "vertical_modulation",
+              "notes": "Pure vertical modulation at 1 kHz (L+R out of phase). Used for azimuth verification, mono-sum null test and vertical channel balance."
+            },
+            {
+              "index": "2-6",
+              "label": "Vertical sweep 1 kHz to 10 Hz",
+              "type": "sweep",
+              "channel": "out_of_phase",
+              "from_hz": 1000,
+              "to_hz": 10,
+              "duration_seconds": 60,
+              "purpose": "vertical_modulation",
+              "notes": "Descending vertical modulation sweep from 1 kHz to 10 Hz. Used to detect vertical resonance peaks. Compare measured peak with Tonearm Match Lab calculated resonance."
+            },
+            {
+              "index": "2-7",
+              "label": "Silent groove",
+              "type": "silence",
+              "channel": "both",
+              "duration_seconds": 30,
+              "purpose": "rumble",
+              "notes": "Unmodulated groove. Used for bearing rumble noise floor measurement, low-frequency energy profiling and plinth/rack isolation testing."
             }
           ]
         }
