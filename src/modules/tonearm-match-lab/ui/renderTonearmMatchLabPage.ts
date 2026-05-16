@@ -16,7 +16,7 @@ import {
 } from '../../../shared/ui/runtimePickerModal';
 import { escapeAttribute, renderText } from '../../../shared/ui/renderSafe';
 import { renderToolTopbar } from '../../../shared/ui/renderToolTopbar';
-import { responseSweepPanelMarkup } from './responseSweepChart';
+import { responseSweepPanelMarkup, enableSweepChartHover } from './responseSweepChart';
 
 type QuickMatchFieldName = keyof ResonanceInput;
 
@@ -1897,6 +1897,7 @@ export function enableTonearmMatchLabInteractions(): void {
     return;
   }
 
+  enableSweepChartHover(resultElement);
   bindRuntimePickers(form, resultElement, state);
 
   document.querySelector<HTMLButtonElement>('[data-reset-tonearm-defaults]')?.addEventListener('click', () => {
