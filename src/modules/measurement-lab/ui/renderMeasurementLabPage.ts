@@ -29,6 +29,7 @@ import { computeFrequencyResponse, type FreqResponseResult } from '../engine/fre
 import { computeRiaaMagnitudeDb } from '../engine/iriaaFilter';
 import { analyseTHD, analyseIMD, type ThdResult, type ImdResult } from '../engine/thd';
 import { analyseResonance, type ResonanceResult, type ResonanceSweepType } from '../engine/resonance';
+import { loadTestRecordsRuntimeData, type TestRecord, type TestBandPurpose } from '../data/loadTestRecords';
 
 type SourceMode = 'live' | 'self-test';
 type CaptureState = 'idle' | 'connecting' | 'live' | 'error';
@@ -118,6 +119,8 @@ type LabState = {
   thd: ThdStateBag;
   resonance: ResonanceStateBag;
   log: string[];
+  selectedTestRecordId: string | null;
+  testRecords: readonly TestRecord[];
 };
 
 /*
@@ -215,6 +218,8 @@ const state: LabState = {
     capture: null,
   },
   log: [],
+  selectedTestRecordId: null,
+  testRecords: [],
 };
 
 function readStoredDeviceId(): string | null {
@@ -319,6 +324,18 @@ function audioSourcePanelMarkup(): string {
                 </div>
               </td>
               <td class="ea-col-meta"><span class="ea-badge">Filter</span></td>
+            </tr>
+            <tr>
+              <td class="ea-col-status"><span class="ea-dot ea-dot--planned" data-mlab-record-dot aria-hidden="true"></span></td>
+              <td class="ea-col-label">Test record
+                <span class="ea-form-table-sublabel">Profile for band guidance</span>
+              </td>
+              <td class="ea-col-value">
+                <select class="ea-input" data-mlab-record aria-label="Test record profile">
+                  <option value="">Loading profiles…</option>
+                </select>
+              </td>
+              <td class="ea-col-meta"><span class="ea-badge">Profile</span></td>
             </tr>
             <tr>
               <td class="ea-col-status">${statusDot('planned')}</td>
@@ -503,7 +520,7 @@ type SessionJson = {
     iriaa_applied: boolean;
     source_mode: string;
   };
-  selection: { cartridge: null; tonearm: null; test_record: null };
+  selection: { cartridge: null; tonearm: null; test_record: string | null };
   measurements: {
     speed: object | null;
     channel_balance: object | null;
@@ -555,7 +572,7 @@ function buildSessionJson(): SessionJson {
       iriaa_applied: state.iriaaEnabled,
       source_mode: state.sourceMode,
     },
-    selection: { cartridge: null, tonearm: null, test_record: null },
+    selection: { cartridge: null, tonearm: null, test_record: state.selectedTestRecordId },
     measurements: {
       speed: speedResult
         ? {
@@ -831,6 +848,8 @@ function elements(root: ParentNode) {
     logResetBtn: root.querySelector<HTMLButtonElement>('[data-mlab-log-reset]'),
     logExportBtn: root.querySelector<HTMLButtonElement>('[data-mlab-log-export]'),
     selfTestBtn: root.querySelector<HTMLButtonElement>('[data-mlab-run-self-test]'),
+    recordSelect: root.querySelector<HTMLSelectElement>('[data-mlab-record]'),
+    recordDot: root.querySelector<HTMLElement>('[data-mlab-record-dot]'),
     waveformL: root.querySelector<HTMLCanvasElement>('[data-mlab-waveform="L"]'),
     waveformR: root.querySelector<HTMLCanvasElement>('[data-mlab-waveform="R"]'),
   };
@@ -941,6 +960,7 @@ function renderSpeedPanel(els: Elements): void {
         </tr>
       </tbody>
     </table>
+    ${recordHint('speed')}
     <div class="mlab-session-controls">
       <button class="ea-button ea-button--primary" type="button" data-mlab-speed-start>Start measurement</button>
     </div>
@@ -1079,6 +1099,7 @@ function renderChannelPanel(els: Elements): void {
   // Idle (no captures yet)
   body.innerHTML = `
     <p class="ea-muted">Step 1 of 2: cue the L-channel reference band on the test record (typically 1&nbsp;kHz, L only). Each capture is ${channelMeasurementDurationSeconds}&nbsp;seconds.</p>
+    ${recordHint('crosstalk')}
     <div class="mlab-session-controls">
       <button class="ea-button ea-button--primary" type="button" data-mlab-channel-start-l>Start L-band capture</button>
     </div>
@@ -1222,6 +1243,7 @@ function renderFreqPanel(els: Elements): void {
     : '';
   body.innerHTML = `
     <p class="ea-muted">Capture ${freqMeasurementDurationSeconds}&thinsp;s of audio and compute the frequency response (20&thinsp;Hz&thinsp;–&thinsp;20&thinsp;kHz).${overlayNote}</p>
+    ${recordHint('freq_response')}
     <div class="mlab-session-controls">
       <button class="ea-button ea-button--primary" type="button" data-mlab-freq-start>Start capture</button>
     </div>
@@ -1314,6 +1336,50 @@ function startThdCapture(els: Elements): void {
 
 function isThdResult(r: ThdResult | ImdResult | null): r is ThdResult {
   return r !== null && 'thdPercent' in r;
+}
+
+function selectedRecord(): TestRecord | null {
+  if (!state.selectedTestRecordId) return null;
+  return state.testRecords.find(r => r.id === state.selectedTestRecordId) ?? null;
+}
+
+function recordHint(purpose: TestBandPurpose): string {
+  const record = selectedRecord();
+  if (!record) return '';
+  const labels: string[] = [];
+  record.sides.forEach(side => {
+    side.bands.filter(b => b.purpose === purpose).forEach(b => {
+      labels.push(`${b.index}: ${renderText(b.label)}`);
+    });
+  });
+  if (labels.length > 0) {
+    return `<p class="ea-muted">Selected record — cue <strong>${labels.join(' or ')}</strong>.</p>`;
+  }
+  return `<p class="ea-muted">Selected record has no ${renderText(purpose.replace(/_/g, ' '))} band; supply a suitable signal manually.</p>`;
+}
+
+function renderRecordSelector(els: Elements): void {
+  if (!els.recordSelect) return;
+  const none = '<option value="">— No record selected —</option>';
+  if (state.testRecords.length === 0) {
+    els.recordSelect.innerHTML = none;
+  } else {
+    const options = [
+      none,
+      ...state.testRecords.map(r => {
+        const label = renderText(`${r.manufacturer} — ${r.title}`);
+        const sel = state.selectedTestRecordId === r.id ? ' selected' : '';
+        return `<option value="${renderText(r.id)}"${sel}>${label}</option>`;
+      }),
+    ].join('');
+    els.recordSelect.innerHTML = options;
+    if (state.selectedTestRecordId) {
+      els.recordSelect.value = state.selectedTestRecordId;
+    }
+  }
+  if (els.recordDot) {
+    els.recordDot.className = `ea-dot ea-dot--${state.selectedTestRecordId ? 'done' : 'planned'}`;
+  }
 }
 
 function renderThdPanel(els: Elements): void {
@@ -1434,6 +1500,7 @@ function renderThdPanel(els: Elements): void {
         </tr>
       </tbody>
     </table>
+    ${isTHD ? recordHint('thd') : recordHint('imd')}
     <div class="mlab-session-controls">
       <button class="ea-button ea-button--primary" type="button" data-mlab-thd-start>Start capture</button>
     </div>
@@ -1575,6 +1642,7 @@ function renderResonancePanel(els: Elements): void {
         </tr>
       </tbody>
     </table>
+    ${recordHint('resonance')}
     <div class="mlab-session-controls">
       <button class="ea-button ea-button--primary" type="button" data-mlab-res-start>Start capture</button>
     </div>
@@ -2221,6 +2289,31 @@ export function enableMeasurementLabInteractions(): void {
   clearMeterDom(els);
 
   void refreshDeviceList(els);
+
+  void loadTestRecordsRuntimeData().then((data) => {
+    state.testRecords = data.records;
+    renderRecordSelector(els);
+    renderSpeedPanel(els);
+    renderChannelPanel(els);
+    renderFreqPanel(els);
+    renderThdPanel(els);
+    renderResonancePanel(els);
+  }).catch(() => {
+    if (els.recordSelect) {
+      els.recordSelect.innerHTML = '<option value="">Test record profiles unavailable</option>';
+    }
+  });
+
+  els.recordSelect?.addEventListener('change', () => {
+    const value = els.recordSelect?.value ?? '';
+    state.selectedTestRecordId = value.length > 0 ? value : null;
+    renderRecordSelector(els);
+    renderSpeedPanel(els);
+    renderChannelPanel(els);
+    renderFreqPanel(els);
+    renderThdPanel(els);
+    renderResonancePanel(els);
+  });
 
   els.sourceModeButtons.forEach((button) => {
     button.addEventListener('click', () => {

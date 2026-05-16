@@ -319,6 +319,104 @@
       ]
     },
     {
+      "id": "analogue-productions-aatlp",
+      "manufacturer": "Analogue Productions",
+      "title": "Ultimate Analogue Test LP",
+      "format": "12-inch LP, 33 1/3 rpm",
+      "source": "Analogue Productions product documentation and published test record insert (Acoustic Sounds)",
+      "sides": [
+        {
+          "side": "1",
+          "bands": [
+            {
+              "index": "1-1",
+              "label": "L channel identification 1 kHz",
+              "type": "sine",
+              "channel": "L",
+              "frequency_hz": 1000,
+              "duration_seconds": 30,
+              "purpose": "crosstalk"
+            },
+            {
+              "index": "1-2",
+              "label": "R channel identification 1 kHz",
+              "type": "sine",
+              "channel": "R",
+              "frequency_hz": 1000,
+              "duration_seconds": 30,
+              "purpose": "crosstalk"
+            },
+            {
+              "index": "1-3",
+              "label": "Speed reference 3150 Hz",
+              "type": "sine",
+              "channel": "both",
+              "frequency_hz": 3150,
+              "duration_seconds": 60,
+              "purpose": "speed",
+              "notes": "DIN 45 545 reference tone for platter speed and wow & flutter analysis."
+            },
+            {
+              "index": "1-4",
+              "label": "Frequency response sweep 20 Hz to 20 kHz",
+              "type": "sweep",
+              "channel": "both",
+              "from_hz": 20,
+              "to_hz": 20000,
+              "duration_seconds": 90,
+              "purpose": "freq_response",
+              "notes": "RIAA-encoded logarithmic sweep for cartridge frequency-response analysis."
+            },
+            {
+              "index": "1-5",
+              "label": "THD reference 1 kHz",
+              "type": "sine",
+              "channel": "both",
+              "frequency_hz": 1000,
+              "duration_seconds": 30,
+              "purpose": "thd",
+              "notes": "Pure 1 kHz sine tone for total harmonic distortion measurement."
+            },
+            {
+              "index": "1-6",
+              "label": "SMPTE IMD 60 Hz + 7 kHz",
+              "type": "dual_tone",
+              "channel": "both",
+              "duration_seconds": 30,
+              "purpose": "imd",
+              "notes": "SMPTE dual-tone intermodulation distortion test (60 Hz low-frequency + 7 kHz high-frequency)."
+            }
+          ]
+        },
+        {
+          "side": "2",
+          "bands": [
+            {
+              "index": "2-1",
+              "label": "Low-frequency resonance sweep 5 Hz to 30 Hz",
+              "type": "sweep",
+              "channel": "both",
+              "from_hz": 5,
+              "to_hz": 30,
+              "duration_seconds": 30,
+              "purpose": "resonance",
+              "notes": "Slow sweep through the cartridge-arm fundamental resonance region."
+            },
+            {
+              "index": "2-2",
+              "label": "Tracking ability 300 Hz",
+              "type": "sine",
+              "channel": "mono",
+              "frequency_hz": 300,
+              "duration_seconds": 60,
+              "purpose": "tracking_ability",
+              "notes": "Escalating tracking ability test tones for stylus tracking and anti-skate assessment."
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "ortofon-test-record",
       "manufacturer": "Ortofon",
       "title": "Ortofon Test Record",

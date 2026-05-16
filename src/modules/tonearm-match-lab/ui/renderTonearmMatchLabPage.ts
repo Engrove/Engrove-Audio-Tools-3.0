@@ -16,6 +16,7 @@ import {
 } from '../../../shared/ui/runtimePickerModal';
 import { escapeAttribute, renderText } from '../../../shared/ui/renderSafe';
 import { renderToolTopbar } from '../../../shared/ui/renderToolTopbar';
+import { responseSweepPanelMarkup, enableSweepChartHover } from './responseSweepChart';
 
 type QuickMatchFieldName = keyof ResonanceInput;
 
@@ -67,6 +68,7 @@ type WorkbenchState = {
 type EvaluatedResult =
   | {
       ok: true;
+      input: ResonanceInput;
       result: ResonanceResult;
       diagnosis: ResonanceDiagnosis;
       classification: ResonanceClassification;
@@ -121,10 +123,10 @@ function createInitialWorkbenchState(): WorkbenchState {
 
 /*
  * Token/layout drift check cannot resolve these template-literal class suffixes.
- * Keep this static inventory in sync with statusDotMarkup() and badgeMarkup().
+ * Keep this static inventory in sync with statusDotMarkup(), badgeMarkup(), and responseSweepChart.ts.
  */
 const tokenLayoutGeneratedClassNames =
-  'ea-badge--direct ea-badge--manufacturer ea-badge--setup ea-dot--planned ea-dot--active ea-dot--done ea-dot--error ea-tasklist-num--done';
+  'ea-badge--direct ea-badge--manufacturer ea-badge--setup ea-dot--planned ea-dot--active ea-dot--done ea-dot--error ea-tasklist-num--done tm-response-chart--displacement tm-response-chart--acceleration';
 
 const gaugeMinHz = 5;
 const gaugeMaxHz = 16;
@@ -680,7 +682,7 @@ function resonanceGaugeMarkup(result: ResonanceResult, classification: Resonance
   `;
 }
 
-export function resultMarkup(result: ResonanceResult, diagnosis: ResonanceDiagnosis): string {
+export function resultMarkup(result: ResonanceResult, diagnosis: ResonanceDiagnosis, input: ResonanceInput): string {
   const classification = classifyResonance(result.resonanceHz);
   const suggestionItems = [
     ...classification.suggestions,
@@ -704,6 +706,7 @@ export function resultMarkup(result: ResonanceResult, diagnosis: ResonanceDiagno
         <span>${renderText(classification.label)}</span>
       </div>
       ${resonanceGaugeMarkup(result, classification)}
+      ${responseSweepPanelMarkup(input)}
       <div class="tm-lab-result__details">
         <div class="tm-lab-scoreline" title="UI match score derived from the existing resonance classification band. It does not change the resonance calculation.">
           <span
@@ -974,12 +977,14 @@ function restoreFocusedNumberInput(snapshot: FocusedNumberInputSnapshot | null):
 
 function evaluateCurrentResult(form: HTMLFormElement): EvaluatedResult {
   try {
-    const result = calculateResonanceResult(readFormInput(form));
+    const input = readFormInput(form);
+    const result = calculateResonanceResult(input);
     const diagnosis = diagnoseResonance(result.resonanceHz);
     const classification = classifyResonance(result.resonanceHz);
 
     return {
       ok: true,
+      input,
       result,
       diagnosis,
       classification,
@@ -1000,7 +1005,7 @@ function updateResultView(form: HTMLFormElement, resultElement: HTMLElement): Ev
     if (evaluated.ok) {
       resultElement.dataset.diagnosisLevel = evaluated.classification.group;
       resultElement.dataset.resonanceBand = evaluated.classification.key;
-      resultElement.innerHTML = resultMarkup(evaluated.result, evaluated.diagnosis);
+      resultElement.innerHTML = resultMarkup(evaluated.result, evaluated.diagnosis, evaluated.input);
     } else {
       resultElement.dataset.diagnosisLevel = 'poor';
       resultElement.dataset.resonanceBand = 'error';
@@ -1821,6 +1826,16 @@ export function renderTonearmMatchLabPage(): string {
                 <li>Tracking force is setup context and is not included in total moving mass.</li>
                 <li>Compliance must be a 10 Hz value or a converted estimate.</li>
               </ul>
+              <h4 class="tm-lab-notes-heading">Low-frequency tonearm response sweep</h4>
+              <p class="tm-lab-notes-body">Engrove calculates a predictive low-frequency response sweep using a standard single-degree-of-freedom damped oscillator model. The model treats vertical record modulation as base displacement input and estimates absolute headshell motion as output.</p>
+              <p class="tm-lab-notes-body">The sweep is an engineering estimate, not a measurement. It depends on total moving mass, dynamic compliance, stylus amplitude and damping/Q assumptions. Actual results can differ because cartridge suspensions are not perfectly linear and manufacturer compliance values are not always measured under the same conditions.</p>
+              <ul class="tm-lab-notes tm-lab-notes--formulas" aria-label="Response sweep formulas">
+                <li>f₀ = 1000 / (2π√(M C))</li>
+                <li>β = f / f₀</li>
+                <li>T = √(1 + (β/Q)²) / √((1 − β²)² + (β/Q)²)</li>
+                <li>displacement = stylusAmplitude × T</li>
+                <li>accelerationG = ((2πf)² × displacementMm) / 9806.65</li>
+              </ul>
             </div>
           </section>
         </div>
@@ -1832,7 +1847,7 @@ export function renderTonearmMatchLabPage(): string {
             <span class="ea-panel-header-spacer"></span>
             <span class="ea-panel-header-action">Live</span>
           </div>
-          ${resultMarkup(initialResult, initialDiagnosis)}
+          ${resultMarkup(initialResult, initialDiagnosis, defaultInput)}
         </aside>
       </section>
 
@@ -1882,6 +1897,7 @@ export function enableTonearmMatchLabInteractions(): void {
     return;
   }
 
+  enableSweepChartHover(resultElement);
   bindRuntimePickers(form, resultElement, state);
 
   document.querySelector<HTMLButtonElement>('[data-reset-tonearm-defaults]')?.addEventListener('click', () => {

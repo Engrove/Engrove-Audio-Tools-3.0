@@ -159,11 +159,11 @@ function alignmentSimulationMarkup(): string {
         <table class="ea-form-table ea-form-table--two-column" aria-label="Reference and simulated VTA values">
           <thead>
             <tr>
-              <th></th>
-              <th></th>
-              <th class="ea-table-header">Reference</th>
-              <th class="ea-table-header ea-table-header--strong">Simulated</th>
-              <th></th>
+              <th class="ea-col-status"></th>
+              <th class="ea-col-label"></th>
+              <th class="ea-table-header ea-col-value">Reference</th>
+              <th class="ea-table-header ea-table-header--strong ea-col-whatif">Simulated</th>
+              <th class="ea-col-meta"></th>
             </tr>
           </thead>
           <tbody>

@@ -136,6 +136,22 @@ export function renderHomePage(): string {
         <section class="ea-tool-grid" aria-label="Audio tools">
           ${tools.map(renderToolCard).join('')}
         </section>
+
+        <section class="ea-home-tech-note" aria-labelledby="home-tech-note-title">
+          <h2 id="home-tech-note-title">How it works</h2>
+          <p>
+            Engrove Audio Tools runs directly in your browser. The calculators, geometry models and Measurement Lab analysis are handled locally on your device, so the tools are fast to use and do not require installing any software.
+          </p>
+          <p>
+            The app is built around transparent setup logic: resonance estimates, compliance conversion, alignment geometry, VTA/SRA changes and measurement results are shown with practical units and exportable reports. The goal is not to hide the math, but to make it useful during real turntable setup.
+          </p>
+          <p>
+            Reference data for cartridges, tonearms, null points and test records is included in the app as best-effort setup support. It can help you get close quickly, but important values should still be checked against your own equipment, manufacturer data and real measurements.
+          </p>
+          <p>
+            Measurement Lab can analyse captured audio from a test record through your browser's audio input. Exported reports and JSON files let you document, compare and repeat setup decisions later.
+          </p>
+        </section>
       </main>
       <footer class="ea-home-footer app-footer">
         <span>Engrove Audio Tools 3.0</span>

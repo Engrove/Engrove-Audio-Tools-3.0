@@ -250,6 +250,26 @@
   font-size: var(--ea-font-size-small);
 }
 
+.tm-lab-notes--formulas {
+  font-family: var(--ea-font-data);
+  list-style: none;
+  padding-left: 0;
+}
+
+.tm-lab-notes-heading {
+  margin: var(--ea-space-4) 0 var(--ea-space-2);
+  font-size: var(--ea-font-size-small);
+  font-weight: 700;
+  color: var(--ea-text-high);
+}
+
+.tm-lab-notes-body {
+  margin: 0 0 var(--ea-space-2);
+  font-size: var(--ea-font-size-small);
+  color: var(--ea-text-medium);
+  line-height: 1.5;
+}
+
 .tm-lab-output {
   overflow: visible;
 }
@@ -709,6 +729,309 @@
 
 .ce-scoreline {
   padding-inline-end: var(--ea-space-3);
+}
+
+/* ── Tonearm Response Sweep ─────────────────────────────────────────────── */
+
+.tm-response-sweep {
+  position: relative;
+  padding: var(--ea-space-4);
+  border-block-start: 1px solid var(--ea-border-soft);
+}
+
+.tm-response-sweep__header {
+  margin-block-end: var(--ea-space-3);
+}
+
+.tm-response-sweep__header h3 {
+  margin: 0 0 var(--ea-space-1);
+  font-size: var(--ea-font-size-small);
+  font-weight: 700;
+  letter-spacing: var(--ea-letter-label);
+  text-transform: uppercase;
+  color: var(--ea-text-high);
+}
+
+.tm-response-sweep__header p {
+  margin: 0;
+  font-size: var(--ea-font-size-small);
+  color: var(--ea-text-medium);
+  line-height: 1.4;
+}
+
+.tm-response-sweep__metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ea-space-3) var(--ea-space-5);
+  margin-block-end: var(--ea-space-4);
+}
+
+.tm-response-sweep__metrics span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tm-response-sweep__metrics strong {
+  font-family: var(--ea-font-data);
+  font-size: var(--ea-font-size-small);
+  font-weight: 700;
+  color: var(--ea-text-high);
+}
+
+.tm-response-sweep__metrics small {
+  font-size: 10px;
+  letter-spacing: var(--ea-letter-label);
+  text-transform: uppercase;
+  color: var(--ea-text-low);
+}
+
+.tm-response-sweep__charts {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-block-end: var(--ea-space-3);
+}
+
+/* ── SVG chart figures ──────────────────────────────────────────────────── */
+
+.tm-response-chart {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tm-response-chart__caption {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ea-space-2);
+}
+
+.tm-response-chart__caption strong {
+  font-size: var(--ea-font-size-small);
+  font-weight: 600;
+  color: var(--ea-text-high);
+}
+
+.tm-response-chart__svg {
+  display: block;
+  width: 100%;
+  height: 190px;
+  background: var(--ea-surface-secondary);
+  border: 1px solid var(--ea-border-soft);
+  border-radius: var(--ea-radius-sm);
+  overflow: visible;
+}
+
+/* ── Curve ──────────────────────────────────────────────────────────────── */
+
+.tm-response-chart__curve {
+  fill: none;
+  stroke: var(--ea-interactive-accent);
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.tm-response-chart--displacement .tm-response-chart__curve {
+  stroke: var(--ea-interactive-accent);
+}
+
+.tm-response-chart--acceleration .tm-response-chart__curve {
+  stroke: var(--ea-status-warning);
+}
+
+/* ── Safe zone ──────────────────────────────────────────────────────────── */
+
+.tm-chart-safe-zone {
+  fill: rgba(52, 168, 104, 0.10);
+}
+
+.tm-chart-threshold-line {
+  stroke: rgba(52, 168, 104, 0.45);
+  stroke-width: 1;
+  stroke-dasharray: 5 3;
+  vector-effect: non-scaling-stroke;
+}
+
+/* ── Grid and axes ──────────────────────────────────────────────────────── */
+
+.tm-chart-grid-line {
+  stroke: var(--ea-border-soft);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.tm-chart-axis-line {
+  stroke: var(--ea-text-low);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.5;
+}
+
+.tm-chart-tick {
+  stroke: var(--ea-text-low);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.5;
+}
+
+.tm-chart-tick-label {
+  font-family: var(--ea-font-data);
+  font-size: 8.5px;
+  fill: var(--ea-text-low);
+}
+
+.tm-chart-unit-label {
+  font-family: var(--ea-font-data);
+  font-size: 8px;
+  fill: var(--ea-text-low);
+  font-style: italic;
+}
+
+.tm-chart-x-unit {
+  font-family: var(--ea-font-data);
+  font-size: 8px;
+  fill: var(--ea-text-low);
+  font-style: italic;
+}
+
+/* ── Peak marker ────────────────────────────────────────────────────────── */
+
+.tm-chart-peak-dot {
+  fill: var(--ea-interactive-accent);
+  stroke: var(--ea-surface-secondary);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.tm-response-chart--acceleration .tm-chart-peak-dot {
+  fill: var(--ea-status-warning);
+}
+
+.tm-chart-peak-label {
+  font-family: var(--ea-font-data);
+  font-size: 8.5px;
+  fill: var(--ea-text-medium);
+}
+
+/* ── Crosshair and hover dot ────────────────────────────────────────────── */
+
+.tm-chart-crosshair {
+  stroke: var(--ea-text-low);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+.tm-chart-hover-dot {
+  fill: var(--ea-text-high);
+  stroke: var(--ea-surface-secondary);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+/* ── Tooltip ────────────────────────────────────────────────────────────── */
+
+.tm-response-sweep__tooltip {
+  display: none;
+  position: absolute;
+  z-index: 10;
+  padding: 6px 10px;
+  background: var(--ea-bg-panel-header);
+  border: 1px solid var(--ea-border-soft);
+  border-radius: var(--ea-radius-md);
+  box-shadow: var(--ea-shadow-card);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.tm-response-sweep__tooltip.is-visible {
+  display: block;
+}
+
+.tm-tooltip-row {
+  display: flex;
+  gap: var(--ea-space-3);
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.tm-tooltip-label {
+  font-size: 9px;
+  font-family: var(--ea-font-data);
+  color: var(--ea-text-low);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.tm-tooltip-value {
+  font-size: 10px;
+  font-family: var(--ea-font-data);
+  font-weight: 600;
+  color: var(--ea-text-high);
+}
+
+.tm-tooltip-status {
+  margin-block-start: 4px;
+  font-size: 9px;
+  font-family: var(--ea-font-data);
+  color: rgba(52, 168, 104, 0.85);
+  letter-spacing: 0.02em;
+  text-align: right;
+}
+
+.tm-tooltip-status--warn {
+  color: var(--ea-status-warning);
+}
+
+/* ── Advanced assumptions disclosure ───────────────────────────────────── */
+
+.tm-response-sweep__assumptions {
+  margin-block-start: var(--ea-space-2);
+}
+
+.tm-response-sweep__assumptions summary {
+  cursor: pointer;
+  font-size: var(--ea-font-size-small);
+  color: var(--ea-text-medium);
+  user-select: none;
+}
+
+.tm-response-sweep__assumptions summary:hover {
+  color: var(--ea-text-high);
+}
+
+.tm-response-sweep__assumptions dl {
+  margin: var(--ea-space-2) 0 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--ea-space-1) var(--ea-space-3);
+}
+
+.tm-response-sweep__assumptions dl div {
+  display: contents;
+}
+
+.tm-response-sweep__assumptions dt {
+  font-size: var(--ea-font-size-small);
+  color: var(--ea-text-low);
+}
+
+.tm-response-sweep__assumptions dd {
+  margin: 0;
+  font-family: var(--ea-font-data);
+  font-size: var(--ea-font-size-small);
+  color: var(--ea-text-high);
+}
+
+@media (max-width: 480px) {
+  .tm-response-chart__svg {
+    height: 160px;
+  }
 }
 
 @media (max-width: 980px) {
