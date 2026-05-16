@@ -51,6 +51,14 @@ const supportedTestBandTypes = new Set([
   'noise',
   'pulse',
 ]);
+const supportedTestRecordSourceStatuses = new Set([
+  'publisher_listing',
+  'publisher_verified',
+  'user_verified',
+  'incomplete',
+  'candidate',
+]);
+let preferredToolbox3RecordCount = 0;
 const kebabIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const limits = {
@@ -397,6 +405,16 @@ function validateTestRecords(data) {
     if (typeof record.source !== 'string' || record.source.trim() === '') {
       add('error', 'test_records.record_source_invalid', `${recordLocation}.source`, 'Test-record must declare a non-empty source citation.');
     }
+    if ('preferred_for_toolbox_3' in record) {
+      if (typeof record.preferred_for_toolbox_3 !== 'boolean') {
+        add('error', 'test_records.record_preferred_invalid', `${recordLocation}.preferred_for_toolbox_3`, 'preferred_for_toolbox_3 must be a boolean when present.');
+      } else if (record.preferred_for_toolbox_3) {
+        preferredToolbox3RecordCount += 1;
+      }
+    }
+    if ('source_status' in record && !supportedTestRecordSourceStatuses.has(record.source_status)) {
+      add('error', 'test_records.record_source_status_invalid', `${recordLocation}.source_status`, `source_status "${record.source_status}" is not in the closed vocabulary.`);
+    }
     if (!Array.isArray(record.sides) || record.sides.length === 0) {
       add('error', 'test_records.record_sides_missing', `${recordLocation}.sides`, 'Test-record must declare at least one side.');
       continue;
@@ -421,6 +439,9 @@ function validateTestRecords(data) {
         bandCount += 1;
       }
     }
+  }
+  if (preferredToolbox3RecordCount > 1) {
+    add('error', 'test_records.preferred_ambiguous', files.publicTestRecords, `At most one record may declare preferred_for_toolbox_3: true (found ${preferredToolbox3RecordCount}).`);
   }
   return bandCount;
 }
@@ -598,7 +619,7 @@ console.log('Engrove Audio Tools 3.0 audio data validation');
 console.log(`- cartridges: ${cartridgesAreArray ? publicCartridges.data.length : 'invalid'}`);
 console.log(`- tonearms: ${tonearmsAreArray ? publicTonearms.data.length : 'invalid'}`);
 console.log(`- null-points: ${nullPointsRecordCount} entries`);
-console.log(`- test-records: ${testRecordsBandCount} bands`);
+console.log(`- test-records: ${testRecordsBandCount} bands (${preferredToolbox3RecordCount} preferred for Toolbox 3.0)`);
 console.log(`- public manifest: ${files.publicManifest}`);
 console.log(`- errors: ${errorCount}`);
 console.log(`- warnings: ${warningCount}`);

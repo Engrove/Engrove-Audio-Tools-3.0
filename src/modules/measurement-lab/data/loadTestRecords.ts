@@ -49,6 +49,13 @@ export type TestRecordSide = {
   readonly bands: readonly TestBand[];
 };
 
+export type TestRecordSourceStatus =
+  | 'publisher_listing'
+  | 'publisher_verified'
+  | 'user_verified'
+  | 'incomplete'
+  | 'candidate';
+
 export type TestRecord = {
   readonly id: string;
   readonly manufacturer: string;
@@ -56,6 +63,8 @@ export type TestRecord = {
   readonly edition?: string;
   readonly format?: string;
   readonly source: string;
+  readonly preferredForToolbox3?: boolean;
+  readonly sourceStatus?: TestRecordSourceStatus;
   readonly sides: readonly TestRecordSide[];
 };
 
@@ -89,6 +98,8 @@ type RawTestRecord = {
   edition?: unknown;
   format?: unknown;
   source?: unknown;
+  preferred_for_toolbox_3?: unknown;
+  source_status?: unknown;
   sides?: unknown;
 };
 
@@ -127,6 +138,9 @@ function expectMember<T extends string>(value: unknown, set: ReadonlySet<T>, loc
 const bandPurposes: ReadonlySet<TestBandPurpose> = new Set([
   'speed', 'freq_response', 'crosstalk', 'thd', 'imd', 'resonance', 'tracking_ability',
 ]);
+const sourceStatuses: ReadonlySet<TestRecordSourceStatus> = new Set([
+  'publisher_listing', 'publisher_verified', 'user_verified', 'incomplete', 'candidate',
+]);
 const bandChannels: ReadonlySet<TestBandChannel> = new Set([
   'mono', 'L', 'R', 'both', 'out_of_phase',
 ]);
@@ -164,6 +178,16 @@ function transformRecord(raw: RawTestRecord, location: string): TestRecord {
   if (!Array.isArray(raw.sides)) {
     throw new Error(`${location}.sides must be an array.`);
   }
+  let preferredForToolbox3: boolean | undefined;
+  if (raw.preferred_for_toolbox_3 !== undefined) {
+    if (typeof raw.preferred_for_toolbox_3 !== 'boolean') {
+      throw new Error(`${location}.preferred_for_toolbox_3 must be a boolean when present.`);
+    }
+    preferredForToolbox3 = raw.preferred_for_toolbox_3;
+  }
+  const sourceStatus = raw.source_status === undefined
+    ? undefined
+    : expectMember(raw.source_status, sourceStatuses, `${location}.source_status`);
   return {
     id: expectString(raw.id, `${location}.id`) as string,
     manufacturer: expectString(raw.manufacturer, `${location}.manufacturer`) as string,
@@ -171,8 +195,31 @@ function transformRecord(raw: RawTestRecord, location: string): TestRecord {
     edition: expectString(raw.edition, `${location}.edition`, true),
     format: expectString(raw.format, `${location}.format`, true),
     source: expectString(raw.source, `${location}.source`) as string,
+    preferredForToolbox3,
+    sourceStatus,
     sides: raw.sides.map((side, index) => transformSide(side as RawTestSide, `${location}.sides[${index}]`)),
   };
+}
+
+export function getPreferredRecord(
+  records: readonly TestRecord[],
+): TestRecord | null {
+  return records.find((r) => r.preferredForToolbox3 === true) ?? null;
+}
+
+export function recordCoverageScore(
+  record: TestRecord,
+  required: ReadonlySet<TestBandPurpose>,
+): { covered: number; total: number; missing: readonly TestBandPurpose[] } {
+  const present = new Set<TestBandPurpose>();
+  for (const side of record.sides) {
+    for (const band of side.bands) {
+      if (required.has(band.purpose)) present.add(band.purpose);
+    }
+  }
+  const missing: TestBandPurpose[] = [];
+  required.forEach((p) => { if (!present.has(p)) missing.push(p); });
+  return { covered: present.size, total: required.size, missing };
 }
 
 function transform(raw: RawTestRecordsData): TestRecordsRuntimeData {
