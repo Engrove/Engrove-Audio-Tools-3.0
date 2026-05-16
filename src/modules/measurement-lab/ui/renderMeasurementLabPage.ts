@@ -29,7 +29,7 @@ import { computeFrequencyResponse, type FreqResponseResult } from '../engine/fre
 import { computeRiaaMagnitudeDb } from '../engine/iriaaFilter';
 import { analyseTHD, analyseIMD, type ThdResult, type ImdResult } from '../engine/thd';
 import { analyseResonance, type ResonanceResult, type ResonanceSweepType } from '../engine/resonance';
-import { loadTestRecordsRuntimeData, getPreferredRecord, type TestRecord, type TestBandPurpose } from '../data/loadTestRecords';
+import { loadTestRecordsRuntimeData, getPreferredRecord, recordCoverageScore, TOOLBOX_3_REQUIRED_PURPOSES, type TestRecord, type TestBandPurpose } from '../data/loadTestRecords';
 
 type SourceMode = 'live' | 'self-test';
 type CaptureState = 'idle' | 'connecting' | 'live' | 'error';
@@ -1360,7 +1360,11 @@ function recordHint(purpose: TestBandPurpose): string {
   return `<p class="ea-muted">Selected record has no ${renderText(purpose.replace(/_/g, ' '))} band; supply a suitable signal manually.</p>`;
 }
 
-const PREFERRED_REC_TEXT = 'Recommended for Toolbox 3.0: Analogue Productions Ultimate Analogue Test LP — broadest coverage for current and planned measurement workflows.';
+const PREFERRED_REC_TAGLINE = 'Recommended for Toolbox 3.0: Analogue Productions Ultimate Analogue Test LP — broadest coverage for current and planned analyzer modules.';
+
+function purposeLabel(p: TestBandPurpose): string {
+  return p.replace(/_/g, ' ');
+}
 
 function renderRecordSelector(els: Elements): void {
   if (!els.recordSelect) return;
@@ -1387,13 +1391,17 @@ function renderRecordSelector(els: Elements): void {
   }
   if (els.recordRec) {
     const rec = state.testRecords.find(r => r.id === state.selectedTestRecordId);
-    if (rec?.preferredForToolbox3) {
-      els.recordRec.textContent = '';
-    } else if (!state.selectedTestRecordId) {
-      els.recordRec.textContent = PREFERRED_REC_TEXT;
-    } else {
-      els.recordRec.textContent = '';
+    const lines: string[] = [renderText(PREFERRED_REC_TAGLINE)];
+    if (rec) {
+      const score = recordCoverageScore(rec, TOOLBOX_3_REQUIRED_PURPOSES);
+      let coverageLine = `Selected: covers ${score.covered}/${score.total} planned analyzer purposes.`;
+      if (score.missing.length > 0) {
+        const miss = score.missing.map(purposeLabel).join(', ');
+        coverageLine += ` Missing: ${miss}.`;
+      }
+      lines.push(renderText(coverageLine));
     }
+    els.recordRec.innerHTML = lines.map(l => `<span>${l}</span>`).join('<br>');
   }
 }
 

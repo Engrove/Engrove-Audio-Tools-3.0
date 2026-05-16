@@ -62,6 +62,43 @@ const supportedTestRecordSourceStatuses = new Set([
   'incomplete',
   'candidate',
 ]);
+const supportedTestBandSignalTypes = new Set([
+  'single_tone',
+  'dual_tone',
+  'sweep',
+  'amplitude_sweep',
+  'noise',
+  'silence',
+  'pulse',
+  'tracking_burst',
+]);
+const supportedTestBandAnalyzerModules = new Set([
+  'reference_calibration',
+  'channel_identity',
+  'azimuth_crosstalk',
+  'frequency_response',
+  'thd',
+  'imd',
+  'vta_imd_optimizer',
+  'wow_flutter',
+  'anti_skate_tracking_stress',
+  'pink_noise_diagnostics',
+  'vertical_modulation',
+  'vertical_resonance',
+  'lf_resonance',
+  'rumble_isolation',
+]);
+const supportedTestBandSweepDirections = new Set(['ascending', 'descending']);
+const supportedTestBandSweepScales = new Set(['log', 'linear']);
+const supportedTestBandStandards = new Set(['SMPTE', 'CCIF', 'DIN', 'IEC', 'AES']);
+const supportedTestBandLevelReferences = new Set(['0dB_groove', 'cm_per_sec', 'peak_velocity']);
+const analyzerReadyPurposes = new Set([
+  'vta_optimization',
+  'pink_noise',
+  'vertical_modulation',
+  'rumble',
+]);
+const dualToneRatioPattern = /^\d+:\d+$/;
 let preferredToolbox3RecordCount = 0;
 const kebabIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -369,6 +406,49 @@ function validateTestRecordBand(record, side, band, location) {
   }
   if ('notes' in band && typeof band.notes !== 'string') {
     add('error', 'test_records.band_notes_invalid', `${location}.notes`, 'Band notes must be a string when present.');
+  }
+  if ('signal_type' in band && !supportedTestBandSignalTypes.has(band.signal_type)) {
+    add('error', 'test_records.band_signal_type_invalid', `${location}.signal_type`, `signal_type "${band.signal_type}" is not in the closed vocabulary.`);
+  }
+  if ('analyzer_module' in band && !supportedTestBandAnalyzerModules.has(band.analyzer_module)) {
+    add('error', 'test_records.band_analyzer_module_invalid', `${location}.analyzer_module`, `analyzer_module "${band.analyzer_module}" is not in the closed vocabulary.`);
+  }
+  if ('sweep_direction' in band && !supportedTestBandSweepDirections.has(band.sweep_direction)) {
+    add('error', 'test_records.band_sweep_direction_invalid', `${location}.sweep_direction`, `sweep_direction must be one of ${[...supportedTestBandSweepDirections].join(', ')}.`);
+  }
+  if ('sweep_scale' in band && !supportedTestBandSweepScales.has(band.sweep_scale)) {
+    add('error', 'test_records.band_sweep_scale_invalid', `${location}.sweep_scale`, `sweep_scale must be one of ${[...supportedTestBandSweepScales].join(', ')}.`);
+  }
+  if ('standard' in band && !supportedTestBandStandards.has(band.standard)) {
+    add('error', 'test_records.band_standard_invalid', `${location}.standard`, `standard must be one of ${[...supportedTestBandStandards].join(', ')}.`);
+  }
+  if ('level_reference' in band && !supportedTestBandLevelReferences.has(band.level_reference)) {
+    add('error', 'test_records.band_level_reference_invalid', `${location}.level_reference`, `level_reference must be one of ${[...supportedTestBandLevelReferences].join(', ')}.`);
+  }
+  for (const numericField of ['level_db', 'level_start_db', 'level_end_db', 'f1_hz', 'f2_hz']) {
+    if (numericField in band && !isNumber(band[numericField])) {
+      add('error', `test_records.band_${numericField}_invalid`, `${location}.${numericField}`, `${numericField} must be a finite number when present.`);
+    }
+  }
+  if ('ratio' in band && (typeof band.ratio !== 'string' || !dualToneRatioPattern.test(band.ratio))) {
+    add('error', 'test_records.band_ratio_invalid', `${location}.ratio`, 'ratio must match pattern "<int>:<int>" when present.');
+  }
+  if (isNumber(band.level_start_db) && isNumber(band.level_end_db) && band.level_start_db === band.level_end_db) {
+    add('error', 'test_records.band_amplitude_sweep_range', location, 'level_start_db and level_end_db must differ when both are present.');
+  }
+  if (analyzerReadyPurposes.has(band.purpose)) {
+    if (typeof band.signal_type !== 'string') {
+      add('error', 'test_records.band_signal_type_required', `${location}.signal_type`, `Bands with purpose "${band.purpose}" must declare signal_type.`);
+    }
+    if (typeof band.analyzer_module !== 'string') {
+      add('error', 'test_records.band_analyzer_module_required', `${location}.analyzer_module`, `Bands with purpose "${band.purpose}" must declare analyzer_module.`);
+    }
+  }
+  if (band.signal_type === 'dual_tone' && (!isNumber(band.f1_hz) || !isNumber(band.f2_hz))) {
+    add('warning', 'test_records.band_dual_tone_unspecified', location, 'dual_tone signal_type should declare f1_hz and f2_hz; without them automated analysis cannot run.');
+  }
+  if (band.signal_type === 'amplitude_sweep' && (!isNumber(band.level_start_db) || !isNumber(band.level_end_db))) {
+    add('warning', 'test_records.band_amplitude_sweep_unspecified', location, 'amplitude_sweep signal_type should declare level_start_db and level_end_db.');
   }
 }
 

@@ -3,8 +3,15 @@
  * /data/audio/v3/runtime/test-records.json. The dataset describes the
  * bands on supported physical test records; Engrove never ships the
  * audio of those records. Each band carries a closed-vocabulary
- * purpose (speed, freq_response, crosstalk, thd, imd, resonance,
- * tracking_ability) that future measurement modules dispatch on.
+ * purpose: speed, freq_response, crosstalk, thd, imd, resonance,
+ * tracking_ability, vta_optimization, pink_noise, vertical_modulation,
+ * rumble. Bands may also carry analyzer-ready metadata: signal_type,
+ * analyzer_module, level_db, level_start_db, level_end_db,
+ * level_reference, f1_hz, f2_hz, ratio, standard, sweep_direction,
+ * sweep_scale. These power signal-driven analyzer dispatch in
+ * Measurement Lab and downstream modules; the new analyzer-ready
+ * purposes (vta_optimization, pink_noise, vertical_modulation, rumble)
+ * are required to declare signal_type and analyzer_module.
  */
 
 export type TestBandPurpose =
@@ -35,6 +42,37 @@ export type TestBandType =
   | 'noise'
   | 'pulse';
 
+export type TestBandSignalType =
+  | 'single_tone'
+  | 'dual_tone'
+  | 'sweep'
+  | 'amplitude_sweep'
+  | 'noise'
+  | 'silence'
+  | 'pulse'
+  | 'tracking_burst';
+
+export type TestBandAnalyzerModule =
+  | 'reference_calibration'
+  | 'channel_identity'
+  | 'azimuth_crosstalk'
+  | 'frequency_response'
+  | 'thd'
+  | 'imd'
+  | 'vta_imd_optimizer'
+  | 'wow_flutter'
+  | 'anti_skate_tracking_stress'
+  | 'pink_noise_diagnostics'
+  | 'vertical_modulation'
+  | 'vertical_resonance'
+  | 'lf_resonance'
+  | 'rumble_isolation';
+
+export type TestBandSweepDirection = 'ascending' | 'descending';
+export type TestBandSweepScale = 'log' | 'linear';
+export type TestBandStandard = 'SMPTE' | 'CCIF' | 'DIN' | 'IEC' | 'AES';
+export type TestBandLevelReference = '0dB_groove' | 'cm_per_sec' | 'peak_velocity';
+
 export type TestBand = {
   readonly index: string;
   readonly label: string;
@@ -46,6 +84,18 @@ export type TestBand = {
   readonly fromHz?: number;
   readonly toHz?: number;
   readonly notes?: string;
+  readonly signalType?: TestBandSignalType;
+  readonly analyzerModule?: TestBandAnalyzerModule;
+  readonly levelDb?: number;
+  readonly levelStartDb?: number;
+  readonly levelEndDb?: number;
+  readonly levelReference?: TestBandLevelReference;
+  readonly f1Hz?: number;
+  readonly f2Hz?: number;
+  readonly ratio?: string;
+  readonly standard?: TestBandStandard;
+  readonly sweepDirection?: TestBandSweepDirection;
+  readonly sweepScale?: TestBandSweepScale;
 };
 
 export type TestRecordSide = {
@@ -88,6 +138,18 @@ type RawTestBand = {
   from_hz?: unknown;
   to_hz?: unknown;
   notes?: unknown;
+  signal_type?: unknown;
+  analyzer_module?: unknown;
+  level_db?: unknown;
+  level_start_db?: unknown;
+  level_end_db?: unknown;
+  level_reference?: unknown;
+  f1_hz?: unknown;
+  f2_hz?: unknown;
+  ratio?: unknown;
+  standard?: unknown;
+  sweep_direction?: unknown;
+  sweep_scale?: unknown;
 };
 
 type RawTestSide = {
@@ -152,6 +214,24 @@ const bandChannels: ReadonlySet<TestBandChannel> = new Set([
 const bandTypes: ReadonlySet<TestBandType> = new Set([
   'sine', 'sweep', 'dual_tone', 'silence', 'noise', 'pulse',
 ]);
+const signalTypes: ReadonlySet<TestBandSignalType> = new Set([
+  'single_tone', 'dual_tone', 'sweep', 'amplitude_sweep', 'noise', 'silence', 'pulse', 'tracking_burst',
+]);
+const analyzerModules: ReadonlySet<TestBandAnalyzerModule> = new Set([
+  'reference_calibration', 'channel_identity', 'azimuth_crosstalk', 'frequency_response',
+  'thd', 'imd', 'vta_imd_optimizer', 'wow_flutter', 'anti_skate_tracking_stress',
+  'pink_noise_diagnostics', 'vertical_modulation', 'vertical_resonance',
+  'lf_resonance', 'rumble_isolation',
+]);
+const sweepDirections: ReadonlySet<TestBandSweepDirection> = new Set(['ascending', 'descending']);
+const sweepScales: ReadonlySet<TestBandSweepScale> = new Set(['log', 'linear']);
+const standards: ReadonlySet<TestBandStandard> = new Set(['SMPTE', 'CCIF', 'DIN', 'IEC', 'AES']);
+const levelReferences: ReadonlySet<TestBandLevelReference> = new Set(['0dB_groove', 'cm_per_sec', 'peak_velocity']);
+
+export const TOOLBOX_3_REQUIRED_PURPOSES: ReadonlySet<TestBandPurpose> = new Set([
+  'speed', 'freq_response', 'crosstalk', 'thd', 'imd', 'resonance', 'tracking_ability',
+  'vta_optimization', 'pink_noise', 'vertical_modulation', 'rumble',
+]);
 
 function transformBand(raw: RawTestBand, location: string): TestBand {
   const duration = expectFinite(raw.duration_seconds, `${location}.duration_seconds`);
@@ -166,6 +246,18 @@ function transformBand(raw: RawTestBand, location: string): TestBand {
     fromHz: expectFinite(raw.from_hz, `${location}.from_hz`, true),
     toHz: expectFinite(raw.to_hz, `${location}.to_hz`, true),
     notes: expectString(raw.notes, `${location}.notes`, true),
+    signalType: raw.signal_type === undefined ? undefined : expectMember(raw.signal_type, signalTypes, `${location}.signal_type`),
+    analyzerModule: raw.analyzer_module === undefined ? undefined : expectMember(raw.analyzer_module, analyzerModules, `${location}.analyzer_module`),
+    levelDb: expectFinite(raw.level_db, `${location}.level_db`, true),
+    levelStartDb: expectFinite(raw.level_start_db, `${location}.level_start_db`, true),
+    levelEndDb: expectFinite(raw.level_end_db, `${location}.level_end_db`, true),
+    levelReference: raw.level_reference === undefined ? undefined : expectMember(raw.level_reference, levelReferences, `${location}.level_reference`),
+    f1Hz: expectFinite(raw.f1_hz, `${location}.f1_hz`, true),
+    f2Hz: expectFinite(raw.f2_hz, `${location}.f2_hz`, true),
+    ratio: expectString(raw.ratio, `${location}.ratio`, true),
+    standard: raw.standard === undefined ? undefined : expectMember(raw.standard, standards, `${location}.standard`),
+    sweepDirection: raw.sweep_direction === undefined ? undefined : expectMember(raw.sweep_direction, sweepDirections, `${location}.sweep_direction`),
+    sweepScale: raw.sweep_scale === undefined ? undefined : expectMember(raw.sweep_scale, sweepScales, `${location}.sweep_scale`),
   };
 }
 
