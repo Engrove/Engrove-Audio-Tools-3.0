@@ -127,9 +127,13 @@ export function behaviorContextTabMarkup(): string {
             <span class="ea-panel-header-id">RI</span>
             <span id="bctx-score-title">Risk index</span>
             <span class="ea-panel-header-spacer"></span>
+            <span class="geo-truth-badge geo-truth-badge--whatif" data-bctx-whatif-badge hidden>WHAT IF</span>
             <span class="geo-truth-badge geo-truth-badge--model">MODEL</span>
           </div>
           <div class="ea-panel-body geo-bctx-score-body">
+            <p class="geo-bctx-whatif-note" data-bctx-whatif-note hidden role="note">
+              Risk index reflects simulated <em>What if</em> values, which deviate from Reference (math). Reset the simulation to evaluate the ideal geometry.
+            </p>
             <div class="geo-risk-score" data-bctx-score-display>
               <span class="geo-risk-score-value" data-bctx-score-value>—</span>
               <span class="geo-risk-score-label" data-bctx-score-label>—</span>
@@ -570,6 +574,8 @@ export type BctxElements = {
   valAngular: HTMLElement | null;
   valEccwarp: HTMLElement | null;
   interpretation: HTMLElement | null;
+  whatifBadge: HTMLElement | null;
+  whatifNote: HTMLElement | null;
   eccentricity: HTMLInputElement | null;
   warp: HTMLSelectElement | null;
   stylus: HTMLSelectElement | null;
@@ -592,6 +598,8 @@ export function bctxElements(root: ParentNode): BctxElements {
     valAngular: root.querySelector<HTMLElement>('[data-bctx-val="angular"]'),
     valEccwarp: root.querySelector<HTMLElement>('[data-bctx-val="eccwarp"]'),
     interpretation: root.querySelector<HTMLElement>('[data-bctx-interpretation]'),
+    whatifBadge: root.querySelector<HTMLElement>('[data-bctx-whatif-badge]'),
+    whatifNote: root.querySelector<HTMLElement>('[data-bctx-whatif-note]'),
     eccentricity: root.querySelector<HTMLInputElement>('[data-bctx-eccentricity]'),
     warp: root.querySelector<HTMLSelectElement>('[data-bctx-warp]'),
     stylus: root.querySelector<HTMLSelectElement>('[data-bctx-stylus]'),
@@ -610,6 +618,18 @@ const riskLevelClass: Record<string, string> = {
   elevated: 'geo-risk-score--elevated',
 };
 
+function geometryDeviates(
+  sim: SimulatedGeometry,
+  ref: ReferenceGeometry,
+): boolean {
+  const eps = 1e-4;
+  return (
+    Math.abs(sim.pivotToSpindleMm - ref.pivotToSpindleMm) > eps ||
+    Math.abs(sim.overhangMm - ref.overhangMm) > eps ||
+    Math.abs(sim.offsetAngleDeg - ref.offsetAngleDeg) > eps
+  );
+}
+
 export function recomputeBehaviorContext(
   bctxEls: BctxElements,
   bctxState: BehaviorContextState,
@@ -618,6 +638,9 @@ export function recomputeBehaviorContext(
 ): void {
   // Prefer simulated geometry when valid so the tab reacts to what-if inputs
   const geom = (simulated && simulated.valid) ? simulated : reference;
+  const usingWhatIf = !!(simulated && simulated.valid) && geometryDeviates(simulated, reference);
+  if (bctxEls.whatifBadge) bctxEls.whatifBadge.hidden = !usingWhatIf;
+  if (bctxEls.whatifNote) bctxEls.whatifNote.hidden = !usingWhatIf;
   const input: BehaviorContextInput = {
     pivotToSpindleMm: geom.pivotToSpindleMm,
     effectiveLengthMm: geom.effectiveLengthMm,
@@ -654,7 +677,9 @@ export function recomputeBehaviorContext(
       display.className = `geo-risk-score ${riskLevelClass[level] ?? ''}`;
     }
   }
-  if (bctxEls.scoreLabel) bctxEls.scoreLabel.textContent = levelLabel;
+  if (bctxEls.scoreLabel) {
+    bctxEls.scoreLabel.textContent = usingWhatIf ? `${levelLabel} (What if)` : levelLabel;
+  }
 
   const avgScrubProxy = samples.reduce((a, s) => a + s.scrubProxy, 0) / samples.length;
   const avgVelocityPenalty = samples.reduce((a, s) => a + s.velocityPenalty, 0) / samples.length;

@@ -362,9 +362,14 @@
   color: #4ab86a;
 }
 
+.geo-truth-badge--whatif {
+  background: #3a2a14;
+  color: #f2b837;
+}
+
 .geo-bctx-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: var(--ea-space-3);
   align-items: start;
 }
@@ -442,6 +447,21 @@
   font-variant-numeric: tabular-nums;
   min-width: 3rem;
   text-align: right;
+}
+
+.geo-bctx-whatif-note {
+  margin: 0;
+  padding: var(--ea-space-2);
+  border: 1px solid #6a4a14;
+  border-radius: var(--ea-radius-sm);
+  background: rgba(242, 184, 55, 0.08);
+  color: #f2b837;
+  font-size: var(--ea-font-size-small);
+  line-height: 1.5;
+}
+
+.geo-bctx-whatif-note[hidden] {
+  display: none;
 }
 
 .geo-bctx-interpretation {
