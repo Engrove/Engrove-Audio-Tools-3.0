@@ -45,7 +45,7 @@
  *      from the same Gaussian width.
  */
 
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { execFileSync } from 'node:child_process';
@@ -433,6 +433,44 @@ function toFloat32(source) {
   for (let i = 0; i < source.length; i += 1) out[i] = source[i];
   return out;
 }
+
+// S3F: static source check — verifies renderMeasurementLabPage.ts handles all
+// three test-record UI states and exposes the resolveSelectedTestRecord helper.
+function checkTestRecordUIStates() {
+  const srcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  if (!existsSync(srcPath)) {
+    console.error('S3F static check: renderMeasurementLabPage.ts not found');
+    process.exitCode = 1;
+    return;
+  }
+  const src = readFileSync(srcPath, 'utf8');
+  const checks = [
+    ['testRecordLoadFailed state field', /testRecordLoadFailed\s*:/],
+    ['selectedTestRecordMissing state field', /selectedTestRecordMissing\s*:/],
+    ['resolveSelectedTestRecord helper', /function resolveSelectedTestRecord\s*\(/],
+    ['dataset-load-failed UI message', /dataset failed to load/],
+    ['selected-record-not-found recovery', /Selected test record not found/],
+    ['recovery to preferred label', /recoveredToLabel/],
+    ['mlab-coverage-load-error class', /mlab-coverage-load-error/],
+    ['mlab-record-warning class', /mlab-record-warning/],
+    ['missing state cleared on change', /selectedTestRecordMissing\s*=\s*null/],
+    ['missing state cleared on catch', /testRecordLoadFailed\s*=\s*true[\s\S]{0,200}selectedTestRecordMissing\s*=\s*null/],
+  ];
+  let failed = false;
+  for (const [label, pattern] of checks) {
+    if (!pattern.test(src)) {
+      console.error(`S3F static check FAIL: "${label}" pattern not found in renderMeasurementLabPage.ts`);
+      failed = true;
+    }
+  }
+  if (!failed) {
+    console.log('- S3F static source check (test-record UI states): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkTestRecordUIStates();
 
 try {
   await runChecks();

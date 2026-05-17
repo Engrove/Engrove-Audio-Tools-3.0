@@ -93,6 +93,12 @@ type ResonanceStateBag = {
   capture: SweepCapture | null;
 };
 
+type SelectedTestRecordMissing = {
+  readonly requestedId: string;
+  readonly recoveredToId: string | null;
+  readonly recoveredToLabel: string | null;
+};
+
 type LabState = {
   sourceMode: SourceMode;
   captureState: CaptureState;
@@ -123,6 +129,7 @@ type LabState = {
   selectedTestRecordId: string | null;
   testRecords: readonly TestRecord[];
   testRecordLoadFailed: boolean;
+  selectedTestRecordMissing: SelectedTestRecordMissing | null;
   coverageCollapsed: boolean;
 };
 
@@ -224,6 +231,7 @@ const state: LabState = {
   selectedTestRecordId: null,
   testRecords: [],
   testRecordLoadFailed: false,
+  selectedTestRecordMissing: null,
   coverageCollapsed: false,
 };
 
@@ -1368,6 +1376,27 @@ function isThdResult(r: ThdResult | ImdResult | null): r is ThdResult {
   return r !== null && 'thdPercent' in r;
 }
 
+function resolveSelectedTestRecord(
+  records: readonly TestRecord[],
+  selectedId: string | null,
+): { nextSelectedId: string | null; missing: SelectedTestRecordMissing | null } {
+  const preferred = getPreferredRecord(records);
+  if (!selectedId) {
+    return { nextSelectedId: preferred ? preferred.id : null, missing: null };
+  }
+  if (records.some(r => r.id === selectedId)) {
+    return { nextSelectedId: selectedId, missing: null };
+  }
+  return {
+    nextSelectedId: preferred ? preferred.id : null,
+    missing: {
+      requestedId: selectedId,
+      recoveredToId: preferred ? preferred.id : null,
+      recoveredToLabel: preferred ? `${preferred.manufacturer} — ${preferred.title}` : null,
+    },
+  };
+}
+
 function selectedRecord(): TestRecord | null {
   if (!state.selectedTestRecordId) return null;
   return state.testRecords.find(r => r.id === state.selectedTestRecordId) ?? null;
@@ -1440,9 +1469,18 @@ function renderCoveragePanel(els: Elements): void {
     return;
   }
 
+  let warningHtml = '';
+  if (state.selectedTestRecordMissing) {
+    const m = state.selectedTestRecordMissing;
+    const recoveryText = m.recoveredToLabel
+      ? `Reset to preferred profile: ${renderText(m.recoveredToLabel)}.`
+      : 'Choose another profile.';
+    warningHtml = `<p class="mlab-record-warning">Selected test record not found. ${recoveryText}</p>`;
+  }
+
   const record = selectedRecord();
   if (!record) {
-    body.innerHTML = '<p class="ea-muted">Select a test record above to see which measurements are available.</p>';
+    body.innerHTML = warningHtml || '<p class="ea-muted">Select a test record above to see which measurements are available.</p>';
     return;
   }
 
@@ -1486,6 +1524,7 @@ function renderCoveragePanel(els: Elements): void {
     : '';
 
   body.innerHTML = `
+    ${warningHtml}
     <p class="ea-muted mlab-coverage-intro">Coverage for <strong>${title}</strong> — ${renderText(summaryParts.join(', '))}.</p>
     <div class="mlab-coverage-grid" role="list">
       ${cards}
@@ -2405,13 +2444,11 @@ export function enableMeasurementLabInteractions(): void {
   void loadTestRecordsRuntimeData().then((data) => {
     state.testRecords = data.records;
     state.testRecordLoadFailed = false;
-    if (!state.selectedTestRecordId) {
-      const preferred = getPreferredRecord(data.records);
-      if (preferred) state.selectedTestRecordId = preferred.id;
-    } else if (!data.records.find(r => r.id === state.selectedTestRecordId)) {
-      appendLog(`Selected test record not found: ${state.selectedTestRecordId ?? ''}. Resetting to preferred profile.`);
-      const preferred = getPreferredRecord(data.records);
-      state.selectedTestRecordId = preferred ? preferred.id : null;
+    const resolved = resolveSelectedTestRecord(data.records, state.selectedTestRecordId);
+    state.selectedTestRecordId = resolved.nextSelectedId;
+    state.selectedTestRecordMissing = resolved.missing;
+    if (resolved.missing) {
+      appendLog(`Selected test record not found: ${resolved.missing.requestedId}. Resetting to preferred profile.`);
     }
     renderRecordSelector(els);
     renderCoveragePanel(els);
@@ -2422,6 +2459,7 @@ export function enableMeasurementLabInteractions(): void {
     renderResonancePanel(els);
   }).catch((err: unknown) => {
     state.testRecordLoadFailed = true;
+    state.selectedTestRecordMissing = null;
     const msg = err instanceof Error && err.message.length > 0 ? err.message : 'unknown load error';
     const sanitized = msg.slice(0, 200);
     appendLog(`Test record dataset failed to load: ${sanitized}`);
@@ -2437,6 +2475,7 @@ export function enableMeasurementLabInteractions(): void {
   els.recordSelect?.addEventListener('change', () => {
     const value = els.recordSelect?.value ?? '';
     state.selectedTestRecordId = value.length > 0 ? value : null;
+    state.selectedTestRecordMissing = null;
     renderRecordSelector(els);
     renderCoveragePanel(els);
     renderSpeedPanel(els);

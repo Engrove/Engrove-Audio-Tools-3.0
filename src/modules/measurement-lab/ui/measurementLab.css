@@ -478,6 +478,14 @@
   font-style: italic;
 }
 
+.mlab-record-warning {
+  padding: var(--ea-space-2) var(--ea-space-3);
+  margin-bottom: var(--ea-space-3);
+  border-left: 3px solid var(--ea-status-warning);
+  color: var(--ea-status-warning);
+  font-size: var(--ea-font-size-small);
+}
+
 .mlab-coverage-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
