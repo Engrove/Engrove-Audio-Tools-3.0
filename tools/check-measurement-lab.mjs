@@ -1590,6 +1590,101 @@ function checkS5BVtaRunModel() {
 
 checkS5BVtaRunModel();
 
+// S5B.1: static source checks — VTA Height Input Parsing & Run Marker QA Hardening.
+function checkS5B1HeightParsing() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const workflowsSrcPath = join(repoRoot, 'src/modules/measurement-lab/data/measurementWorkflows.ts');
+  if (!existsSync(renderSrcPath) || !existsSync(workflowsSrcPath)) {
+    console.error('S5B.1 static check: source file(s) not found');
+    process.exitCode = 1;
+    return;
+  }
+  const src = readFileSync(renderSrcPath, 'utf8');
+  const workflowsSrc = readFileSync(workflowsSrcPath, 'utf8');
+
+  const checks = [
+    // 1. Buggy || null pattern is gone
+    [
+      'no buggy `|| null` height pattern',
+      !(/Number\(rawMm\.replace\(|Number\(trimmed\.replace\([^)]+\)\)\s*\|\|\s*null/.test(src)),
+    ],
+    // 2. parseVtaHeightMm helper exists
+    [
+      'parseVtaHeightMm function defined',
+      /function parseVtaHeightMm\(raw:\s*string\)\s*:\s*number\s*\|\s*null/.test(src),
+    ],
+    // 3. Number.isFinite used inside the helper
+    [
+      'Number.isFinite used in parseVtaHeightMm',
+      /function parseVtaHeightMm[\s\S]{0,200}Number\.isFinite\(parsed\)/.test(src),
+    ],
+    // 4. Helper handles empty string → null (returns null when trimmed empty)
+    [
+      'parseVtaHeightMm returns null for empty trimmed string',
+      /function parseVtaHeightMm[\s\S]{0,200}trimmed\.length\s*===\s*0[\s\S]{0,50}return null/.test(src),
+    ],
+    // 5. Helper handles decimal comma → dot replacement
+    [
+      "parseVtaHeightMm replaces ',' with '.'",
+      /function parseVtaHeightMm[\s\S]{0,300}replace\(','\s*,\s*'\.'\)/.test(src),
+    ],
+    // 6. Call site uses parseVtaHeightMm, not the old rawMm pattern
+    [
+      'call site uses parseVtaHeightMm',
+      /const heightMm = parseVtaHeightMm\(state\.vta\.heightMmInput\)/.test(src),
+    ],
+    // 7. No rawMm variable left at call site
+    [
+      'no rawMm variable at add-run call site',
+      !(/const rawMm = state\.vta\.heightMmInput/.test(src)),
+    ],
+    // 8. Label fallback still uses heightMm !== null (not truthiness check)
+    [
+      'label fallback uses heightMm !== null',
+      /heightMm\s*!==\s*null\s*\?\s*`\$\{heightMm\}\s*mm`/.test(src),
+    ],
+    // 9. imdPercent stays null — no numeric IMD value assigned
+    [
+      'imdPercent: null preserved',
+      /imdPercent:\s*null/.test(src),
+    ],
+    // 10. source stays 'manual_placeholder'
+    [
+      "source: 'manual_placeholder' preserved",
+      /source:\s*'manual_placeholder'/.test(src),
+    ],
+    // 11. VTA workflow is not changed to supported (guard against accidental promotion)
+    [
+      "VTA implementationStatus stays 'planned' in workflows file",
+      (() => {
+        // Find the VTA block: from id: 'vta_imd_optimizer' to the next closing brace
+        const vtaStart = workflowsSrc.indexOf("id: 'vta_imd_optimizer'");
+        if (vtaStart === -1) return false;
+        const blockEnd = workflowsSrc.indexOf('},', vtaStart);
+        if (blockEnd === -1) return false;
+        const block = workflowsSrc.slice(vtaStart, blockEnd + 2);
+        return /implementationStatus:\s*'planned'/.test(block) &&
+               !/implementationStatus:\s*'supported'/.test(block);
+      })(),
+    ],
+  ];
+
+  let allPass = true;
+  for (const [label, result] of checks) {
+    if (!result) {
+      console.error(`S5B.1 static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S5B.1 static source check (VTA Height Input Parsing & Run Marker QA Hardening): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS5B1HeightParsing();
+
 try {
   await runChecks();
 } catch (error) {

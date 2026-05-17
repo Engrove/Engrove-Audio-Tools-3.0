@@ -3023,6 +3023,13 @@ function renderResonancePanel(els: Elements): void {
 
 let vtaRunIdCounter = 0;
 
+function parseVtaHeightMm(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (trimmed.length === 0) return null;
+  const parsed = Number(trimmed.replace(',', '.'));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function nextVtaRunId(): string {
   vtaRunIdCounter += 1;
   return `vta-run-${vtaRunIdCounter}`;
@@ -3247,8 +3254,7 @@ function renderAdvancedPanel(els: Elements): void {
   });
 
   body.querySelector<HTMLButtonElement>('[data-mlab-vta-add]')?.addEventListener('click', () => {
-    const rawMm = state.vta.heightMmInput.trim();
-    const heightMm = rawMm.length > 0 ? (Number(rawMm.replace(',', '.')) || null) : null;
+    const heightMm = parseVtaHeightMm(state.vta.heightMmInput);
     const heightLabel = state.vta.heightLabelInput.trim() || (heightMm !== null ? `${heightMm} mm` : 'unlabelled');
     const run: VtaImdRun = {
       id: nextVtaRunId(),
