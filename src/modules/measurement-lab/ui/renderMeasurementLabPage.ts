@@ -1367,8 +1367,7 @@ function renderRecordSelector(els: Elements): void {
     const options = [
       none,
       ...state.testRecords.map(r => {
-        const suffix = r.preferredForToolbox3 === true ? '  ★ Recommended for Toolbox 3.0' : '';
-        const label = renderText(`${r.manufacturer} — ${r.title}${suffix}`);
+        const label = renderText(`${r.manufacturer} — ${r.title}`);
         const sel = state.selectedTestRecordId === r.id ? ' selected' : '';
         return `<option value="${renderText(r.id)}"${sel}>${label}</option>`;
       }),
