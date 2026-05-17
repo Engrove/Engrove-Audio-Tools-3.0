@@ -690,6 +690,27 @@ button.mlab-coverage-badge--available:focus-visible {
   line-height: 1.5;
 }
 
+.mlab-reflevel-warning {
+  color: var(--ea-text-warning, #d4a017);
+  font-size: var(--ea-font-size-small);
+  margin: var(--ea-space-1) 0;
+}
+
+.mlab-reflevel-clip {
+  font-family: var(--ea-font-data);
+  font-size: 1.1rem;
+  color: var(--ea-text-medium);
+}
+
+.mlab-reflevel-clip--active {
+  color: var(--ea-color-error, #d05050);
+  font-weight: 600;
+}
+
+.mlab-reflevel-selftest-note {
+  margin-bottom: var(--ea-space-2);
+}
+
 @media (max-width: 1180px) {
   .mlab-workbench-grid {
     grid-template-columns: 1fr;

@@ -79,7 +79,7 @@ export const MEASUREMENT_WORKFLOWS: readonly MeasurementWorkflow[] = [
     description: 'Calibrate ADC input against standard groove level using a reference tone.',
     requiredAnalyzerModule: 'reference_calibration',
     fallbackPurposes: ['freq_response', 'thd'],
-    implementationStatus: 'planned',
+    implementationStatus: 'supported',
     unavailableReason: 'No reference calibration band on selected test record.',
   },
   {

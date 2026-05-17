@@ -29,7 +29,8 @@ import { computeFrequencyResponse, type FreqResponseResult } from '../engine/fre
 import { computeRiaaMagnitudeDb } from '../engine/iriaaFilter';
 import { analyseTHD, analyseIMD, type ThdResult, type ImdResult } from '../engine/thd';
 import { analyseResonance, type ResonanceResult, type ResonanceSweepType } from '../engine/resonance';
-import { loadTestRecordsRuntimeData, getPreferredRecord, type TestRecord, type TestBandPurpose } from '../data/loadTestRecords';
+import { analyzeReferenceLevel, type ReferenceLevelResult } from '../engine/referenceLevel';
+import { loadTestRecordsRuntimeData, getPreferredRecord, type TestRecord, type TestBand, type TestBandPurpose } from '../data/loadTestRecords';
 import { computeAllWorkflowCoverage, MEASUREMENT_WORKFLOWS, type WorkflowAvailability } from '../data/measurementWorkflows';
 
 const WORKFLOW_PANEL_TARGETS: Readonly<Record<string, string>> = {
@@ -37,6 +38,7 @@ const WORKFLOW_PANEL_TARGETS: Readonly<Record<string, string>> = {
   channel_identity: 'mlab-channel-panel',
   azimuth_crosstalk: 'mlab-channel-panel',
   frequency_response: 'mlab-freq-panel',
+  reference_level: 'mlab-reflevel-panel',
   vta_imd_optimizer: 'mlab-thd-panel',
   vertical_resonance: 'mlab-resonance-panel',
 };
@@ -108,6 +110,19 @@ type SelectedTestRecordMissing = {
   readonly recoveredToLabel: string | null;
 };
 
+type RefLevelCapture = {
+  readonly stop: () => void;
+};
+
+type RefLevelStateBag = {
+  active: boolean;
+  elapsedSeconds: number;
+  result: ReferenceLevelResult | null;
+  resultSource: 'live_capture' | 'self_test' | null;
+  selectedBandIndex: string | null;
+  capture: RefLevelCapture | null;
+};
+
 type LabState = {
   sourceMode: SourceMode;
   captureState: CaptureState;
@@ -140,6 +155,7 @@ type LabState = {
   testRecordLoadFailed: boolean;
   selectedTestRecordMissing: SelectedTestRecordMissing | null;
   coverageCollapsed: boolean;
+  refLevel: RefLevelStateBag;
 };
 
 /*
@@ -150,13 +166,14 @@ type LabState = {
  * site below; it has no runtime effect.
  */
 const tokenLayoutGeneratedClassNames =
-  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight';
+  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active';
 void tokenLayoutGeneratedClassNames;
 
 const speedMeasurementDurationSeconds = 30;
 const defaultSpeedReferenceHz = 3150;
 const channelMeasurementDurationSeconds = 10;
 const freqMeasurementDurationSeconds = 10;
+const refLevelMeasurementDurationSeconds = 5;
 
 const defaultRequestedSampleRateHz = 96_000;
 const defaultRequestedChannelCount = 2;
@@ -242,6 +259,14 @@ const state: LabState = {
   testRecordLoadFailed: false,
   selectedTestRecordMissing: null,
   coverageCollapsed: false,
+  refLevel: {
+    active: false,
+    elapsedSeconds: 0,
+    result: null,
+    resultSource: null,
+    selectedBandIndex: null,
+    capture: null,
+  },
 };
 
 function readStoredDeviceId(): string | null {
@@ -485,6 +510,20 @@ function resonancePanelMarkup(): string {
   `;
 }
 
+function refLevelPanelMarkup(): string {
+  return `
+    <section id="mlab-reflevel-panel" data-mlab-tool-panel="reference_level" class="ea-panel" aria-labelledby="mlab-reflevel-title">
+      <div class="ea-panel-header">
+        <span class="ea-panel-header-id">08</span>
+        <span id="mlab-reflevel-title">Reference level calibration</span>
+      </div>
+      <div class="ea-panel-body" data-mlab-reflevel-body>
+        <p class="ea-muted">Connect a source to analyze reference level.</p>
+      </div>
+    </section>
+  `;
+}
+
 function meterChannelMarkup(channel: ChannelKey, label: string): string {
   return `
     <div class="mlab-meter-channel" data-mlab-meter-channel="${channel}">
@@ -511,7 +550,7 @@ function visualizationMarkup(): string {
     <div class="mlab-viz-col">
       <aside class="ea-panel mlab-viz-panel" aria-labelledby="mlab-viz-title">
         <div class="ea-panel-header">
-          <span class="ea-panel-header-id">08</span>
+          <span class="ea-panel-header-id">09</span>
           <span id="mlab-viz-title">Level meter</span>
         </div>
         <div class="ea-panel-body mlab-viz-body">
@@ -528,7 +567,7 @@ function visualizationMarkup(): string {
       </aside>
       <aside class="ea-panel mlab-log-panel" aria-labelledby="mlab-log-title">
         <div class="ea-panel-header">
-          <span class="ea-panel-header-id">09</span>
+          <span class="ea-panel-header-id">10</span>
           <span id="mlab-log-title">Activity log</span>
           <span class="ea-panel-header-spacer"></span>
           <button class="ea-panel-header-action" type="button" data-mlab-log-reset>Clear</button>
@@ -571,6 +610,7 @@ type SessionJson = {
     thd: object | null;
     imd: object | null;
     resonance: object | null;
+    reference_level: object | null;
   };
 };
 
@@ -646,6 +686,24 @@ function buildSessionJson(): SessionJson {
             sweep_to_hz: state.resonance.toHz,
           }
         : null,
+      reference_level: (() => {
+        const r = state.refLevel.result;
+        if (!r) return null;
+        return {
+          source: state.refLevel.resultSource ?? 'unavailable',
+          left_rms_dbfs: r.leftRmsDbfs,
+          right_rms_dbfs: r.rightRmsDbfs,
+          left_peak_dbfs: r.leftPeakDbfs,
+          right_peak_dbfs: r.rightPeakDbfs,
+          balance_db: r.balanceDb,
+          headroom_db: r.headroomDb,
+          clipping: r.clipping,
+          confidence: r.confidence,
+          reference_frequency_hz: r.referenceFrequencyHz ?? null,
+          reference_level_db: r.referenceLevelDb ?? null,
+          warnings: Array.from(r.warnings),
+        };
+      })(),
     },
   };
 }
@@ -797,6 +855,28 @@ function buildReportText(): string {
     lines.push('');
   }
 
+  // Reference level calibration
+  const refr = state.refLevel.result;
+  if (refr) {
+    lines.push('REFERENCE LEVEL CALIBRATION');
+    lines.push(`  Source:                ${state.refLevel.resultSource ?? 'unknown'}`);
+    if (refr.referenceFrequencyHz !== undefined) {
+      lines.push(`  Reference band:        ${refr.referenceFrequencyHz} Hz${refr.referenceLevelDb !== undefined ? ` · ${refr.referenceLevelDb} dB` : ''}`);
+    }
+    lines.push(`  L RMS:                 ${refr.leftRmsDbfs !== null ? refr.leftRmsDbfs.toFixed(2) + ' dBFS' : '—'}`);
+    lines.push(`  R RMS:                 ${refr.rightRmsDbfs !== null ? refr.rightRmsDbfs.toFixed(2) + ' dBFS' : '—'}`);
+    lines.push(`  L Peak:                ${refr.leftPeakDbfs !== null ? refr.leftPeakDbfs.toFixed(2) + ' dBFS' : '—'}`);
+    lines.push(`  R Peak:                ${refr.rightPeakDbfs !== null ? refr.rightPeakDbfs.toFixed(2) + ' dBFS' : '—'}`);
+    lines.push(`  Balance (R − L):       ${refr.balanceDb !== null ? (refr.balanceDb >= 0 ? '+' : '') + refr.balanceDb.toFixed(2) + ' dB' : '—'}`);
+    lines.push(`  Headroom:              ${refr.headroomDb !== null ? refr.headroomDb.toFixed(2) + ' dB' : '—'}`);
+    lines.push(`  Clipping:              ${refr.clipping ? 'yes' : 'no'}`);
+    lines.push(`  Confidence:            ${refr.confidence}`);
+    if (refr.warnings.length > 0) {
+      lines.push(`  Warnings:              ${Array.from(refr.warnings).join('; ')}`);
+    }
+    lines.push('');
+  }
+
   if (state.log.length > 0) {
     lines.push(hr);
     lines.push('ACTIVITY LOG');
@@ -853,6 +933,7 @@ export function renderMeasurementLabPage(): string {
             ${freqPanelMarkup()}
             ${thdPanelMarkup()}
             ${resonancePanelMarkup()}
+            ${refLevelPanelMarkup()}
           </div>
           ${visualizationMarkup()}
         </div>
@@ -899,6 +980,7 @@ function elements(root: ParentNode) {
     coverageBody: root.querySelector<HTMLElement>('[data-mlab-coverage-body]'),
     waveformL: root.querySelector<HTMLCanvasElement>('[data-mlab-waveform="L"]'),
     waveformR: root.querySelector<HTMLCanvasElement>('[data-mlab-waveform="R"]'),
+    refLevelBody: root.querySelector<HTMLElement>('[data-mlab-reflevel-body]'),
   };
 }
 
@@ -1383,6 +1465,279 @@ function startThdCapture(els: Elements): void {
 
 function isThdResult(r: ThdResult | ImdResult | null): r is ThdResult {
   return r !== null && 'thdPercent' in r;
+}
+
+function getReferenceBands(record: TestRecord): readonly TestBand[] {
+  return record.sides.flatMap(s => [...s.bands]).filter(b => b.analyzerModule === 'reference_calibration');
+}
+
+function selectedReferenceBand(): TestBand | null {
+  const record = selectedRecord();
+  if (!record) return null;
+  const bands = getReferenceBands(record);
+  if (bands.length === 0) return null;
+  if (state.refLevel.selectedBandIndex) {
+    return bands.find(b => b.index === state.refLevel.selectedBandIndex) ?? bands[0];
+  }
+  return bands.find(b => b.frequencyHz === 1000) ?? bands[0];
+}
+
+function stopRefLevelCapture(): void {
+  if (state.refLevel.capture) {
+    state.refLevel.capture.stop();
+    state.refLevel.capture = null;
+  }
+  state.refLevel.active = false;
+  state.refLevel.elapsedSeconds = 0;
+}
+
+function startRefLevelCapture(els: Elements): void {
+  const context = state.audioHandle?.context;
+  const source = state.preSplitterNode;
+  if (!context || !source || state.captureState !== 'live') return;
+
+  stopRefLevelCapture();
+  state.refLevel.active = true;
+  state.refLevel.elapsedSeconds = 0;
+  state.refLevel.result = null;
+  renderRefLevelPanel(els);
+
+  const durationSeconds = refLevelMeasurementDurationSeconds;
+  const totalSamples = Math.ceil(durationSeconds * context.sampleRate);
+  const leftBuf = new Float32Array(totalSamples);
+  const rightBuf = new Float32Array(totalSamples);
+  let written = 0;
+  let done = false;
+  const bufferSize = 4096;
+
+  // eslint-disable-next-line deprecation/deprecation
+  const processor = context.createScriptProcessor(bufferSize, 2, 2);
+  const silentSink = context.createGain();
+  silentSink.gain.value = 0;
+  silentSink.connect(context.destination);
+
+  const teardown = (): void => {
+    try { processor.disconnect(); } catch { /* gone */ }
+    try { silentSink.disconnect(); } catch { /* gone */ }
+  };
+
+  processor.onaudioprocess = (event) => {
+    if (done) return;
+    const inBuf = event.inputBuffer;
+    const inL = inBuf.getChannelData(0);
+    const inR = inBuf.numberOfChannels > 1 ? inBuf.getChannelData(1) : inL;
+    const remaining = totalSamples - written;
+    const toWrite = Math.min(inL.length, remaining);
+    leftBuf.set(inL.subarray(0, toWrite), written);
+    rightBuf.set(inR.subarray(0, toWrite), written);
+    written += toWrite;
+    state.refLevel.elapsedSeconds = written / context.sampleRate;
+    renderRefLevelPanel(els);
+    if (written >= totalSamples) {
+      done = true;
+      teardown();
+      state.refLevel.capture = null;
+      state.refLevel.active = false;
+      const band = selectedReferenceBand();
+      state.refLevel.result = analyzeReferenceLevel({
+        leftSamples: leftBuf.subarray(0, written),
+        rightSamples: rightBuf.subarray(0, written),
+        sampleRateHz: context.sampleRate,
+        referenceFrequencyHz: band?.frequencyHz,
+        referenceLevelDb: band?.levelDb,
+      });
+      state.refLevel.resultSource = state.sourceMode === 'self-test' ? 'self_test' : 'live_capture';
+      const bal = state.refLevel.result.balanceDb?.toFixed(2) ?? '—';
+      appendLog(`Reference level — balance ${bal} dB, confidence ${state.refLevel.result.confidence}`);
+      renderRefLevelPanel(els);
+    }
+  };
+
+  source.connect(processor);
+  processor.connect(silentSink);
+
+  state.refLevel.capture = {
+    stop(): void {
+      if (!done) {
+        done = true;
+        teardown();
+      }
+    },
+  };
+}
+
+function fmtDbfs(value: number | null): string {
+  if (value === null || !Number.isFinite(value)) return '—';
+  return `${value.toFixed(2)} dBFS`;
+}
+
+function fmtDbSigned(value: number | null): string {
+  if (value === null || !Number.isFinite(value)) return '—';
+  return `${value >= 0 ? '+' : ''}${value.toFixed(2)} dB`;
+}
+
+function renderRefLevelPanel(els: Elements): void {
+  const body = els.refLevelBody;
+  if (!body) return;
+
+  if (state.captureState !== 'live') {
+    body.innerHTML = '<p class="ea-muted">Connect a source to analyze reference level.</p>';
+    return;
+  }
+
+  if (state.testRecordLoadFailed) {
+    body.innerHTML = '<p class="ea-muted mlab-coverage-load-error">Test record dataset failed to load.</p>';
+    return;
+  }
+
+  const record = selectedRecord();
+  if (!record) {
+    body.innerHTML = '<p class="ea-muted">Select a test record above to see available reference bands.</p>';
+    return;
+  }
+
+  const referenceBands = getReferenceBands(record);
+  if (referenceBands.length === 0) {
+    body.innerHTML = '<p class="ea-muted">Reference level calibration is not available with selected test record.</p>';
+    return;
+  }
+
+  if (state.refLevel.active) {
+    const pct = Math.min(100, (state.refLevel.elapsedSeconds / refLevelMeasurementDurationSeconds) * 100);
+    const remaining = Math.max(0, refLevelMeasurementDurationSeconds - state.refLevel.elapsedSeconds);
+    body.innerHTML = `
+      <p class="ea-muted">Capturing ${refLevelMeasurementDurationSeconds}&thinsp;s reference level&hellip;</p>
+      <div class="mlab-progress-track" role="progressbar" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100" aria-label="Capture progress">
+        <div class="mlab-progress-fill" style="width:${pct.toFixed(1)}%"></div>
+      </div>
+      <p class="mlab-progress-label">${remaining.toFixed(1)}&nbsp;s remaining</p>
+      <div class="mlab-session-controls">
+        <button class="ea-button ea-button--ghost" type="button" data-mlab-reflevel-cancel>Cancel</button>
+      </div>
+    `;
+    body.querySelector<HTMLButtonElement>('[data-mlab-reflevel-cancel]')?.addEventListener('click', () => {
+      stopRefLevelCapture();
+      renderRefLevelPanel(els);
+    });
+    return;
+  }
+
+  if (state.refLevel.result) {
+    const r = state.refLevel.result;
+    const sourceLabel = state.refLevel.resultSource === 'self_test' ? 'Self-test / Simulated' : 'Live capture';
+    const sourceBadgeClass = state.refLevel.resultSource === 'self_test' ? 'ea-badge ea-badge--setup' : 'ea-badge ea-badge--manufacturer';
+    const warningHtml = r.warnings.length > 0
+      ? Array.from(r.warnings).map(w => `<p class="mlab-reflevel-warning">${renderText(w)}</p>`).join('')
+      : '';
+    const clipClass = r.clipping ? 'mlab-reflevel-clip mlab-reflevel-clip--active' : 'mlab-reflevel-clip';
+    body.innerHTML = `
+      <div class="mlab-wf-result">
+        <div class="mlab-wf-result-row">
+          <span class="mlab-wf-result-label">Source</span>
+          <span class="mlab-wf-result-value"><span class="${sourceBadgeClass}">${renderText(sourceLabel)}</span></span>
+        </div>
+        ${r.referenceFrequencyHz !== undefined ? `
+        <div class="mlab-wf-result-row">
+          <span class="mlab-wf-result-label">Reference band</span>
+          <span class="mlab-wf-result-value">${r.referenceFrequencyHz}&nbsp;Hz${r.referenceLevelDb !== undefined ? ` &middot; ${r.referenceLevelDb}&nbsp;dB` : ''}</span>
+        </div>` : ''}
+        <div class="mlab-wf-result-row">
+          <span class="mlab-wf-result-label">L RMS</span>
+          <span class="mlab-wf-result-value">${fmtDbfs(r.leftRmsDbfs)}</span>
+        </div>
+        <div class="mlab-wf-result-row">
+          <span class="mlab-wf-result-label">R RMS</span>
+          <span class="mlab-wf-result-value">${fmtDbfs(r.rightRmsDbfs)}</span>
+        </div>
+        <div class="mlab-wf-result-row">
+          <span class="mlab-wf-result-label">L Peak</span>
+          <span class="mlab-wf-result-value">${fmtDbfs(r.leftPeakDbfs)}</span>
+        </div>
+        <div class="mlab-wf-result-row">
+          <span class="mlab-wf-result-label">R Peak</span>
+          <span class="mlab-wf-result-value">${fmtDbfs(r.rightPeakDbfs)}</span>
+        </div>
+        <div class="mlab-wf-result-row">
+          <span class="mlab-wf-result-label">Balance (R&minus;L)</span>
+          <span class="mlab-wf-result-value">${fmtDbSigned(r.balanceDb)}</span>
+        </div>
+        <div class="mlab-wf-result-row">
+          <span class="mlab-wf-result-label">Headroom</span>
+          <span class="mlab-wf-result-value">${r.headroomDb !== null ? `${r.headroomDb.toFixed(2)}&nbsp;dB` : '—'}</span>
+        </div>
+        <div class="mlab-wf-result-row mlab-wf-result-row--grade">
+          <span class="mlab-wf-result-label">Clipping</span>
+          <span class="${clipClass}">${r.clipping ? 'Clipping' : 'No clip'}</span>
+        </div>
+        <div class="mlab-wf-result-row">
+          <span class="mlab-wf-result-label">Confidence</span>
+          <span class="mlab-wf-result-value">${renderText(r.confidence.charAt(0).toUpperCase() + r.confidence.slice(1))}</span>
+        </div>
+      </div>
+      ${warningHtml}
+      <p class="mlab-wf-note">Captured at ${(r.sampleRateHz / 1000).toFixed(1)}&nbsp;kHz &middot; balance&nbsp;=&nbsp;R&nbsp;RMS&nbsp;&minus;&nbsp;L&nbsp;RMS</p>
+      <div class="mlab-session-controls">
+        <button class="ea-button ea-button--primary" type="button" data-mlab-reflevel-start>Analyze again</button>
+      </div>
+    `;
+    body.querySelector<HTMLButtonElement>('[data-mlab-reflevel-start]')?.addEventListener('click', () => {
+      state.refLevel.result = null;
+      startRefLevelCapture(els);
+    });
+    return;
+  }
+
+  // Idle — ready to analyze
+  const selectedBand = selectedReferenceBand();
+  const bandOptions = referenceBands.map(b => {
+    const isSelected = state.refLevel.selectedBandIndex
+      ? b.index === state.refLevel.selectedBandIndex
+      : b.index === selectedBand?.index;
+    const sel = isSelected ? ' selected' : '';
+    const freq = b.frequencyHz ? ` (${b.frequencyHz} Hz)` : '';
+    const level = b.levelDb !== undefined ? ` · ${b.levelDb} dB` : '';
+    return `<option value="${renderText(b.index)}"${sel}>${renderText(b.label + freq + level)}</option>`;
+  }).join('');
+
+  const selfTestNote = state.sourceMode === 'self-test'
+    ? `<p class="ea-muted mlab-reflevel-selftest-note">Self-test mode: results will be marked as <strong>self-test / simulated</strong>.</p>`
+    : '';
+
+  body.innerHTML = `
+    ${selfTestNote}
+    <table class="ea-form-table" aria-label="Reference level setup">
+      <tbody>
+        <tr>
+          <td class="ea-col-status">${statusDot('planned')}</td>
+          <td class="ea-col-label">Reference band
+            <span class="ea-form-table-sublabel">Band from test record</span>
+          </td>
+          <td class="ea-col-value">
+            <select class="ea-input" data-mlab-reflevel-band aria-label="Reference band">
+              ${bandOptions}
+            </select>
+          </td>
+          <td class="ea-col-meta"><span class="ea-badge">Band</span></td>
+        </tr>
+        <tr>
+          <td class="ea-col-status">${statusDot('done')}</td>
+          <td class="ea-col-label">Duration</td>
+          <td class="ea-col-value mlab-requested">${refLevelMeasurementDurationSeconds}&nbsp;s</td>
+          <td class="ea-col-meta"><span class="ea-badge">Fixed</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="mlab-session-controls">
+      <button class="ea-button ea-button--primary" type="button" data-mlab-reflevel-start>Analyze reference level</button>
+    </div>
+  `;
+  body.querySelector<HTMLSelectElement>('[data-mlab-reflevel-band]')?.addEventListener('change', (e) => {
+    const val = (e.currentTarget as HTMLSelectElement).value;
+    state.refLevel.selectedBandIndex = val.length > 0 ? val : null;
+  });
+  body.querySelector<HTMLButtonElement>('[data-mlab-reflevel-start]')?.addEventListener('click', () => {
+    startRefLevelCapture(els);
+  });
 }
 
 function highlightTargetPanel(panelId: string): void {
@@ -2223,6 +2578,8 @@ async function teardownAudio(): Promise<void> {
   state.thd.result = null;
   stopResonanceCapture();
   state.resonance.result = null;
+  stopRefLevelCapture();
+  state.refLevel.result = null;
   if (state.selfTestOscillator) {
     try { state.selfTestOscillator.stop(); } catch { /* already stopped */ }
     try { state.selfTestOscillator.disconnect(); } catch { /* not connected */ }
@@ -2419,6 +2776,7 @@ async function connectMeasurementLab(els: Elements): Promise<void> {
   renderFreqPanel(els);
   renderThdPanel(els);
   renderResonancePanel(els);
+  renderRefLevelPanel(els);
 }
 
 async function disconnectMeasurementLab(els: Elements): Promise<void> {
@@ -2435,6 +2793,7 @@ async function disconnectMeasurementLab(els: Elements): Promise<void> {
   renderFreqPanel(els);
   renderThdPanel(els);
   renderResonancePanel(els);
+  renderRefLevelPanel(els);
 }
 
 async function refreshDeviceList(els: Elements): Promise<void> {
@@ -2471,6 +2830,7 @@ export function enableMeasurementLabInteractions(): void {
   renderFreqPanel(els);
   renderThdPanel(els);
   renderResonancePanel(els);
+  renderRefLevelPanel(els);
   renderLogPanel(els);
   clearMeterDom(els);
 
@@ -2492,6 +2852,7 @@ export function enableMeasurementLabInteractions(): void {
     renderFreqPanel(els);
     renderThdPanel(els);
     renderResonancePanel(els);
+    renderRefLevelPanel(els);
   }).catch((err: unknown) => {
     state.testRecordLoadFailed = true;
     state.selectedTestRecordMissing = null;
@@ -2511,6 +2872,7 @@ export function enableMeasurementLabInteractions(): void {
     const value = els.recordSelect?.value ?? '';
     state.selectedTestRecordId = value.length > 0 ? value : null;
     state.selectedTestRecordMissing = null;
+    state.refLevel.selectedBandIndex = null;
     renderRecordSelector(els);
     renderCoveragePanel(els);
     renderSpeedPanel(els);
@@ -2518,6 +2880,7 @@ export function enableMeasurementLabInteractions(): void {
     renderFreqPanel(els);
     renderThdPanel(els);
     renderResonancePanel(els);
+    renderRefLevelPanel(els);
   });
 
   els.coverageToggleBtn?.addEventListener('click', () => {

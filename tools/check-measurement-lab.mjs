@@ -106,6 +106,7 @@ async function runChecks() {
   copySource('src/modules/measurement-lab/engine/freqResponse.ts');
   copySource('src/modules/measurement-lab/engine/thd.ts');
   copySource('src/modules/measurement-lab/engine/resonance.ts');
+  copySource('src/modules/measurement-lab/engine/referenceLevel.ts');
   copySource('src/shared/audio-io/levelMetrics.ts');
   compileTempSources();
 
@@ -127,6 +128,9 @@ async function runChecks() {
   const resonanceModule = await import(
     pathToFileURL(join(tempRoot, 'dist/modules/measurement-lab/engine/resonance.js')).href
   );
+  const referenceLevelModule = await import(
+    pathToFileURL(join(tempRoot, 'dist/modules/measurement-lab/engine/referenceLevel.js')).href
+  );
   const levelMetricsModule = await import(
     pathToFileURL(join(tempRoot, 'dist/shared/audio-io/levelMetrics.js')).href
   );
@@ -140,6 +144,7 @@ async function runChecks() {
   const { computeFrequencyResponse, fftInPlace } = freqResponseModule;
   const { analyseTHD, analyseIMD } = thdModule;
   const { analyseResonance } = resonanceModule;
+  const { analyzeReferenceLevel } = referenceLevelModule;
   const { analyseSpeedFlutter } = speedFlutterModule;
   const { analyseChannelCapture, summariseChannelBalance } = crosstalkModule;
   const { computeRmsLinear } = levelMetricsModule;
@@ -425,6 +430,64 @@ async function runChecks() {
     throw new Error('resonance Q estimate: expected a non-null Q but got null.');
   }
 
+  // --- S4A: Reference level calibration engine checks ---
+  //
+  // Synthesise stereo test signals at 96 kHz, 2 seconds.
+  // Helper: sine wave at given frequency and amplitude.
+  const rlSR = 96_000;
+  const rlN = rlSR * 2;
+  function makeSine(freq, amp) {
+    const sig = new Float32Array(rlN);
+    for (let i = 0; i < rlN; i++) sig[i] = amp * Math.sin(2 * Math.PI * freq * i / rlSR);
+    return sig;
+  }
+
+  // 16. Equal L/R levels → balance ≈ 0 dB
+  const rlEqualL = makeSine(1000, 0.5);
+  const rlEqualR = makeSine(1000, 0.5);
+  const rlResult1 = analyzeReferenceLevel({ leftSamples: rlEqualL, rightSamples: rlEqualR, sampleRateHz: rlSR });
+  assertWithin('ref level: equal L/R balance', rlResult1.balanceDb, 0, 0.01);
+  console.log('- ref level: equal L/R → balance = 0 dB: PASS');
+
+  // 17. R channel at -6 dB relative to L → balance ≈ -6.02 dB (R lower than L)
+  //     balance = rightRmsDbfs − leftRmsDbfs; R at half amplitude = -6.02 dB vs L
+  const rlFullL = makeSine(1000, 0.5);
+  const rlHalfR = makeSine(1000, 0.25); // 0.25 = 0.5 / 2 → -6.02 dB relative
+  const rlResult2 = analyzeReferenceLevel({ leftSamples: rlFullL, rightSamples: rlHalfR, sampleRateHz: rlSR });
+  assertWithin('ref level: R at -6 dB → balance ≈ -6.02 dB', rlResult2.balanceDb, -6.0206, 0.05);
+  console.log('- ref level: R at -6 dB → balance ≈ -6.02 dB: PASS');
+
+  // 18. Peak and headroom computed correctly
+  //     amplitude 0.95 → peakDbfs ≈ 20·log10(0.95); headroom = -peakDbfs
+  const rlHighSig = makeSine(1000, 0.95);
+  const rlResult3 = analyzeReferenceLevel({ leftSamples: rlHighSig, rightSamples: rlHighSig, sampleRateHz: rlSR });
+  const rlExpectedPeak = 20 * Math.log10(0.95);
+  assertWithin('ref level: peak dBFS at amp 0.95', rlResult3.leftPeakDbfs, rlExpectedPeak, 0.05);
+  assertWithin('ref level: headroom at amp 0.95', rlResult3.headroomDb, -rlExpectedPeak, 0.05);
+  console.log('- ref level: peak and headroom correct at amplitude 0.95: PASS');
+
+  // 19. Clipping detected at amplitude 1.0 (abs >= 0.999 threshold)
+  const rlClipSig = new Float32Array(rlN).fill(1.0);
+  const rlResult4 = analyzeReferenceLevel({ leftSamples: rlClipSig, rightSamples: rlClipSig, sampleRateHz: rlSR });
+  if (!rlResult4.clipping) {
+    throw new Error('ref level: expected clipping=true for amplitude 1.0');
+  }
+  if (!rlResult4.warnings.some(w => w.toLowerCase().includes('clipping'))) {
+    throw new Error('ref level: expected clipping warning for amplitude 1.0');
+  }
+  console.log('- ref level: clipping detected at amplitude 1.0: PASS');
+
+  // 20. Silent input (all zeros) → low confidence + low-signal warning; no crash
+  const rlSilentSig = new Float32Array(rlN); // all zeros
+  const rlResult5 = analyzeReferenceLevel({ leftSamples: rlSilentSig, rightSamples: rlSilentSig, sampleRateHz: rlSR });
+  if (rlResult5.confidence !== 'low') {
+    throw new Error(`ref level: expected confidence='low' for silent input, got '${rlResult5.confidence}'`);
+  }
+  if (!rlResult5.warnings.some(w => w.toLowerCase().includes('too low'))) {
+    throw new Error('ref level: expected low-signal warning for silent input');
+  }
+  console.log('- ref level: silent input → low confidence + warning (no crash): PASS');
+
   console.log('PASS measurement lab engine checks');
 }
 
@@ -529,6 +592,79 @@ function checkCoverageNavigation() {
 }
 
 checkCoverageNavigation();
+
+// S4A: static source checks — reference level calibration foundation.
+function checkReferenceLevelFoundation() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const engineSrcPath = join(repoRoot, 'src/modules/measurement-lab/engine/referenceLevel.ts');
+  const workflowsSrcPath = join(repoRoot, 'src/modules/measurement-lab/data/measurementWorkflows.ts');
+  if (!existsSync(renderSrcPath) || !existsSync(engineSrcPath) || !existsSync(workflowsSrcPath)) {
+    console.error('S4A static check: source file(s) not found');
+    process.exitCode = 1;
+    return;
+  }
+  const src = readFileSync(renderSrcPath, 'utf8');
+  const engineSrc = readFileSync(engineSrcPath, 'utf8');
+  const workflowsSrc = readFileSync(workflowsSrcPath, 'utf8');
+
+  const renderChecks = [
+    ['analyzeReferenceLevel import', /analyzeReferenceLevel/],
+    ['reference_level in WORKFLOW_PANEL_TARGETS', /reference_level.*mlab-reflevel-panel|mlab-reflevel-panel.*reference_level/],
+    ['mlab-reflevel-panel id in markup', /id="mlab-reflevel-panel"/],
+    ['data-mlab-reflevel-body attribute', /data-mlab-reflevel-body/],
+    ['refLevel state field', /refLevel\s*:/],
+    ['stopRefLevelCapture function', /function stopRefLevelCapture\s*\(/],
+    ['startRefLevelCapture function', /function startRefLevelCapture\s*\(/],
+    ['renderRefLevelPanel function', /function renderRefLevelPanel\s*\(/],
+    ['getReferenceBands function', /function getReferenceBands\s*\(/],
+    ['live_capture source label', /live_capture/],
+    ['self_test source label', /self_test/],
+    ['reference band unavailability message', /not available with selected test record/],
+    ['refLevelBody in elements', /refLevelBody/],
+    ['stopRefLevelCapture in teardownAudio', /stopRefLevelCapture\(\)/],
+    ['reference_level in SessionJson measurements', /reference_level\s*:/],
+  ];
+  const engineChecks = [
+    ['analyzeReferenceLevel export', /export function analyzeReferenceLevel\s*\(/],
+    ['ReferenceLevelResult type export', /export type ReferenceLevelResult/],
+    ['CLIPPING_THRESHOLD export', /export const CLIPPING_THRESHOLD/],
+    ['balance documented as R minus L', /rightRmsDbfs.*leftRmsDbfs|balanceDb.*rightRmsDbfs.*leftRmsDbfs/],
+    ['headroomDb as 0 minus peak', /headroomDb.*0\s*-\s*maxPeakDbfs|0\s*-\s*maxPeakDbfs/],
+    ['low confidence for silent input', /'low'/],
+    ['clipping at 0.999', /0\.999/],
+  ];
+  const workflowsChecks = [
+    ['reference_level implementationStatus supported', /reference_level[\s\S]{0,400}implementationStatus.*supported/],
+  ];
+
+  let failed = false;
+  for (const [label, pattern] of renderChecks) {
+    if (!pattern.test(src)) {
+      console.error(`S4A static check FAIL: "${label}" not found in renderMeasurementLabPage.ts`);
+      failed = true;
+    }
+  }
+  for (const [label, pattern] of engineChecks) {
+    if (!pattern.test(engineSrc)) {
+      console.error(`S4A static check FAIL: "${label}" not found in referenceLevel.ts`);
+      failed = true;
+    }
+  }
+  for (const [label, pattern] of workflowsChecks) {
+    if (!pattern.test(workflowsSrc)) {
+      console.error(`S4A static check FAIL: "${label}" not found in measurementWorkflows.ts`);
+      failed = true;
+    }
+  }
+
+  if (!failed) {
+    console.log('- S4A static source check (reference level calibration foundation): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkReferenceLevelFoundation();
 
 try {
   await runChecks();
