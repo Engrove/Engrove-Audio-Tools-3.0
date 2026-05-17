@@ -94,10 +94,22 @@ type ChannelStateBag = {
   rightBandMeta: ChannelBandMeta | null;
 };
 
+type FreqBandMeta = {
+  readonly index: string;
+  readonly label: string;
+  readonly frequencyStartHz: number | null;
+  readonly frequencyEndHz: number | null;
+  readonly frequencyHz: number | null;
+  readonly levelDb: number | null;
+};
+
 type FreqState = {
   active: boolean;
   elapsedSeconds: number;
   result: FreqResponseResult | null;
+  resultSource: 'live_capture' | 'self_test' | null;
+  selectedBandIndex: string | null;
+  selectedBandMeta: FreqBandMeta | null;
   capture: SweepCapture | null;
 };
 
@@ -258,6 +270,9 @@ const state: LabState = {
     active: false,
     elapsedSeconds: 0,
     result: null,
+    resultSource: null,
+    selectedBandIndex: null,
+    selectedBandMeta: null,
     capture: null,
   },
   thd: {
@@ -710,10 +725,17 @@ function buildSessionJson(): SessionJson {
       channel_identity: channelIdentityResult,
       frequency_response: freqResult
         ? {
-            fft_size: freqResult.fftSize,
-            block_count: freqResult.blockCount,
-            frequencies_hz: Array.from(freqResult.frequenciesHz),
-            magnitudes_db: Array.from(freqResult.magnitudesDb),
+            source: state.freq.resultSource ?? 'live_capture',
+            sweep_band: state.freq.selectedBandMeta ?? null,
+            result: {
+              fft_size: freqResult.fftSize,
+              block_count: freqResult.blockCount,
+              sample_rate_hz: freqResult.sampleRateHz,
+              iriaa_applied: state.iriaaEnabled,
+              frequencies_hz: Array.from(freqResult.frequenciesHz),
+              magnitudes_db: Array.from(freqResult.magnitudesDb),
+            },
+            warnings: [],
           }
         : null,
       thd: thdResult && thdResult.type === 'thd' ? thdResult : null,
@@ -887,10 +909,18 @@ function buildReportText(): string {
   const fr = state.freq.result;
   if (fr) {
     lines.push('FREQUENCY RESPONSE');
+    lines.push(`  Source:                ${state.freq.resultSource ?? 'live_capture'}`);
+    if (state.freq.selectedBandMeta) {
+      const bm = state.freq.selectedBandMeta;
+      const range = bm.frequencyStartHz !== null && bm.frequencyEndHz !== null
+        ? ` · ${bm.frequencyStartHz}–${bm.frequencyEndHz} Hz` : '';
+      lines.push(`  Sweep band:            ${bm.label}${range}`);
+    }
     lines.push(`  FFT size:              ${fr.fftSize}`);
     lines.push(`  Blocks averaged:       ${fr.blockCount}`);
     lines.push(`  Sample rate:           ${fr.sampleRateHz.toLocaleString()} Hz`);
     lines.push(`  Range:                 ${fr.frequenciesHz[0]?.toFixed(0) ?? '?'} – ${fr.frequenciesHz[fr.frequenciesHz.length - 1]?.toFixed(0) ?? '?'} Hz`);
+    lines.push('  (Measures full playback/capture chain, not cartridge-only response.)');
     lines.push('  (Full data in JSON export)');
     lines.push('');
   }
@@ -1488,6 +1518,24 @@ function renderFreqPanel(els: Elements): void {
     return;
   }
 
+  const record = selectedRecord();
+  const sweepBands = record ? getFrequencyResponseBands(record) : [];
+
+  // No record selected
+  if (!record) {
+    body.innerHTML = '<p class="ea-muted">Select a test record with a frequency sweep band.</p>';
+    return;
+  }
+
+  // Record selected but no sweep band available
+  if (sweepBands.length === 0) {
+    body.innerHTML = `
+      <p class="ea-muted">Frequency response measurement is not available with selected test record.</p>
+      <p class="ea-muted">Choose a test record with a frequency sweep band.</p>
+    `;
+    return;
+  }
+
   if (state.freq.active) {
     const pct = Math.min(100, (state.freq.elapsedSeconds / freqMeasurementDurationSeconds) * 100);
     const remaining = Math.max(0, freqMeasurementDurationSeconds - state.freq.elapsedSeconds);
@@ -1511,9 +1559,27 @@ function renderFreqPanel(els: Elements): void {
 
   if (state.freq.result) {
     const chartHtml = buildFreqResponseSvg(state.freq.result, state.iriaaEnabled);
+    const sourceBadge = state.freq.resultSource === 'self_test'
+      ? '<span class="ea-badge ea-badge--setup">Self-test / Simulated</span>'
+      : '<span class="ea-badge ea-badge--manufacturer">Live capture</span>';
+    const bm = state.freq.selectedBandMeta;
+    const bandRange = bm?.frequencyStartHz !== null && bm?.frequencyEndHz !== null && bm !== null
+      ? ` · ${bm.frequencyStartHz}–${bm.frequencyEndHz} Hz` : '';
     body.innerHTML = `
       <div class="mlab-freq-chart-wrap">${chartHtml}</div>
+      <div class="mlab-wf-result">
+        <div class="mlab-wf-result-row">
+          <span class="mlab-wf-result-label">Source</span>
+          <span class="mlab-wf-result-value">${sourceBadge}</span>
+        </div>
+        ${bm ? `
+        <div class="mlab-wf-result-row">
+          <span class="mlab-wf-result-label">Sweep band</span>
+          <span class="mlab-wf-result-value">${renderText(bm.label)}${renderText(bandRange)}</span>
+        </div>` : ''}
+      </div>
       <p class="mlab-wf-note">${state.freq.result.blockCount} blocks averaged &middot; ${(state.freq.result.sampleRateHz / 1000).toFixed(1)}&thinsp;kHz &middot; FFT size ${state.freq.result.fftSize}</p>
+      <p class="mlab-reflevel-info">These readings measure the full playback/capture chain: test record, cartridge, tonearm, phono stage and audio interface. They are not cartridge-only response.</p>
       <div class="mlab-session-controls">
         <button class="ea-button ea-button--primary" type="button" data-mlab-freq-start>Measure again</button>
       </div>
@@ -1525,16 +1591,75 @@ function renderFreqPanel(els: Elements): void {
     return;
   }
 
+  // Idle — show band selector and start button
+  const selectedBand = selectedFreqBand();
   const overlayNote = !state.iriaaEnabled
     ? ' The RIAA reference curve will be overlaid for comparison.'
     : '';
+  const selfTestNote = state.sourceMode === 'self-test'
+    ? `<p class="ea-muted mlab-reflevel-selftest-note">Self-test mode: the 1&thinsp;kHz oscillator does not produce a sweep &mdash; results will be marked <strong>self-test&nbsp;/&nbsp;simulated</strong> and are not a frequency response measurement.</p>`
+    : '';
+  const calSetNote = state.refLevel.calibrationSet.length > 0
+    ? `<p class="mlab-reflevel-info">Reference calibration set available for context.</p>`
+    : '';
+
+  const bandOptions = sweepBands.map(b => {
+    const isSelected = state.freq.selectedBandIndex
+      ? b.index === state.freq.selectedBandIndex
+      : b.index === selectedBand?.index;
+    const sel = isSelected ? ' selected' : '';
+    const range = b.fromHz !== undefined && b.toHz !== undefined ? ` (${b.fromHz}–${b.toHz} Hz)` : '';
+    const level = b.levelDb !== undefined ? ` · ${b.levelDb} dB` : '';
+    return `<option value="${renderText(b.index)}"${sel}>${renderText(b.label + range + level)}</option>`;
+  }).join('');
+
+  const bandRow = sweepBands.length > 1
+    ? `
+        <tr>
+          <td class="ea-col-status">${statusDot('planned')}</td>
+          <td class="ea-col-label">Sweep band
+            <span class="ea-form-table-sublabel">Band from test record</span>
+          </td>
+          <td class="ea-col-value">
+            <select class="ea-input" data-mlab-freq-band aria-label="Sweep band">
+              ${bandOptions}
+            </select>
+          </td>
+          <td class="ea-col-meta"><span class="ea-badge">Band</span></td>
+        </tr>`
+    : `
+        <tr>
+          <td class="ea-col-status">${statusDot('done')}</td>
+          <td class="ea-col-label">Sweep band</td>
+          <td class="ea-col-value">${selectedBand ? renderText(selectedBand.label) : '—'}${selectedBand?.fromHz !== undefined && selectedBand?.toHz !== undefined ? `<span class="mlab-formula-reminder"> ${selectedBand.fromHz}–${selectedBand.toHz}&nbsp;Hz</span>` : ''}</td>
+          <td class="ea-col-meta"><span class="ea-badge">Band</span></td>
+        </tr>`;
+
   body.innerHTML = `
-    <p class="ea-muted">Capture ${freqMeasurementDurationSeconds}&thinsp;s of audio and compute the frequency response (20&thinsp;Hz&thinsp;–&thinsp;20&thinsp;kHz).${overlayNote}</p>
-    ${recordHint('freq_response')}
+    ${selfTestNote}
+    <p class="mlab-reflevel-info">These readings measure the full playback/capture chain: test record, cartridge, tonearm, phono stage and audio interface. They are not cartridge-only response.${overlayNote}</p>
+    ${calSetNote}
+    <table class="ea-form-table" aria-label="Frequency response setup">
+      <tbody>
+        ${bandRow}
+        <tr>
+          <td class="ea-col-status">${statusDot('done')}</td>
+          <td class="ea-col-label">Duration</td>
+          <td class="ea-col-value mlab-requested">${freqMeasurementDurationSeconds}&thinsp;s</td>
+          <td class="ea-col-meta"><span class="ea-badge">Fixed</span></td>
+        </tr>
+      </tbody>
+    </table>
     <div class="mlab-session-controls">
       <button class="ea-button ea-button--primary" type="button" data-mlab-freq-start>Start capture</button>
     </div>
   `;
+  if (sweepBands.length > 1) {
+    body.querySelector<HTMLSelectElement>('[data-mlab-freq-band]')?.addEventListener('change', (e) => {
+      const val = (e.currentTarget as HTMLSelectElement).value;
+      state.freq.selectedBandIndex = val.length > 0 ? val : null;
+    });
+  }
   body.querySelector<HTMLButtonElement>('[data-mlab-freq-start]')?.addEventListener('click', () => {
     startFreqCapture(els);
   });
@@ -1558,6 +1683,18 @@ function startFreqCapture(els: Elements): void {
   state.freq.active = true;
   state.freq.elapsedSeconds = 0;
   state.freq.result = null;
+  state.freq.resultSource = state.sourceMode === 'self-test' ? 'self_test' : 'live_capture';
+  const band = selectedFreqBand();
+  state.freq.selectedBandMeta = band
+    ? {
+        index: band.index,
+        label: band.label,
+        frequencyStartHz: band.fromHz ?? null,
+        frequencyEndHz: band.toHz ?? null,
+        frequencyHz: band.frequencyHz ?? null,
+        levelDb: band.levelDb ?? null,
+      }
+    : null;
   renderFreqPanel(els);
 
   state.freq.capture = createSweepCapture(
@@ -1627,6 +1764,36 @@ function isThdResult(r: ThdResult | ImdResult | null): r is ThdResult {
 
 function getReferenceBands(record: TestRecord): readonly TestBand[] {
   return record.sides.flatMap(s => [...s.bands]).filter(b => b.analyzerModule === 'reference_calibration');
+}
+
+function getFrequencyResponseBands(record: TestRecord): readonly TestBand[] {
+  const allBands = record.sides.flatMap(s => [...s.bands]);
+  const sweepBands = allBands.filter(
+    b =>
+      b.type === 'sweep' &&
+      (b.analyzerModule === 'frequency_response' ||
+        (b.analyzerModules as string[] | undefined)?.includes('frequency_response') ||
+        b.purpose === 'freq_response'),
+  );
+  // Prefer 20 Hz–20 kHz sweeps; stable sort preserves original order within each tier
+  return [...sweepBands].sort((a, b) => {
+    const aFull = (a.fromHz ?? Infinity) <= 25 && (a.toHz ?? 0) >= 19000;
+    const bFull = (b.fromHz ?? Infinity) <= 25 && (b.toHz ?? 0) >= 19000;
+    if (aFull && !bFull) return -1;
+    if (!aFull && bFull) return 1;
+    return 0;
+  });
+}
+
+function selectedFreqBand(): TestBand | null {
+  const record = selectedRecord();
+  if (!record) return null;
+  const bands = getFrequencyResponseBands(record);
+  if (bands.length === 0) return null;
+  if (state.freq.selectedBandIndex) {
+    return bands.find(b => b.index === state.freq.selectedBandIndex) ?? bands[0] ?? null;
+  }
+  return bands[0] ?? null;
 }
 
 function getChannelIdentityBands(record: TestRecord): { leftBand: TestBand | null; rightBand: TestBand | null } {
@@ -3180,6 +3347,7 @@ export function enableMeasurementLabInteractions(): void {
     state.selectedTestRecordId = value.length > 0 ? value : null;
     state.selectedTestRecordMissing = null;
     state.refLevel.selectedBandIndex = null;
+    state.freq.selectedBandIndex = null;
     if (state.refLevel.calibrationSet.length > 0) {
       state.refLevel.calibrationSet = clearCalibrationSet();
       appendLog('Reference calibration set cleared (test record changed)');

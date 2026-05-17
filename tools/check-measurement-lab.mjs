@@ -1130,6 +1130,75 @@ function checkS4C1ChannelGate() {
 
 checkS4C1ChannelGate();
 
+// S4D: static source checks — frequency response sweep workflow gate & export hardening.
+function checkS4DFreqPanel() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const workflowsSrcPath = join(repoRoot, 'src/modules/measurement-lab/data/measurementWorkflows.ts');
+  if (!existsSync(renderSrcPath) || !existsSync(workflowsSrcPath)) {
+    console.error('S4D static check: source file(s) not found');
+    process.exitCode = 1;
+    return;
+  }
+  const src = readFileSync(renderSrcPath, 'utf8');
+  const workflowsSrc = readFileSync(workflowsSrcPath, 'utf8');
+
+  const renderChecks = [
+    // Helpers
+    ['getFrequencyResponseBands helper', /function getFrequencyResponseBands\s*\(/],
+    ['selectedFreqBand helper', /function selectedFreqBand\s*\(/],
+    // Types
+    ['FreqBandMeta type', /type FreqBandMeta\s*=/],
+    // FreqState extensions
+    ['resultSource in FreqState', /resultSource\s*:\s*'live_capture'\s*\|\s*'self_test'\s*\|\s*null/],
+    ['selectedBandIndex in FreqState', /selectedBandIndex\s*:\s*(string\s*\|\s*null|null\s*\|\s*string)/],
+    ['selectedBandMeta in FreqState', /selectedBandMeta\s*:\s*FreqBandMeta\s*\|\s*null/],
+    // Availability gate messages
+    ['no-record message', /Select a test record with a frequency sweep band/],
+    ['unavailability message', /Frequency response measurement is not available with selected test record/],
+    ['secondary unavailability text', /Choose a test record with a frequency sweep band/],
+    // Chain-honesty text
+    ['chain-honesty text in idle state', /full playback\/capture chain/],
+    // Self-test note
+    ['self-test note for freq panel', /does not produce a sweep/],
+    // Result source handling
+    ['result source stored on capture start', /state\.freq\.resultSource\s*=/],
+    ['result source badge in UI', /Self-test \/ Simulated|self_test.*Live capture|Live capture.*self_test/],
+    // Export
+    ['sweep_band in JSON export', /sweep_band/],
+    ['source in freq response export', /source.*state\.freq\.resultSource/],
+    ['iriaa_applied in freq result export', /iriaa_applied/],
+    // Band index reset on record change
+    ['freq.selectedBandIndex reset on record change', /freq\.selectedBandIndex\s*=\s*null/],
+    // VTA still not supported
+    ['VTA still not supported', !/vta_imd_optimizer[\s\S]{0,200}implementationStatus.*supported/.test(workflowsSrc)],
+  ];
+
+  // Band preference: verify the sort puts 20Hz–20kHz sweeps first
+  const sortRegion = src.match(/function getFrequencyResponseBands[\s\S]{0,600}/)?.[0] ?? '';
+  const sortPrefersFull = /aFull.*bFull|fromHz.*19000|toHz.*19000/.test(sortRegion);
+  if (!sortPrefersFull) {
+    console.error('S4D static check FAIL: getFrequencyResponseBands does not appear to prefer 20 Hz–20 kHz sweeps');
+    process.exitCode = 1;
+  }
+
+  let failed = false;
+  for (const [label, pattern] of renderChecks) {
+    const ok = typeof pattern === 'boolean' ? pattern : pattern.test(src);
+    if (!ok) {
+      console.error(`S4D static check FAIL: "${label}" not found in renderMeasurementLabPage.ts`);
+      failed = true;
+    }
+  }
+
+  if (!failed && sortPrefersFull) {
+    console.log('- S4D static source check (freq response sweep gate & export hardening): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS4DFreqPanel();
+
 try {
   await runChecks();
 } catch (error) {
