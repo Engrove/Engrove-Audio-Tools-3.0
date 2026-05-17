@@ -657,6 +657,19 @@ type SessionJson = {
   };
 };
 
+function serializeFreqBandMeta(meta: FreqBandMeta | null) {
+  return meta
+    ? {
+        index: meta.index,
+        label: meta.label,
+        frequency_start_hz: meta.frequencyStartHz,
+        frequency_end_hz: meta.frequencyEndHz,
+        frequency_hz: meta.frequencyHz,
+        level_db: meta.levelDb,
+      }
+    : null;
+}
+
 function buildSessionJson(): SessionJson {
   const deviceLabel = state.devices.find(d => d.deviceId === state.selectedDeviceId)?.label ?? null;
 
@@ -726,16 +739,7 @@ function buildSessionJson(): SessionJson {
       frequency_response: freqResult
         ? {
             source: state.freq.resultSource ?? 'live_capture',
-            sweep_band: state.freq.selectedBandMeta
-              ? {
-                  index: state.freq.selectedBandMeta.index,
-                  label: state.freq.selectedBandMeta.label,
-                  frequency_start_hz: state.freq.selectedBandMeta.frequencyStartHz,
-                  frequency_end_hz: state.freq.selectedBandMeta.frequencyEndHz,
-                  frequency_hz: state.freq.selectedBandMeta.frequencyHz,
-                  level_db: state.freq.selectedBandMeta.levelDb,
-                }
-              : null,
+            sweep_band: serializeFreqBandMeta(state.freq.selectedBandMeta),
             result: {
               fft_size: freqResult.fftSize,
               block_count: freqResult.blockCount,
@@ -1689,7 +1693,10 @@ function startFreqCapture(els: Elements): void {
   if (!context || !source || state.captureState !== 'live') return;
 
   const band = selectedFreqBand();
-  if (!band) return;
+  if (!band) {
+    appendLog('Frequency response: no sweep band available — capture aborted.');
+    return;
+  }
 
   if (state.freq.selectedBandIndex && band.index !== state.freq.selectedBandIndex) {
     state.freq.selectedBandIndex = null;
