@@ -1306,6 +1306,68 @@ function checkS4EThdImdGate() {
 
 checkS4EThdImdGate();
 
+// S4F: static source checks — Wow/Flutter workflow polish & export hardening.
+function checkS4FWowFlutter() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const workflowsSrcPath = join(repoRoot, 'src/modules/measurement-lab/data/measurementWorkflows.ts');
+  if (!existsSync(renderSrcPath) || !existsSync(workflowsSrcPath)) {
+    console.error('S4F static check: source file(s) not found');
+    process.exitCode = 1;
+    return;
+  }
+  const src = readFileSync(renderSrcPath, 'utf8');
+  const workflowsSrc = readFileSync(workflowsSrcPath, 'utf8');
+
+  const renderChecks = [
+    // Band helper
+    ['getWowFlutterBands function', /function getWowFlutterBands\s*\(/],
+    // SpeedBandMeta type
+    ['SpeedBandMeta type', /type SpeedBandMeta\s*=/],
+    // SpeedState extensions
+    ['resultSource in SpeedState', /resultSource\s*:\s*'live_capture'\s*\|\s*'self_test'\s*\|\s*null/],
+    ['bandMeta in SpeedState', /bandMeta\s*:\s*SpeedBandMeta\s*\|\s*null/],
+    // Serializer helper
+    ['serializeSpeedBandMeta function', /function serializeSpeedBandMeta\s*\(/],
+    // Export fields
+    ['source in speed export', /source.*state\.speed\.resultSource|state\.speed\.resultSource.*source/],
+    ['band in speed export via serializer', /serializeSpeedBandMeta\s*\(\s*state\.speed\.bandMeta\s*\)/],
+    ['frequency_hz in serializeSpeedBandMeta', /function serializeSpeedBandMeta[\s\S]{0,200}frequency_hz\s*:/],
+    ['level_db in serializeSpeedBandMeta', /function serializeSpeedBandMeta[\s\S]{0,200}level_db\s*:/],
+    // Availability gating
+    ['no-record message for speed', /Select a test record with a speed.*wow.*flutter band/i],
+    ['unavailability message for speed', /Speed.*W.*F measurement is not available with selected test record/],
+    // Availability shown before connect-source instruction
+    ['no-record check before captureState in renderSpeedPanel',
+      /function renderSpeedPanel[\s\S]{0,400}selectedRecord\(\)[\s\S]{0,600}captureState[\s\S]{0,200}Connect a source/],
+    // Capture guard log
+    ['capture-aborted log for speed', /no speed band available.*capture aborted/],
+    // resultSource set in startSpeedMeasurement
+    ['resultSource set in startSpeedMeasurement', /state\.speed\.resultSource\s*=/],
+    // THD/IMD: no-record check before captureState (Part A fix)
+    ['no-record check before captureState in renderThdPanel',
+      /function renderThdPanel[\s\S]{0,400}selectedRecord\(\)[\s\S]{0,600}captureState[\s\S]{0,600}Connect a source/],
+    // VTA still not supported
+    ['VTA still not supported', !/vta_imd_optimizer[\s\S]{0,200}implementationStatus.*supported/.test(workflowsSrc)],
+  ];
+
+  let failed = false;
+  for (const [label, pattern] of renderChecks) {
+    const ok = typeof pattern === 'boolean' ? pattern : pattern.test(src);
+    if (!ok) {
+      console.error(`S4F static check FAIL: "${label}" not found in renderMeasurementLabPage.ts`);
+      failed = true;
+    }
+  }
+
+  if (!failed) {
+    console.log('- S4F static source check (Wow/Flutter workflow polish & export hardening): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS4FWowFlutter();
+
 try {
   await runChecks();
 } catch (error) {

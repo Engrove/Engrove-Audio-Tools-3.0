@@ -65,11 +65,19 @@ type ChannelLevel = {
 
 type ChannelKey = 'L' | 'R';
 
+type SpeedBandMeta = {
+  readonly index: string;
+  readonly label: string;
+  readonly frequencyHz: number | null;
+  readonly levelDb: number | null;
+};
 type SpeedState = {
   referenceHz: number;
   active: boolean;
   elapsedSeconds: number;
   result: SpeedFlutterResult | null;
+  resultSource: 'live_capture' | 'self_test' | null;
+  bandMeta: SpeedBandMeta | null;
   capture: SpeedFlutterCapture | null;
 };
 
@@ -263,6 +271,8 @@ const state: LabState = {
     active: false,
     elapsedSeconds: 0,
     result: null,
+    resultSource: null,
+    bandMeta: null,
     capture: null,
   },
   channel: {
@@ -672,6 +682,17 @@ type SessionJson = {
   };
 };
 
+function serializeSpeedBandMeta(meta: SpeedBandMeta | null) {
+  return meta
+    ? {
+        index: meta.index,
+        label: meta.label,
+        frequency_hz: meta.frequencyHz,
+        level_db: meta.levelDb,
+      }
+    : null;
+}
+
 function serializeFreqBandMeta(meta: FreqBandMeta | null) {
   return meta
     ? {
@@ -760,6 +781,8 @@ function buildSessionJson(): SessionJson {
     measurements: {
       speed: speedResult
         ? {
+            source: state.speed.resultSource ?? 'live_capture',
+            band: serializeSpeedBandMeta(state.speed.bandMeta),
             speed_deviation_percent: speedResult.speedDeviationPercent,
             unweighted_wf_percent: speedResult.unweightedWfPercent,
             weighted_wf_percent: speedResult.weightedWfPercent,
@@ -1163,6 +1186,22 @@ function renderSpeedPanel(els: Elements): void {
   const body = els.speedBody;
   if (!body) return;
 
+  const speedRecord = selectedRecord();
+  const speedBands = getWowFlutterBands(speedRecord);
+
+  if (!speedRecord) {
+    body.innerHTML = '<p class="ea-muted">Select a test record with a speed / wow &amp; flutter band.</p>';
+    return;
+  }
+
+  if (speedBands.length === 0) {
+    body.innerHTML = `
+      <p class="ea-muted">Speed &amp; W&amp;F measurement is not available with selected test record.</p>
+      <p class="ea-muted">Choose a test record with a 3150&thinsp;Hz speed reference band.</p>
+    `;
+    return;
+  }
+
   if (state.captureState !== 'live') {
     body.innerHTML = '<p class="ea-muted">Connect a source to begin a Speed &amp; W&amp;F measurement.</p>';
     return;
@@ -1222,23 +1261,49 @@ function renderSpeedPanel(els: Elements): void {
     return;
   }
 
-  // Idle — ready to measure
-  body.innerHTML = `
-    <table class="ea-form-table" aria-label="Speed and W&F setup">
-      <tbody>
+  // Idle — band-driven setup
+  const preferredBand = speedBands.find(b => b.frequencyHz === state.speed.referenceHz)
+    ?? speedBands.find(b => b.frequencyHz === 3150)
+    ?? speedBands[0];
+
+  const bandOptions = speedBands.map(b => {
+    const sel = b.index === preferredBand?.index ? ' selected' : '';
+    const freq = b.frequencyHz !== undefined ? ` (${b.frequencyHz.toLocaleString('en-US')} Hz)` : '';
+    const level = b.levelDb !== undefined ? ` · ${b.levelDb} dB` : '';
+    return `<option value="${renderText(b.index)}"${sel}>${renderText(b.label + freq + level)}</option>`;
+  }).join('');
+
+  const bandRow = speedBands.length > 1
+    ? `
         <tr>
           <td class="ea-col-status">${statusDot('planned')}</td>
-          <td class="ea-col-label">Reference frequency
-            <span class="ea-form-table-sublabel">From speed band on test record</span>
+          <td class="ea-col-label">Speed band
+            <span class="ea-form-table-sublabel">Band from test record</span>
           </td>
           <td class="ea-col-value">
-            <select class="ea-input" data-mlab-speed-refhz aria-label="Reference frequency">
-              <option value="3150" ${state.speed.referenceHz === 3150 ? 'selected' : ''}>3150 Hz (DIN 45&thinsp;545, common)</option>
-              <option value="3000" ${state.speed.referenceHz === 3000 ? 'selected' : ''}>3000 Hz (AES alternative)</option>
+            <select class="ea-input" data-mlab-speed-band aria-label="Speed band">
+              ${bandOptions}
             </select>
           </td>
-          <td class="ea-col-meta"><span class="ea-badge">Hz</span></td>
-        </tr>
+          <td class="ea-col-meta"><span class="ea-badge">Band</span></td>
+        </tr>`
+    : `
+        <tr>
+          <td class="ea-col-status">${statusDot('done')}</td>
+          <td class="ea-col-label">Speed band</td>
+          <td class="ea-col-value">${preferredBand ? renderText(preferredBand.label) : '—'}${preferredBand?.frequencyHz !== undefined ? `<span class="mlab-formula-reminder"> ${preferredBand.frequencyHz.toLocaleString('en-US')}&nbsp;Hz</span>` : ''}</td>
+          <td class="ea-col-meta"><span class="ea-badge">Band</span></td>
+        </tr>`;
+
+  const selfTestNote = state.sourceMode === 'self-test'
+    ? `<p class="ea-muted mlab-reflevel-selftest-note">Self-test mode: the 1&thinsp;kHz oscillator is not a 3150&thinsp;Hz reference — results will be marked <strong>self-test&nbsp;/&nbsp;simulated</strong> and are not a valid W&amp;F measurement.</p>`
+    : '';
+
+  body.innerHTML = `
+    ${selfTestNote}
+    <table class="ea-form-table" aria-label="Speed and W&F setup">
+      <tbody>
+        ${bandRow}
         <tr>
           <td class="ea-col-status">${statusDot('done')}</td>
           <td class="ea-col-label">Duration</td>
@@ -1247,15 +1312,19 @@ function renderSpeedPanel(els: Elements): void {
         </tr>
       </tbody>
     </table>
-    ${recordHint('speed')}
     <div class="mlab-session-controls">
       <button class="ea-button ea-button--primary" type="button" data-mlab-speed-start>Start measurement</button>
     </div>
   `;
-  body.querySelector<HTMLSelectElement>('[data-mlab-speed-refhz]')?.addEventListener('change', (event) => {
-    const val = parseInt((event.currentTarget as HTMLSelectElement).value, 10);
-    if (val === 3150 || val === 3000) state.speed.referenceHz = val;
-  });
+  if (speedBands.length > 1) {
+    body.querySelector<HTMLSelectElement>('[data-mlab-speed-band]')?.addEventListener('change', (event) => {
+      const val = (event.currentTarget as HTMLSelectElement).value;
+      const selected = speedBands.find(b => b.index === val);
+      if (selected?.frequencyHz !== undefined && selected.frequencyHz !== null) {
+        state.speed.referenceHz = selected.frequencyHz;
+      }
+    });
+  }
   body.querySelector<HTMLButtonElement>('[data-mlab-speed-start]')?.addEventListener('click', () => {
     startSpeedMeasurement(els);
   });
@@ -1845,6 +1914,16 @@ function isThdResult(r: ThdResult | ImdResult | null): r is ThdResult {
 
 function getReferenceBands(record: TestRecord): readonly TestBand[] {
   return record.sides.flatMap(s => [...s.bands]).filter(b => b.analyzerModule === 'reference_calibration');
+}
+
+function getWowFlutterBands(record: TestRecord | null): readonly TestBand[] {
+  if (!record) return [];
+  const allBands = record.sides.flatMap(s => [...s.bands]);
+  return allBands.filter(b =>
+    b.analyzerModule === 'wow_flutter' ||
+    (b.analyzerModules as string[] | undefined)?.includes('wow_flutter') ||
+    b.purpose === 'speed',
+  );
 }
 
 function getDistortionBands(record: TestRecord | null): { thdBands: readonly TestBand[]; imdBands: readonly TestBand[] } {
@@ -2457,16 +2536,23 @@ function renderThdPanel(els: Elements): void {
   const body = els.thdBody;
   if (!body) return;
 
-  if (state.captureState !== 'live') {
-    body.innerHTML = '<p class="ea-muted">Connect a source to begin a THD or IMD measurement.</p>';
-    return;
-  }
-
   const thdRecord = selectedRecord();
   const { thdBands, imdBands } = getDistortionBands(thdRecord);
 
   if (!thdRecord) {
     body.innerHTML = '<p class="ea-muted">Select a test record with a THD or IMD band.</p>';
+    return;
+  }
+
+  if (state.captureState !== 'live') {
+    const isTHDModeDisc = state.thd.mode === 'thd';
+    const activeBandsDisc = isTHDModeDisc ? thdBands : imdBands;
+    if (activeBandsDisc.length === 0) {
+      const modeLabel = isTHDModeDisc ? 'THD' : 'SMPTE IMD';
+      body.innerHTML = `<p class="ea-muted">${modeLabel} measurement is not available with selected test record.</p>`;
+      return;
+    }
+    body.innerHTML = '<p class="ea-muted">Connect a source to begin a THD or IMD measurement.</p>';
     return;
   }
 
@@ -3188,6 +3274,28 @@ function startSpeedMeasurement(els: Elements): void {
   const context = state.audioHandle?.context;
   const source = state.preSplitterNode;
   if (!context || !source || state.captureState !== 'live') return;
+
+  const speedBands = getWowFlutterBands(selectedRecord());
+  const band = speedBands.find(b => b.frequencyHz === state.speed.referenceHz)
+    ?? speedBands.find(b => b.frequencyHz === 3150)
+    ?? speedBands[0]
+    ?? null;
+
+  if (!band) {
+    appendLog('Speed & W&F: no speed band available for selected test record — capture aborted.');
+    return;
+  }
+
+  if (band.frequencyHz !== undefined && band.frequencyHz !== null) {
+    state.speed.referenceHz = band.frequencyHz;
+  }
+  state.speed.bandMeta = {
+    index: band.index,
+    label: band.label,
+    frequencyHz: band.frequencyHz ?? null,
+    levelDb: band.levelDb ?? null,
+  };
+  state.speed.resultSource = state.sourceMode === 'self-test' ? 'self_test' : 'live_capture';
 
   stopSpeedMeasurement();
   state.speed.active = true;
