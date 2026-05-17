@@ -73,6 +73,12 @@ type SpeedState = {
   capture: SpeedFlutterCapture | null;
 };
 
+type ChannelBandMeta = {
+  readonly index: string;
+  readonly label: string;
+  readonly frequencyHz: number | null;
+};
+
 type ChannelStep = 'idle' | 'left-recording' | 'left-done' | 'right-recording' | 'done';
 type ChannelStateBag = {
   step: ChannelStep;
@@ -84,6 +90,8 @@ type ChannelStateBag = {
   source: 'live_capture' | 'self_test' | null;
   leftBandIndex: string | null;
   rightBandIndex: string | null;
+  leftBandMeta: ChannelBandMeta | null;
+  rightBandMeta: ChannelBandMeta | null;
 };
 
 type FreqState = {
@@ -243,6 +251,8 @@ const state: LabState = {
     source: null,
     leftBandIndex: null,
     rightBandIndex: null,
+    leftBandMeta: null,
+    rightBandMeta: null,
   },
   freq: {
     active: false,
@@ -637,12 +647,16 @@ function buildSessionJson(): SessionJson {
 
   const speedResult = state.speed.result;
   const channelIdentityResult = (() => {
-    const { leftCapture, rightCapture, identityResult, source, leftBandIndex, rightBandIndex } = state.channel;
+    const { leftCapture, rightCapture, identityResult, source, leftBandMeta, rightBandMeta } = state.channel;
     if (!leftCapture || !rightCapture) return null;
     return {
       source: source ?? 'live_capture',
-      left_band: leftBandIndex,
-      right_band: rightBandIndex,
+      left_band: leftBandMeta
+        ? { index: leftBandMeta.index, label: leftBandMeta.label, frequency_hz: leftBandMeta.frequencyHz }
+        : null,
+      right_band: rightBandMeta
+        ? { index: rightBandMeta.index, label: rightBandMeta.label, frequency_hz: rightBandMeta.frequencyHz }
+        : null,
       left_rms_dbfs: leftCapture.leftRmsDbFs,
       right_rms_dbfs: rightCapture.rightRmsDbFs,
       result: identityResult
@@ -1217,6 +1231,32 @@ function renderChannelPanel(els: Elements): void {
   const isSelfTest = state.sourceMode === 'self-test';
 
   const recordingStep = ch.step === 'left-recording' || ch.step === 'right-recording';
+
+  // Band availability gate: block when record exists but lacks the required L/R bands.
+  // Active recordings are allowed to complete; stale state shows a reset affordance.
+  if (record && !recordingStep && (!leftBand || !rightBand)) {
+    const hasStaleState = ch.step !== 'idle' || ch.leftCapture !== null || ch.rightCapture !== null || ch.identityResult !== null;
+    let html = '<p class="ea-muted">Channel identity and crosstalk are not available with selected test record.</p>';
+    if (leftBand && !rightBand) {
+      html += '<p class="ea-muted">Missing right-channel test band.</p>';
+    } else if (!leftBand && rightBand) {
+      html += '<p class="ea-muted">Missing left-channel test band.</p>';
+    } else {
+      html += '<p class="ea-muted">Choose a test record with left-only and right-only channel bands.</p>';
+    }
+    if (hasStaleState) {
+      html += '<div class="mlab-session-controls"><button class="ea-button ea-button--ghost" type="button" data-mlab-channel-reset>Reset</button></div>';
+    }
+    body.innerHTML = html;
+    if (hasStaleState) {
+      body.querySelector<HTMLButtonElement>('[data-mlab-channel-reset]')?.addEventListener('click', () => {
+        resetChannelMeasurement();
+        renderChannelPanel(els);
+      });
+    }
+    return;
+  }
+
   if (recordingStep) {
     const which = ch.step === 'left-recording' ? 'L' : 'R';
     const pct = Math.min(100, (ch.elapsedSeconds / channelMeasurementDurationSeconds) * 100);
@@ -2435,6 +2475,8 @@ function resetChannelMeasurement(): void {
   state.channel.source = null;
   state.channel.leftBandIndex = null;
   state.channel.rightBandIndex = null;
+  state.channel.leftBandMeta = null;
+  state.channel.rightBandMeta = null;
 }
 
 function stopChannelMeasurement(): void {
@@ -2452,7 +2494,19 @@ function startChannelCapture(els: Elements, which: 'left' | 'right'): void {
 
   const captureSource = state.sourceMode === 'self-test' ? 'self_test' as const : 'live_capture' as const;
   const record = selectedRecord();
-  const { leftBand, rightBand } = record ? getChannelIdentityBands(record) : { leftBand: null, rightBand: null };
+  if (!record) {
+    appendLog('Channel: no test record selected — capture aborted.');
+    return;
+  }
+  const { leftBand, rightBand } = getChannelIdentityBands(record);
+  if (which === 'left' && !leftBand) {
+    appendLog('Channel: left-band not available for selected test record — capture aborted.');
+    return;
+  }
+  if (which === 'right' && !rightBand) {
+    appendLog('Channel: right-band not available for selected test record — capture aborted.');
+    return;
+  }
 
   stopChannelMeasurement();
   state.channel.step = which === 'left' ? 'left-recording' : 'right-recording';
@@ -2461,6 +2515,12 @@ function startChannelCapture(els: Elements, which: 'left' | 'right'): void {
     state.channel.source = captureSource;
     state.channel.leftBandIndex = leftBand?.index ?? null;
     state.channel.rightBandIndex = rightBand?.index ?? null;
+    state.channel.leftBandMeta = leftBand
+      ? { index: leftBand.index, label: leftBand.label, frequencyHz: leftBand.frequencyHz ?? null }
+      : null;
+    state.channel.rightBandMeta = rightBand
+      ? { index: rightBand.index, label: rightBand.label, frequencyHz: rightBand.frequencyHz ?? null }
+      : null;
   }
   renderChannelPanel(els);
 
@@ -3123,6 +3183,10 @@ export function enableMeasurementLabInteractions(): void {
     if (state.refLevel.calibrationSet.length > 0) {
       state.refLevel.calibrationSet = clearCalibrationSet();
       appendLog('Reference calibration set cleared (test record changed)');
+    }
+    if (state.channel.step !== 'idle' || state.channel.leftCapture !== null || state.channel.rightCapture !== null || state.channel.identityResult !== null) {
+      resetChannelMeasurement();
+      appendLog('Channel identity capture reset after test record change.');
     }
     renderRecordSelector(els);
     renderCoveragePanel(els);

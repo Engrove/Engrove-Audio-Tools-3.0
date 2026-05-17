@@ -1076,6 +1076,60 @@ function checkS4CChannelIdentity() {
 
 checkS4CChannelIdentity();
 
+// S4C.1: static source checks — channel band availability gate & export metadata hardening.
+function checkS4C1ChannelGate() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  if (!existsSync(renderSrcPath)) {
+    console.error('S4C.1 static check: renderMeasurementLabPage.ts not found');
+    process.exitCode = 1;
+    return;
+  }
+  const src = readFileSync(renderSrcPath, 'utf8');
+
+  const renderChecks = [
+    // Unavailability message when both bands missing
+    ['unavailability message (not available)', /Channel identity and crosstalk are not available with selected test record/],
+    // Secondary hint when both bands missing
+    ['secondary hint (choose a test record)', /Choose a test record with left-only and right-only channel bands/],
+    // Partial-band messages
+    ['missing right-channel test band message', /Missing right-channel test band/],
+    ['missing left-channel test band message', /Missing left-channel test band/],
+    // Start capture guards
+    ['guard: no test record selected', /no test record selected.*capture aborted|capture aborted.*no test record selected/],
+    ['guard: left-band not available', /left-band not available for selected test record/],
+    ['guard: right-band not available', /right-band not available for selected test record/],
+    // Auto-reset on record change
+    ['channel reset on record change', /resetChannelMeasurement\(\)[\s\S]{0,300}Channel identity capture reset after test record change|Channel identity capture reset after test record change[\s\S]{0,300}resetChannelMeasurement\(\)/],
+    ['activity log for channel reset', /Channel identity capture reset after test record change/],
+    // New state fields
+    ['ChannelBandMeta type', /type ChannelBandMeta\s*=/],
+    ['leftBandMeta state field', /leftBandMeta\s*:/],
+    ['rightBandMeta state field', /rightBandMeta\s*:/],
+    // Export metadata as objects with snake_case keys (not just a bare index string)
+    ['left_band exported as object with frequency_hz', /left_band[^;]{0,200}frequency_hz/],
+    ['right_band exported as object with frequency_hz', /right_band[^;]{0,200}frequency_hz/],
+    // Stale-state reset affordance
+    ['hasStaleState reset button', /hasStaleState/],
+  ];
+
+  let failed = false;
+  for (const [label, pattern] of renderChecks) {
+    const ok = typeof pattern === 'boolean' ? pattern : pattern.test(src);
+    if (!ok) {
+      console.error(`S4C.1 static check FAIL: "${label}" not found in renderMeasurementLabPage.ts`);
+      failed = true;
+    }
+  }
+
+  if (!failed) {
+    console.log('- S4C.1 static source check (channel band availability gate & export hardening): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS4C1ChannelGate();
+
 try {
   await runChecks();
 } catch (error) {
