@@ -122,6 +122,7 @@ type LabState = {
   log: string[];
   selectedTestRecordId: string | null;
   testRecords: readonly TestRecord[];
+  coverageCollapsed: boolean;
 };
 
 /*
@@ -132,7 +133,7 @@ type LabState = {
  * site below; it has no runtime effect.
  */
 const tokenLayoutGeneratedClassNames =
-  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable';
+  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed';
 void tokenLayoutGeneratedClassNames;
 
 const speedMeasurementDurationSeconds = 30;
@@ -221,6 +222,7 @@ const state: LabState = {
   log: [],
   selectedTestRecordId: null,
   testRecords: [],
+  coverageCollapsed: false,
 };
 
 function readStoredDeviceId(): string | null {
@@ -280,12 +282,19 @@ function renderContextBar(): string {
 
 function coveragePanelMarkup(): string {
   return `
-    <section class="ea-panel" aria-labelledby="mlab-coverage-title">
+    <section class="ea-panel" id="mlab-coverage-panel" aria-labelledby="mlab-coverage-title">
       <div class="ea-panel-header">
         <span class="ea-panel-header-id">02</span>
         <span id="mlab-coverage-title">Measurement coverage</span>
+        <span class="ea-panel-header-spacer"></span>
+        <button
+          class="mlab-coverage-toggle"
+          type="button"
+          aria-expanded="true"
+          aria-controls="mlab-coverage-body"
+          data-mlab-coverage-toggle>Collapse</button>
       </div>
-      <div class="ea-panel-body" data-mlab-coverage-body>
+      <div class="ea-panel-body" id="mlab-coverage-body" data-mlab-coverage-body>
         <p class="ea-muted">Select a test record above to see which measurements are available.</p>
       </div>
     </section>
@@ -866,6 +875,8 @@ function elements(root: ParentNode) {
     selfTestBtn: root.querySelector<HTMLButtonElement>('[data-mlab-run-self-test]'),
     recordSelect: root.querySelector<HTMLSelectElement>('[data-mlab-record]'),
     recordDot: root.querySelector<HTMLElement>('[data-mlab-record-dot]'),
+    coveragePanelSection: root.querySelector<HTMLElement>('#mlab-coverage-panel'),
+    coverageToggleBtn: root.querySelector<HTMLButtonElement>('[data-mlab-coverage-toggle]'),
     coverageBody: root.querySelector<HTMLElement>('[data-mlab-coverage-body]'),
     waveformL: root.querySelector<HTMLCanvasElement>('[data-mlab-waveform="L"]'),
     waveformR: root.querySelector<HTMLCanvasElement>('[data-mlab-waveform="R"]'),
@@ -1397,6 +1408,15 @@ function renderRecordSelector(els: Elements): void {
   if (els.recordDot) {
     els.recordDot.className = `ea-dot ea-dot--${state.selectedTestRecordId ? 'done' : 'planned'}`;
   }
+}
+
+function syncCoverageCollapsed(els: Elements): void {
+  const collapsed = state.coverageCollapsed;
+  if (els.coverageToggleBtn) {
+    els.coverageToggleBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    els.coverageToggleBtn.textContent = collapsed ? 'Expand' : 'Collapse';
+  }
+  els.coveragePanelSection?.classList.toggle('mlab-coverage-panel--collapsed', collapsed);
 }
 
 function coverageBadgeMarkup(availability: WorkflowAvailability): string {
@@ -2405,6 +2425,11 @@ export function enableMeasurementLabInteractions(): void {
     renderFreqPanel(els);
     renderThdPanel(els);
     renderResonancePanel(els);
+  });
+
+  els.coverageToggleBtn?.addEventListener('click', () => {
+    state.coverageCollapsed = !state.coverageCollapsed;
+    syncCoverageCollapsed(els);
   });
 
   els.sourceModeButtons.forEach((button) => {

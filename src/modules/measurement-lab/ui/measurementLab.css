@@ -584,6 +584,42 @@
   border: 1px solid var(--ea-border-soft);
 }
 
+/* Collapsible coverage panel toggle (S3C) */
+.mlab-coverage-toggle {
+  padding: 2px var(--ea-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--ea-radius-sm);
+  background: transparent;
+  color: var(--ea-interactive-accent);
+  font-family: var(--ea-font-data);
+  font-size: var(--ea-font-size-micro);
+  font-weight: 600;
+  letter-spacing: var(--ea-letter-label);
+  text-transform: uppercase;
+  cursor: pointer;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.mlab-coverage-toggle:hover {
+  border-color: var(--ea-border-soft);
+  color: var(--ea-text-high);
+}
+
+.mlab-coverage-toggle:focus-visible {
+  outline: 2px solid var(--ea-interactive-accent);
+  outline-offset: 2px;
+}
+
+.mlab-coverage-panel--collapsed .ea-panel-header {
+  border-bottom: none;
+  border-radius: var(--ea-radius-md);
+}
+
+.mlab-coverage-panel--collapsed #mlab-coverage-body {
+  display: none;
+}
+
 .mlab-coverage-help {
   margin-top: var(--ea-space-2);
   border: 1px solid var(--ea-border-soft);
