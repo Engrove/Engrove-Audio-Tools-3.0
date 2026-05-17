@@ -726,7 +726,16 @@ function buildSessionJson(): SessionJson {
       frequency_response: freqResult
         ? {
             source: state.freq.resultSource ?? 'live_capture',
-            sweep_band: state.freq.selectedBandMeta ?? null,
+            sweep_band: state.freq.selectedBandMeta
+              ? {
+                  index: state.freq.selectedBandMeta.index,
+                  label: state.freq.selectedBandMeta.label,
+                  frequency_start_hz: state.freq.selectedBandMeta.frequencyStartHz,
+                  frequency_end_hz: state.freq.selectedBandMeta.frequencyEndHz,
+                  frequency_hz: state.freq.selectedBandMeta.frequencyHz,
+                  level_db: state.freq.selectedBandMeta.levelDb,
+                }
+              : null,
             result: {
               fft_size: freqResult.fftSize,
               block_count: freqResult.blockCount,
@@ -1679,22 +1688,26 @@ function startFreqCapture(els: Elements): void {
   const source = state.preSplitterNode;
   if (!context || !source || state.captureState !== 'live') return;
 
+  const band = selectedFreqBand();
+  if (!band) return;
+
+  if (state.freq.selectedBandIndex && band.index !== state.freq.selectedBandIndex) {
+    state.freq.selectedBandIndex = null;
+  }
+
   stopFreqCapture();
   state.freq.active = true;
   state.freq.elapsedSeconds = 0;
   state.freq.result = null;
   state.freq.resultSource = state.sourceMode === 'self-test' ? 'self_test' : 'live_capture';
-  const band = selectedFreqBand();
-  state.freq.selectedBandMeta = band
-    ? {
-        index: band.index,
-        label: band.label,
-        frequencyStartHz: band.fromHz ?? null,
-        frequencyEndHz: band.toHz ?? null,
-        frequencyHz: band.frequencyHz ?? null,
-        levelDb: band.levelDb ?? null,
-      }
-    : null;
+  state.freq.selectedBandMeta = {
+    index: band.index,
+    label: band.label,
+    frequencyStartHz: band.fromHz ?? null,
+    frequencyEndHz: band.toHz ?? null,
+    frequencyHz: band.frequencyHz ?? null,
+    levelDb: band.levelDb ?? null,
+  };
   renderFreqPanel(els);
 
   state.freq.capture = createSweepCapture(
