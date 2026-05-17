@@ -467,12 +467,156 @@
   background: rgba(0, 0, 0, 0.25);
 }
 
+/* --- Measurement coverage panel (S3A) --- */
+
+.mlab-coverage-intro {
+  margin-bottom: var(--ea-space-3);
+}
+
+.mlab-coverage-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--ea-space-2);
+  margin-bottom: var(--ea-space-3);
+}
+
+.mlab-coverage-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ea-space-1);
+  padding: var(--ea-space-2) var(--ea-space-3);
+  border: 1px solid var(--ea-border-soft);
+  border-radius: var(--ea-radius-sm);
+  background: var(--ea-bg-panel-alt);
+}
+
+.mlab-coverage-card--unavailable {
+  opacity: 0.55;
+  border-style: dashed;
+  background: transparent;
+}
+
+.mlab-coverage-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ea-space-2);
+}
+
+.mlab-coverage-card-label {
+  color: var(--ea-text-high);
+  font-size: var(--ea-font-size-small);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.mlab-coverage-card--unavailable .mlab-coverage-card-label {
+  color: var(--ea-text-low);
+}
+
+.mlab-coverage-card-desc {
+  margin: 0;
+  color: var(--ea-text-medium);
+  font-size: var(--ea-font-size-micro);
+  line-height: 1.4;
+}
+
+.mlab-coverage-card--unavailable .mlab-coverage-card-desc {
+  color: var(--ea-text-low);
+}
+
+.mlab-coverage-reason {
+  margin: 0;
+  font-family: var(--ea-font-data);
+  font-size: var(--ea-font-size-micro);
+  font-weight: 500;
+  letter-spacing: var(--ea-letter-label);
+  text-transform: uppercase;
+}
+
+.mlab-coverage-card--available .mlab-coverage-reason {
+  color: var(--ea-status-success);
+}
+
+.mlab-coverage-card--planned .mlab-coverage-reason {
+  color: var(--ea-interactive-accent);
+}
+
+.mlab-coverage-card--partial .mlab-coverage-reason {
+  color: var(--ea-status-warning);
+}
+
+.mlab-coverage-card--unavailable .mlab-coverage-reason {
+  color: var(--ea-text-low);
+}
+
+.mlab-coverage-badge {
+  flex-shrink: 0;
+  display: inline-block;
+  padding: 1px var(--ea-space-2);
+  border-radius: var(--ea-radius-sm);
+  font-family: var(--ea-font-data);
+  font-size: var(--ea-font-size-micro);
+  font-weight: 600;
+  letter-spacing: var(--ea-letter-label);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.mlab-coverage-badge--available {
+  background: var(--ea-status-success);
+  color: #14161a;
+}
+
+.mlab-coverage-badge--planned {
+  background: var(--ea-interactive-accent);
+  color: #14161a;
+}
+
+.mlab-coverage-badge--partial {
+  background: var(--ea-status-warning);
+  color: #14161a;
+}
+
+.mlab-coverage-badge--unavailable {
+  background: var(--ea-bg-panel-alt);
+  color: var(--ea-text-low);
+  border: 1px solid var(--ea-border-soft);
+}
+
+.mlab-coverage-help {
+  margin-top: var(--ea-space-2);
+  border: 1px solid var(--ea-border-soft);
+  border-radius: var(--ea-radius-sm);
+  padding: var(--ea-space-2) var(--ea-space-3);
+  background: var(--ea-bg-panel-alt);
+}
+
+.mlab-coverage-help-summary {
+  cursor: pointer;
+  color: var(--ea-text-medium);
+  font-size: var(--ea-font-size-small);
+  font-weight: 600;
+  user-select: none;
+}
+
+.mlab-coverage-help-body {
+  margin: var(--ea-space-2) 0 0;
+  color: var(--ea-text-medium);
+  font-size: var(--ea-font-size-small);
+  line-height: 1.5;
+}
+
 @media (max-width: 1180px) {
   .mlab-workbench-grid {
     grid-template-columns: 1fr;
   }
 
   .mlab-meter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mlab-coverage-grid {
     grid-template-columns: 1fr;
   }
 }

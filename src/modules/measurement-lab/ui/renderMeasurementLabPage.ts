@@ -30,6 +30,7 @@ import { computeRiaaMagnitudeDb } from '../engine/iriaaFilter';
 import { analyseTHD, analyseIMD, type ThdResult, type ImdResult } from '../engine/thd';
 import { analyseResonance, type ResonanceResult, type ResonanceSweepType } from '../engine/resonance';
 import { loadTestRecordsRuntimeData, getPreferredRecord, type TestRecord, type TestBandPurpose } from '../data/loadTestRecords';
+import { computeAllWorkflowCoverage, MEASUREMENT_WORKFLOWS, type WorkflowAvailability } from '../data/measurementWorkflows';
 
 type SourceMode = 'live' | 'self-test';
 type CaptureState = 'idle' | 'connecting' | 'live' | 'error';
@@ -131,7 +132,7 @@ type LabState = {
  * site below; it has no runtime effect.
  */
 const tokenLayoutGeneratedClassNames =
-  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor';
+  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable';
 void tokenLayoutGeneratedClassNames;
 
 const speedMeasurementDurationSeconds = 30;
@@ -277,6 +278,20 @@ function renderContextBar(): string {
   `;
 }
 
+function coveragePanelMarkup(): string {
+  return `
+    <section class="ea-panel" aria-labelledby="mlab-coverage-title">
+      <div class="ea-panel-header">
+        <span class="ea-panel-header-id">02</span>
+        <span id="mlab-coverage-title">Measurement coverage</span>
+      </div>
+      <div class="ea-panel-body" data-mlab-coverage-body>
+        <p class="ea-muted">Select a test record above to see which measurements are available.</p>
+      </div>
+    </section>
+  `;
+}
+
 function audioSourcePanelMarkup(): string {
   return `
     <section class="ea-panel" aria-labelledby="mlab-source-title">
@@ -376,7 +391,7 @@ function speedPanelMarkup(): string {
   return `
     <section class="ea-panel" aria-labelledby="mlab-speed-title">
       <div class="ea-panel-header">
-        <span class="ea-panel-header-id">02</span>
+        <span class="ea-panel-header-id">03</span>
         <span id="mlab-speed-title">Speed &amp; Wow·Flutter</span>
       </div>
       <div class="ea-panel-body" data-mlab-speed-body>
@@ -390,7 +405,7 @@ function channelPanelMarkup(): string {
   return `
     <section class="ea-panel" aria-labelledby="mlab-channel-title">
       <div class="ea-panel-header">
-        <span class="ea-panel-header-id">03</span>
+        <span class="ea-panel-header-id">04</span>
         <span id="mlab-channel-title">Channel balance &amp; crosstalk</span>
       </div>
       <div class="ea-panel-body" data-mlab-channel-body>
@@ -404,7 +419,7 @@ function freqPanelMarkup(): string {
   return `
     <section class="ea-panel" aria-labelledby="mlab-freq-title">
       <div class="ea-panel-header">
-        <span class="ea-panel-header-id">04</span>
+        <span class="ea-panel-header-id">05</span>
         <span id="mlab-freq-title">Frequency response</span>
       </div>
       <div class="ea-panel-body" data-mlab-freq-body>
@@ -418,7 +433,7 @@ function thdPanelMarkup(): string {
   return `
     <section class="ea-panel" aria-labelledby="mlab-thd-title">
       <div class="ea-panel-header">
-        <span class="ea-panel-header-id">05</span>
+        <span class="ea-panel-header-id">06</span>
         <span id="mlab-thd-title">THD &amp; IMD</span>
       </div>
       <div class="ea-panel-body" data-mlab-thd-body>
@@ -432,7 +447,7 @@ function resonancePanelMarkup(): string {
   return `
     <section class="ea-panel" aria-labelledby="mlab-resonance-title">
       <div class="ea-panel-header">
-        <span class="ea-panel-header-id">06</span>
+        <span class="ea-panel-header-id">07</span>
         <span id="mlab-resonance-title">Resonance peak</span>
       </div>
       <div class="ea-panel-body" data-mlab-resonance-body>
@@ -468,7 +483,7 @@ function visualizationMarkup(): string {
     <div class="mlab-viz-col">
       <aside class="ea-panel mlab-viz-panel" aria-labelledby="mlab-viz-title">
         <div class="ea-panel-header">
-          <span class="ea-panel-header-id">07</span>
+          <span class="ea-panel-header-id">08</span>
           <span id="mlab-viz-title">Level meter</span>
         </div>
         <div class="ea-panel-body mlab-viz-body">
@@ -485,7 +500,7 @@ function visualizationMarkup(): string {
       </aside>
       <aside class="ea-panel mlab-log-panel" aria-labelledby="mlab-log-title">
         <div class="ea-panel-header">
-          <span class="ea-panel-header-id">08</span>
+          <span class="ea-panel-header-id">09</span>
           <span id="mlab-log-title">Activity log</span>
           <span class="ea-panel-header-spacer"></span>
           <button class="ea-panel-header-action" type="button" data-mlab-log-reset>Clear</button>
@@ -804,6 +819,7 @@ export function renderMeasurementLabPage(): string {
         <div class="mlab-workbench-grid">
           <div class="mlab-workbench-main">
             ${audioSourcePanelMarkup()}
+            ${coveragePanelMarkup()}
             ${speedPanelMarkup()}
             ${channelPanelMarkup()}
             ${freqPanelMarkup()}
@@ -850,6 +866,7 @@ function elements(root: ParentNode) {
     selfTestBtn: root.querySelector<HTMLButtonElement>('[data-mlab-run-self-test]'),
     recordSelect: root.querySelector<HTMLSelectElement>('[data-mlab-record]'),
     recordDot: root.querySelector<HTMLElement>('[data-mlab-record-dot]'),
+    coverageBody: root.querySelector<HTMLElement>('[data-mlab-coverage-body]'),
     waveformL: root.querySelector<HTMLCanvasElement>('[data-mlab-waveform="L"]'),
     waveformR: root.querySelector<HTMLCanvasElement>('[data-mlab-waveform="R"]'),
   };
@@ -1380,6 +1397,74 @@ function renderRecordSelector(els: Elements): void {
   if (els.recordDot) {
     els.recordDot.className = `ea-dot ea-dot--${state.selectedTestRecordId ? 'done' : 'planned'}`;
   }
+}
+
+function coverageBadgeMarkup(availability: WorkflowAvailability): string {
+  const labels: Record<WorkflowAvailability, string> = {
+    available: 'Available',
+    planned: 'Planned',
+    partial: 'Partial',
+    unavailable: 'Not available',
+  };
+  return `<span class="mlab-coverage-badge mlab-coverage-badge--${availability}">${renderText(labels[availability])}</span>`;
+}
+
+function renderCoveragePanel(els: Elements): void {
+  const body = els.coverageBody;
+  if (!body) return;
+
+  const record = selectedRecord();
+  if (!record) {
+    body.innerHTML = '<p class="ea-muted">Select a test record above to see which measurements are available.</p>';
+    return;
+  }
+
+  const coverageList = computeAllWorkflowCoverage(record);
+  const title = renderText(`${record.manufacturer} — ${record.title}`);
+
+  const counts = {
+    available: coverageList.filter(c => c.availability === 'available').length,
+    planned: coverageList.filter(c => c.availability === 'planned').length,
+    partial: coverageList.filter(c => c.availability === 'partial').length,
+    unavailable: coverageList.filter(c => c.availability === 'unavailable').length,
+  };
+  const summaryParts: string[] = [];
+  if (counts.available > 0) summaryParts.push(`${counts.available} available`);
+  if (counts.planned > 0) summaryParts.push(`${counts.planned} planned`);
+  if (counts.partial > 0) summaryParts.push(`${counts.partial} partial`);
+  if (counts.unavailable > 0) summaryParts.push(`${counts.unavailable} not available`);
+
+  const cards = coverageList.map(cov => {
+    const workflow = MEASUREMENT_WORKFLOWS.find(w => w.id === cov.workflowId);
+    if (!workflow) return '';
+    const ariaDisabled = cov.availability === 'unavailable' ? ' aria-disabled="true"' : '';
+    return `
+      <div class="mlab-coverage-card mlab-coverage-card--${cov.availability}" role="listitem"${ariaDisabled}>
+        <div class="mlab-coverage-card-head">
+          <span class="mlab-coverage-card-label">${renderText(workflow.label)}</span>
+          ${coverageBadgeMarkup(cov.availability)}
+        </div>
+        <p class="mlab-coverage-card-desc">${renderText(workflow.description)}</p>
+        <p class="mlab-coverage-reason">${renderText(cov.reason)}</p>
+      </div>
+    `;
+  }).join('');
+
+  const isUltimateLP = record.id === 'analogue-productions-aatlp';
+  const helpHtml = isUltimateLP
+    ? `<details class="mlab-coverage-help">
+        <summary class="mlab-coverage-help-summary">Why is this the preferred test record?</summary>
+        <p class="mlab-coverage-help-body">Analogue Productions Ultimate Analogue Test LP is the preferred reference record for Toolbox 3.0 because it provides broad coverage for reference level, channel identity, azimuth/crosstalk, frequency sweeps, VTA/IMD, wow/flutter, anti-skate, pink-noise diagnostics, vertical resonance and rumble/isolation. Other records can still be used when they provide equivalent bands.</p>
+      </details>`
+    : '';
+
+  body.innerHTML = `
+    <p class="ea-muted mlab-coverage-intro">Coverage for <strong>${title}</strong> — ${renderText(summaryParts.join(', '))}.</p>
+    <div class="mlab-coverage-grid" role="list">
+      ${cards}
+    </div>
+    ${helpHtml}
+  `;
 }
 
 function renderThdPanel(els: Elements): void {
@@ -2297,6 +2382,7 @@ export function enableMeasurementLabInteractions(): void {
       if (preferred) state.selectedTestRecordId = preferred.id;
     }
     renderRecordSelector(els);
+    renderCoveragePanel(els);
     renderSpeedPanel(els);
     renderChannelPanel(els);
     renderFreqPanel(els);
@@ -2306,12 +2392,14 @@ export function enableMeasurementLabInteractions(): void {
     if (els.recordSelect) {
       els.recordSelect.innerHTML = '<option value="">Test record profiles unavailable</option>';
     }
+    renderCoveragePanel(els);
   });
 
   els.recordSelect?.addEventListener('change', () => {
     const value = els.recordSelect?.value ?? '';
     state.selectedTestRecordId = value.length > 0 ? value : null;
     renderRecordSelector(els);
+    renderCoveragePanel(els);
     renderSpeedPanel(els);
     renderChannelPanel(els);
     renderFreqPanel(els);
