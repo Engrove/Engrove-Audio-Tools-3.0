@@ -114,6 +114,15 @@ type FreqState = {
 };
 
 type ThdMode = 'thd' | 'imd';
+type ThdBandMeta = {
+  readonly index: string;
+  readonly label: string;
+  readonly frequencyHz: number | null;
+  readonly f1Hz: number | null;
+  readonly f2Hz: number | null;
+  readonly levelDb: number | null;
+  readonly standard: string | null;
+};
 type ThdStateBag = {
   mode: ThdMode;
   fundamentalHz: number;
@@ -122,6 +131,9 @@ type ThdStateBag = {
   active: boolean;
   elapsedSeconds: number;
   result: ThdResult | ImdResult | null;
+  resultSource: 'live_capture' | 'self_test' | null;
+  bandMeta: ThdBandMeta | null;
+  selectedBandIndex: string | null;
   capture: SweepCapture | null;
 };
 
@@ -283,6 +295,9 @@ const state: LabState = {
     active: false,
     elapsedSeconds: 0,
     result: null,
+    resultSource: null,
+    bandMeta: null,
+    selectedBandIndex: null,
     capture: null,
   },
   resonance: {
@@ -670,6 +685,20 @@ function serializeFreqBandMeta(meta: FreqBandMeta | null) {
     : null;
 }
 
+function serializeThdBandMeta(meta: ThdBandMeta | null) {
+  return meta
+    ? {
+        index: meta.index,
+        label: meta.label,
+        frequency_hz: meta.frequencyHz,
+        f1_hz: meta.f1Hz,
+        f2_hz: meta.f2Hz,
+        level_db: meta.levelDb,
+        standard: meta.standard,
+      }
+    : null;
+}
+
 function buildSessionJson(): SessionJson {
   const deviceLabel = state.devices.find(d => d.deviceId === state.selectedDeviceId)?.label ?? null;
 
@@ -705,10 +734,12 @@ function buildSessionJson(): SessionJson {
   const thdResult = (() => {
     const r = state.thd.result;
     if (!r) return null;
+    const source = state.thd.resultSource ?? 'live_capture';
+    const band = serializeThdBandMeta(state.thd.bandMeta);
     if (isThdResult(r)) {
-      return { type: 'thd', fundamental_hz: r.fundamentalHz, thd_percent: r.thdPercent, harmonics_dbc: r.harmonics };
+      return { type: 'thd', source, band, fundamental_hz: r.fundamentalHz, thd_percent: r.thdPercent, harmonics_dbc: r.harmonics };
     }
-    return { type: 'imd', f1_hz: r.f1Hz, f2_hz: r.f2Hz, imd_percent: r.imdPercent };
+    return { type: 'imd', source, band, f1_hz: r.f1Hz, f2_hz: r.f2Hz, imd_percent: r.imdPercent };
   })();
 
   const resResult = state.resonance.result;
@@ -1750,10 +1781,40 @@ function startThdCapture(els: Elements): void {
   const source = state.preSplitterNode;
   if (!context || !source || state.captureState !== 'live') return;
 
+  const { thdBands, imdBands } = getDistortionBands(selectedRecord());
+  const activeBands = state.thd.mode === 'thd' ? thdBands : imdBands;
+  const band = state.thd.selectedBandIndex
+    ? activeBands.find(b => b.index === state.thd.selectedBandIndex) ?? activeBands[0] ?? null
+    : activeBands[0] ?? null;
+
+  if (!band) {
+    appendLog(`${state.thd.mode.toUpperCase()}: no band available for selected test record — capture aborted.`);
+    return;
+  }
+
+  if (state.thd.mode === 'thd' && band.frequencyHz !== undefined) {
+    state.thd.fundamentalHz = band.frequencyHz;
+  }
+  if (state.thd.mode === 'imd') {
+    if (band.f1Hz !== undefined) state.thd.imdF1Hz = band.f1Hz;
+    if (band.f2Hz !== undefined) state.thd.imdF2Hz = band.f2Hz;
+  }
+
+  state.thd.bandMeta = {
+    index: band.index,
+    label: band.label,
+    frequencyHz: band.frequencyHz ?? null,
+    f1Hz: band.f1Hz ?? null,
+    f2Hz: band.f2Hz ?? null,
+    levelDb: band.levelDb ?? null,
+    standard: band.standard ?? null,
+  };
+
   stopThdCapture();
   state.thd.active = true;
   state.thd.elapsedSeconds = 0;
   state.thd.result = null;
+  state.thd.resultSource = state.sourceMode === 'self-test' ? 'self_test' : 'live_capture';
   renderThdPanel(els);
 
   const durationSeconds = 5;
@@ -1784,6 +1845,22 @@ function isThdResult(r: ThdResult | ImdResult | null): r is ThdResult {
 
 function getReferenceBands(record: TestRecord): readonly TestBand[] {
   return record.sides.flatMap(s => [...s.bands]).filter(b => b.analyzerModule === 'reference_calibration');
+}
+
+function getDistortionBands(record: TestRecord | null): { thdBands: readonly TestBand[]; imdBands: readonly TestBand[] } {
+  if (!record) return { thdBands: [], imdBands: [] };
+  const allBands = record.sides.flatMap(s => [...s.bands]);
+  const thdBands = allBands.filter(b =>
+    b.analyzerModule === 'thd' ||
+    (b.analyzerModules as string[] | undefined)?.includes('thd') ||
+    b.purpose === 'thd',
+  );
+  const imdBands = allBands.filter(b =>
+    b.analyzerModule === 'imd' ||
+    (b.analyzerModules as string[] | undefined)?.includes('imd') ||
+    b.purpose === 'imd',
+  );
+  return { thdBands, imdBands };
 }
 
 function getFrequencyResponseBands(record: TestRecord): readonly TestBand[] {
@@ -2385,6 +2462,14 @@ function renderThdPanel(els: Elements): void {
     return;
   }
 
+  const thdRecord = selectedRecord();
+  const { thdBands, imdBands } = getDistortionBands(thdRecord);
+
+  if (!thdRecord) {
+    body.innerHTML = '<p class="ea-muted">Select a test record with a THD or IMD band.</p>';
+    return;
+  }
+
   if (state.thd.active) {
     const pct = Math.min(100, (state.thd.elapsedSeconds / 5) * 100);
     const remaining = Math.max(0, 5 - state.thd.elapsedSeconds);
@@ -2449,9 +2534,97 @@ function renderThdPanel(els: Elements): void {
     return;
   }
 
-  // Idle
+  // Idle — mode selector always visible; availability gated per mode
   const isTHD = state.thd.mode === 'thd';
+  const activeBandsIdle = isTHD ? thdBands : imdBands;
+  const unavailableForMode = activeBandsIdle.length === 0;
+
+  if (unavailableForMode) {
+    const modeLabel = isTHD ? 'THD' : 'SMPTE IMD';
+    const altMode = isTHD ? 'SMPTE IMD' : 'THD';
+    const altBands = isTHD ? imdBands : thdBands;
+    const altNote = altBands.length > 0
+      ? ` Switch to ${altMode} to use an available band.`
+      : '';
+    body.innerHTML = `
+      <div class="mlab-segmented" role="radiogroup" aria-label="THD or IMD" style="margin-bottom:0.75rem">
+        <button class="mlab-segmented-option${isTHD ? ' mlab-segmented-option--active' : ''}" role="radio" aria-checked="${isTHD}" type="button" data-mlab-thd-mode="thd">THD</button>
+        <button class="mlab-segmented-option${!isTHD ? ' mlab-segmented-option--active' : ''}" role="radio" aria-checked="${!isTHD}" type="button" data-mlab-thd-mode="imd">SMPTE IMD</button>
+      </div>
+      <p class="ea-muted">${modeLabel} measurement is not available with selected test record.${renderText(altNote)}</p>
+      <p class="ea-muted">Choose a test record with a ${modeLabel} band.</p>
+    `;
+    body.querySelectorAll<HTMLButtonElement>('[data-mlab-thd-mode]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const m = btn.dataset.mlabThdMode as ThdMode | undefined;
+        if (m && m !== state.thd.mode) { state.thd.mode = m; renderThdPanel(els); }
+      });
+    });
+    return;
+  }
+
+  const selectedBand = state.thd.selectedBandIndex
+    ? activeBandsIdle.find(b => b.index === state.thd.selectedBandIndex) ?? activeBandsIdle[0]
+    : activeBandsIdle[0];
+
+  const bandOptions = activeBandsIdle.map(b => {
+    const sel = b.index === selectedBand?.index ? ' selected' : '';
+    const freq = isTHD
+      ? (b.frequencyHz !== undefined ? ` (${b.frequencyHz} Hz)` : '')
+      : (b.f1Hz !== undefined && b.f2Hz !== undefined ? ` (${b.f1Hz} Hz + ${b.f2Hz.toLocaleString('en-US')} Hz)` : '');
+    const level = b.levelDb !== undefined ? ` · ${b.levelDb} dB` : '';
+    return `<option value="${renderText(b.index)}"${sel}>${renderText(b.label + freq + level)}</option>`;
+  }).join('');
+
+  const bandRow = activeBandsIdle.length > 1
+    ? `
+        <tr>
+          <td class="ea-col-status">${statusDot('planned')}</td>
+          <td class="ea-col-label">${isTHD ? 'Distortion band' : 'IMD band'}
+            <span class="ea-form-table-sublabel">Band from test record</span>
+          </td>
+          <td class="ea-col-value">
+            <select class="ea-input" data-mlab-thd-band aria-label="${isTHD ? 'THD band' : 'IMD band'}">
+              ${bandOptions}
+            </select>
+          </td>
+          <td class="ea-col-meta"><span class="ea-badge">Band</span></td>
+        </tr>`
+    : `
+        <tr>
+          <td class="ea-col-status">${statusDot('done')}</td>
+          <td class="ea-col-label">${isTHD ? 'Distortion band' : 'IMD band'}</td>
+          <td class="ea-col-value">${selectedBand ? renderText(selectedBand.label) : '—'}</td>
+          <td class="ea-col-meta"><span class="ea-badge">Band</span></td>
+        </tr>`;
+
+  const freqRow = isTHD
+    ? (selectedBand?.frequencyHz !== undefined
+        ? `
+        <tr>
+          <td class="ea-col-status">${statusDot('done')}</td>
+          <td class="ea-col-label">Fundamental</td>
+          <td class="ea-col-value mlab-requested">${selectedBand.frequencyHz.toLocaleString('en-US')}&nbsp;Hz</td>
+          <td class="ea-col-meta"><span class="ea-badge">Hz</span></td>
+        </tr>`
+        : '')
+    : (selectedBand?.f1Hz !== undefined && selectedBand?.f2Hz !== undefined
+        ? `
+        <tr>
+          <td class="ea-col-status">${statusDot('done')}</td>
+          <td class="ea-col-label">f1 (low) / f2 (high)</td>
+          <td class="ea-col-value mlab-requested">${selectedBand.f1Hz}&nbsp;Hz &middot; ${selectedBand.f2Hz.toLocaleString('en-US')}&nbsp;Hz${selectedBand.standard ? ` (${renderText(selectedBand.standard)})` : ''}</td>
+          <td class="ea-col-meta"><span class="ea-badge">Fixed</span></td>
+        </tr>`
+        : '');
+
+  const selfTestNote = state.sourceMode === 'self-test'
+    ? `<p class="ea-muted mlab-reflevel-selftest-note">Self-test mode: the 1&thinsp;kHz oscillator does not produce a distortion signal — results will be marked <strong>self-test&nbsp;/&nbsp;simulated</strong> and are not a valid distortion measurement.</p>`
+    : '';
+
   body.innerHTML = `
+    ${selfTestNote}
+    <p class="mlab-reflevel-info">These readings measure distortion in the full playback/capture chain: test record, cartridge, tonearm, phono stage and audio interface. They are not cartridge-only distortion.</p>
     <table class="ea-form-table" aria-label="THD and IMD setup">
       <tbody>
         <tr>
@@ -2465,27 +2638,8 @@ function renderThdPanel(els: Elements): void {
           </td>
           <td class="ea-col-meta"><span class="ea-badge">Mode</span></td>
         </tr>
-        ${isTHD ? `
-        <tr>
-          <td class="ea-col-status">${statusDot('planned')}</td>
-          <td class="ea-col-label">Fundamental
-            <span class="ea-form-table-sublabel">Tone frequency on test record</span>
-          </td>
-          <td class="ea-col-value">
-            <select class="ea-input" data-mlab-thd-fund aria-label="Fundamental frequency">
-              <option value="1000" ${state.thd.fundamentalHz === 1000 ? 'selected' : ''}>1000 Hz</option>
-              <option value="315"  ${state.thd.fundamentalHz === 315  ? 'selected' : ''}>315 Hz</option>
-              <option value="10000" ${state.thd.fundamentalHz === 10000 ? 'selected' : ''}>10 kHz</option>
-            </select>
-          </td>
-          <td class="ea-col-meta"><span class="ea-badge">Hz</span></td>
-        </tr>` : `
-        <tr>
-          <td class="ea-col-status">${statusDot('planned')}</td>
-          <td class="ea-col-label">f1 (low) / f2 (high)</td>
-          <td class="ea-col-value mlab-requested">60&nbsp;Hz &middot; 7&nbsp;kHz (SMPTE)</td>
-          <td class="ea-col-meta"><span class="ea-badge">Fixed</span></td>
-        </tr>`}
+        ${bandRow}
+        ${freqRow}
         <tr>
           <td class="ea-col-status">${statusDot('done')}</td>
           <td class="ea-col-label">Capture duration</td>
@@ -2494,7 +2648,6 @@ function renderThdPanel(els: Elements): void {
         </tr>
       </tbody>
     </table>
-    ${isTHD ? recordHint('thd') : recordHint('imd')}
     <div class="mlab-session-controls">
       <button class="ea-button ea-button--primary" type="button" data-mlab-thd-start>Start capture</button>
     </div>
@@ -2505,10 +2658,12 @@ function renderThdPanel(els: Elements): void {
       if (m && m !== state.thd.mode) { state.thd.mode = m; renderThdPanel(els); }
     });
   });
-  body.querySelector<HTMLSelectElement>('[data-mlab-thd-fund]')?.addEventListener('change', (e) => {
-    const v = parseInt((e.currentTarget as HTMLSelectElement).value, 10);
-    if (Number.isFinite(v) && v > 0) state.thd.fundamentalHz = v;
-  });
+  if (activeBandsIdle.length > 1) {
+    body.querySelector<HTMLSelectElement>('[data-mlab-thd-band]')?.addEventListener('change', (e) => {
+      const val = (e.currentTarget as HTMLSelectElement).value;
+      state.thd.selectedBandIndex = val.length > 0 ? val : null;
+    });
+  }
   body.querySelector<HTMLButtonElement>('[data-mlab-thd-start]')?.addEventListener('click', () => {
     startThdCapture(els);
   });

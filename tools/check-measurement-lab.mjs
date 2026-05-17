@@ -1199,6 +1199,113 @@ function checkS4DFreqPanel() {
 
 checkS4DFreqPanel();
 
+// S4D.1/S4D.2: static source checks — freq export schema normalization & capture guard.
+function checkS4D1D2FreqExport() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  if (!existsSync(renderSrcPath)) {
+    console.error('S4D.1/S4D.2 static check: renderMeasurementLabPage.ts not found');
+    process.exitCode = 1;
+    return;
+  }
+  const src = readFileSync(renderSrcPath, 'utf8');
+
+  const checks = [
+    // Serializer helper present
+    ['serializeFreqBandMeta function', /function serializeFreqBandMeta\s*\(/],
+    // Snake-case export fields in the serializer
+    ['frequency_start_hz in serializer', /frequency_start_hz\s*:/],
+    ['frequency_end_hz in serializer', /frequency_end_hz\s*:/],
+    ['frequency_hz in serializer (FreqBandMeta)', /frequency_hz\s*:/],
+    ['level_db in serializer (FreqBandMeta)', /level_db\s*:/],
+    // buildSessionJson uses the helper, not a direct pass-through
+    ['buildSessionJson uses serializeFreqBandMeta', /serializeFreqBandMeta\s*\(\s*state\.freq\.selectedBandMeta\s*\)/],
+    // Direct camelCase pass-through must NOT exist
+    ['no direct selectedBandMeta pass-through in sweep_band',
+      !/sweep_band\s*:\s*state\.freq\.selectedBandMeta/.test(src)],
+    // Missing-band guard log line
+    ['missing-band guard log', /Frequency response: no sweep band available/],
+  ];
+
+  let failed = false;
+  for (const [label, pattern] of checks) {
+    const ok = typeof pattern === 'boolean' ? pattern : pattern.test(src);
+    if (!ok) {
+      console.error(`S4D.1/S4D.2 static check FAIL: "${label}" not found in renderMeasurementLabPage.ts`);
+      failed = true;
+    }
+  }
+
+  if (!failed) {
+    console.log('- S4D.1/S4D.2 static source check (freq export schema & capture guard): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS4D1D2FreqExport();
+
+// S4E: static source checks — THD/IMD workflow gate & export hardening.
+function checkS4EThdImdGate() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const workflowsSrcPath = join(repoRoot, 'src/modules/measurement-lab/data/measurementWorkflows.ts');
+  if (!existsSync(renderSrcPath) || !existsSync(workflowsSrcPath)) {
+    console.error('S4E static check: source file(s) not found');
+    process.exitCode = 1;
+    return;
+  }
+  const src = readFileSync(renderSrcPath, 'utf8');
+  const workflowsSrc = readFileSync(workflowsSrcPath, 'utf8');
+
+  const renderChecks = [
+    // Band helper
+    ['getDistortionBands function', /function getDistortionBands\s*\(/],
+    ['thdBands returned', /thdBands/],
+    ['imdBands returned', /imdBands/],
+    // ThdBandMeta type
+    ['ThdBandMeta type', /type ThdBandMeta\s*=/],
+    // New ThdStateBag fields
+    ['resultSource in ThdStateBag', /resultSource\s*:\s*'live_capture'\s*\|\s*'self_test'\s*\|\s*null/],
+    ['bandMeta in ThdStateBag', /bandMeta\s*:\s*ThdBandMeta\s*\|\s*null/],
+    ['selectedBandIndex in ThdStateBag', /selectedBandIndex\s*:/],
+    // Serializer helper
+    ['serializeThdBandMeta function', /function serializeThdBandMeta\s*\(/],
+    // Export fields
+    ['source in thd/imd export', /source.*state\.thd\.resultSource|state\.thd\.resultSource.*source/],
+    ['band in thd/imd export via serializer', /serializeThdBandMeta\s*\(\s*state\.thd\.bandMeta\s*\)/],
+    ['f1_hz in serializeThdBandMeta', /f1_hz\s*:/],
+    ['f2_hz in serializeThdBandMeta', /f2_hz\s*:/],
+    // Availability gating
+    ['no-record message for THD/IMD', /Select a test record with a THD or IMD band/],
+    ['unavailability message for mode', /not available with selected test record/],
+    // Capture guard log (template literal uses toUpperCase() — match the invariant parts)
+    ['capture-aborted log present', /no band available.*capture aborted/],
+    ['capture-aborted uses mode', /mode\.toUpperCase\(\).*no band available|no band available.*capture aborted/],
+    // Full-chain disclaimer
+    ['full-chain disclaimer for THD/IMD panel', /full playback\/capture chain/],
+    // resultSource set on capture start
+    ['resultSource set in startThdCapture', /state\.thd\.resultSource\s*=/],
+    // VTA still not supported
+    ['VTA still not supported', !/vta_imd_optimizer[\s\S]{0,200}implementationStatus.*supported/.test(workflowsSrc)],
+  ];
+
+  let failed = false;
+  for (const [label, pattern] of renderChecks) {
+    const ok = typeof pattern === 'boolean' ? pattern : pattern.test(src);
+    if (!ok) {
+      console.error(`S4E static check FAIL: "${label}" not found in renderMeasurementLabPage.ts`);
+      failed = true;
+    }
+  }
+
+  if (!failed) {
+    console.log('- S4E static source check (THD/IMD workflow gate & export hardening): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS4EThdImdGate();
+
 try {
   await runChecks();
 } catch (error) {
