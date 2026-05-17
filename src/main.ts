@@ -7,9 +7,11 @@ import './modules/measurement-lab/ui/measurementLab.css';
 import { bootAnalyticsConsent } from './shared/privacy/analytics';
 import { mountConsentBanner } from './shared/privacy/renderConsentBanner';
 import { mountHelpModal } from './shared/ui/helpModal';
+import { mountMobileDesktopNotice } from './shared/ui/mobileDesktopNotice';
 import { startRouter } from './app/router';
 
 bootAnalyticsConsent();
 startRouter('#app');
 mountConsentBanner();
 mountHelpModal();
+mountMobileDesktopNotice();
