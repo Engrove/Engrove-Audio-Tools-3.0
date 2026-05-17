@@ -1469,14 +1469,23 @@ function syncCoverageCollapsed(els: Elements): void {
   els.coveragePanelSection?.classList.toggle('mlab-coverage-panel--collapsed', collapsed);
 }
 
-function coverageBadgeMarkup(availability: WorkflowAvailability): string {
+function coverageBadgeMarkup(
+  availability: WorkflowAvailability,
+  panelTarget?: string,
+  workflowLabel?: string,
+): string {
   const labels: Record<WorkflowAvailability, string> = {
     available: 'Available',
     planned: 'Planned',
     partial: 'Partial',
     unavailable: 'Not available',
   };
-  return `<span class="mlab-coverage-badge mlab-coverage-badge--${availability}">${renderText(labels[availability])}</span>`;
+  const text = renderText(labels[availability]);
+  if (availability === 'available' && panelTarget) {
+    const ariaLabel = renderText(`${workflowLabel ?? 'Available'} — go to tool`);
+    return `<button class="mlab-coverage-badge mlab-coverage-badge--available" type="button" data-mlab-goto-panel="${renderText(panelTarget)}" aria-label="${ariaLabel}">${text}</button>`;
+  }
+  return `<span class="mlab-coverage-badge mlab-coverage-badge--${availability}">${text}</span>`;
 }
 
 function renderCoveragePanel(els: Elements): void {
@@ -1522,24 +1531,15 @@ function renderCoveragePanel(els: Elements): void {
     const workflow = MEASUREMENT_WORKFLOWS.find(w => w.id === cov.workflowId);
     if (!workflow) return '';
     const panelTarget = WORKFLOW_PANEL_TARGETS[cov.workflowId];
-    const isNavigable = cov.availability === 'available' && Boolean(panelTarget);
     const ariaDisabled = cov.availability === 'unavailable' ? ' aria-disabled="true"' : '';
-    const navHtml = isNavigable
-      ? `<div class="mlab-coverage-card-foot">
-          <button class="mlab-coverage-nav-btn" type="button"
-                  data-mlab-goto-panel="${renderText(panelTarget)}"
-                  aria-label="${renderText(`Go to ${workflow.label} tool`)}">Go to tool</button>
-        </div>`
-      : '';
     return `
       <div class="mlab-coverage-card mlab-coverage-card--${cov.availability}" role="listitem"${ariaDisabled}>
         <div class="mlab-coverage-card-head">
           <span class="mlab-coverage-card-label">${renderText(workflow.label)}</span>
-          ${coverageBadgeMarkup(cov.availability)}
+          ${coverageBadgeMarkup(cov.availability, panelTarget, workflow.label)}
         </div>
         <p class="mlab-coverage-card-desc">${renderText(workflow.description)}</p>
         <p class="mlab-coverage-reason">${renderText(cov.reason)}</p>
-        ${navHtml}
       </div>
     `;
   }).join('');

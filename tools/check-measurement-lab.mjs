@@ -484,7 +484,7 @@ function checkCoverageNavigation() {
   const src = readFileSync(renderSrcPath, 'utf8');
   const loaderSrc = readFileSync(loaderSrcPath, 'utf8');
 
-  const checks = [
+  const renderChecks = [
     ['WORKFLOW_PANEL_TARGETS mapping', /WORKFLOW_PANEL_TARGETS/],
     ['mlab-speed-panel id in markup', /id="mlab-speed-panel"/],
     ['mlab-channel-panel id in markup', /id="mlab-channel-panel"/],
@@ -492,10 +492,11 @@ function checkCoverageNavigation() {
     ['mlab-thd-panel id in markup', /id="mlab-thd-panel"/],
     ['mlab-resonance-panel id in markup', /id="mlab-resonance-panel"/],
     ['data-mlab-tool-panel attribute', /data-mlab-tool-panel=/],
-    ['data-mlab-goto-panel attribute', /data-mlab-goto-panel=/],
+    ['data-mlab-goto-panel on badge button', /mlab-coverage-badge.*data-mlab-goto-panel|data-mlab-goto-panel.*mlab-coverage-badge/],
     ['mlab-panel--target-highlight class', /mlab-panel--target-highlight/],
     ['highlightTargetPanel function', /function highlightTargetPanel\s*\(/],
-    ['mlab-coverage-nav-btn class', /mlab-coverage-nav-btn/],
+  ];
+  const loaderChecks = [
     ['IEC_IMD in runtime loader', /IEC_IMD/],
   ];
 
@@ -507,16 +508,17 @@ function checkCoverageNavigation() {
   }
 
   let failed = false;
-  for (const [label, pattern] of checks.slice(0, 11)) {
+  for (const [label, pattern] of renderChecks) {
     if (!pattern.test(src)) {
       console.error(`S3G static check FAIL: "${label}" pattern not found in renderMeasurementLabPage.ts`);
       failed = true;
     }
   }
-  // IEC_IMD check is on the loader source
-  if (!checks[11][1].test(loaderSrc)) {
-    console.error('S3G static check FAIL: IEC_IMD not found in loadTestRecords.ts');
-    failed = true;
+  for (const [label, pattern] of loaderChecks) {
+    if (!pattern.test(loaderSrc)) {
+      console.error(`S3G static check FAIL: "${label}" pattern not found in loadTestRecords.ts`);
+      failed = true;
+    }
   }
 
   if (!failed) {

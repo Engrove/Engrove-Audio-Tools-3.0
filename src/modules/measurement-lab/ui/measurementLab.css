@@ -597,39 +597,20 @@
   border: 1px solid var(--ea-border-soft);
 }
 
-/* Coverage card navigation button (S3G) */
-.mlab-coverage-card-foot {
-  margin-top: var(--ea-space-2);
-  padding-top: var(--ea-space-2);
-  border-top: 1px solid var(--ea-border-soft);
-}
-
-.mlab-coverage-nav-btn {
+/* Available badge as navigation button (S3G) */
+button.mlab-coverage-badge--available {
   appearance: none;
-  background: transparent;
-  border: 1px solid var(--ea-status-good);
-  border-radius: var(--ea-radius-sm);
-  color: var(--ea-status-good);
+  border: none;
   cursor: pointer;
-  font-family: var(--ea-font-data);
-  font-size: var(--ea-font-size-micro);
-  font-weight: 600;
-  letter-spacing: var(--ea-letter-label);
-  padding: 2px var(--ea-space-2);
-  text-transform: uppercase;
-  white-space: nowrap;
 }
 
-.mlab-coverage-nav-btn:hover {
-  background: var(--ea-status-good);
-  color: #14161a;
+button.mlab-coverage-badge--available:hover {
+  filter: brightness(1.2);
 }
 
-.mlab-coverage-nav-btn:focus-visible {
-  outline: 2px solid var(--ea-status-good);
+button.mlab-coverage-badge--available:focus-visible {
+  outline: 2px solid var(--ea-status-success);
   outline-offset: 2px;
-  background: var(--ea-status-good);
-  color: #14161a;
 }
 
 /* Target panel highlight animation (S3G) */
