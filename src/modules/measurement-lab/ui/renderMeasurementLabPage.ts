@@ -942,6 +942,12 @@ function buildReportText(): string {
   const sr = state.speed.result;
   if (sr) {
     lines.push('SPEED & WOW·FLUTTER');
+    lines.push(`  Source:                ${state.speed.resultSource ?? 'live_capture'}`);
+    if (state.speed.bandMeta) {
+      const sbm = state.speed.bandMeta;
+      const freq = sbm.frequencyHz != null ? ` · ${sbm.frequencyHz.toLocaleString('en-US')} Hz` : '';
+      lines.push(`  Band:                  ${sbm.label}${freq}`);
+    }
     lines.push(`  Speed deviation:       ${sr.speedDeviationPercent.toFixed(3)} %`);
     lines.push(`  Unweighted W&F (AES6): ${sr.unweightedWfPercent.toFixed(3)} %`);
     lines.push(`  IEC-weighted W&F:      ${sr.weightedWfPercent.toFixed(3)} %`);
@@ -950,10 +956,18 @@ function buildReportText(): string {
   }
 
   // Channel identity
-  const { leftCapture, rightCapture, identityResult: chIdentity, source: chSource } = state.channel;
+  const { leftCapture, rightCapture, identityResult: chIdentity, source: chSource, leftBandMeta: chLeftBand, rightBandMeta: chRightBand } = state.channel;
   if (leftCapture && rightCapture) {
     lines.push('CHANNEL IDENTITY & CROSSTALK');
     lines.push(`  Source:                ${chSource ?? 'live_capture'}`);
+    if (chLeftBand) {
+      const lf = chLeftBand.frequencyHz != null ? ` · ${chLeftBand.frequencyHz.toLocaleString('en-US')} Hz` : '';
+      lines.push(`  Left band:             ${chLeftBand.label}${lf}`);
+    }
+    if (chRightBand) {
+      const rf = chRightBand.frequencyHz != null ? ` · ${chRightBand.frequencyHz.toLocaleString('en-US')} Hz` : '';
+      lines.push(`  Right band:            ${chRightBand.label}${rf}`);
+    }
     if (chIdentity) {
       lines.push(`  Identity:              ${chIdentity.identity}`);
       lines.push(`  Confidence:            ${chIdentity.confidence}`);
@@ -997,12 +1011,24 @@ function buildReportText(): string {
   if (tr) {
     if (isThdResult(tr)) {
       lines.push('THD');
+      lines.push(`  Source:                ${state.thd.resultSource ?? 'live_capture'}`);
+      if (state.thd.bandMeta) {
+        const tbm = state.thd.bandMeta;
+        const tf = tbm.frequencyHz != null ? ` · ${tbm.frequencyHz.toLocaleString('en-US')} Hz` : '';
+        lines.push(`  Band:                  ${tbm.label}${tf}`);
+      }
       lines.push(`  Fundamental:           ${tr.fundamentalHz} Hz`);
       lines.push(`  THD:                   ${tr.thdPercent.toFixed(3)} %`);
       const hdbs = tr.harmonics.map((h, i) => `${i + 2}nd: ${h.toFixed(1)} dBc`).join(', ');
       if (hdbs) lines.push(`  Harmonics:             ${hdbs}`);
     } else {
       lines.push('SMPTE IMD');
+      lines.push(`  Source:                ${state.thd.resultSource ?? 'live_capture'}`);
+      if (state.thd.bandMeta) {
+        const tbm = state.thd.bandMeta;
+        const tf = tbm.frequencyHz != null ? ` · ${tbm.frequencyHz.toLocaleString('en-US')} Hz` : '';
+        lines.push(`  Band:                  ${tbm.label}${tf}`);
+      }
       lines.push(`  f1 (LF):               ${tr.f1Hz} Hz`);
       lines.push(`  f2 (HF):               ${tr.f2Hz} Hz`);
       lines.push(`  IMD:                   ${tr.imdPercent.toFixed(3)} %`);
@@ -1230,8 +1256,20 @@ function renderSpeedPanel(els: Elements): void {
   if (state.speed.result) {
     const r = state.speed.result;
     const grade = classifyWf(r.unweightedWfPercent);
+    const srcBadgeClass = state.speed.resultSource === 'self_test' ? 'ea-badge--setup' : 'ea-badge--manufacturer';
+    const srcBadgeLabel = state.speed.resultSource === 'self_test' ? 'Self-test / Simulated' : 'Live capture';
+    const bandRow = state.speed.bandMeta
+      ? `<div class="mlab-wf-result-row">
+          <span class="mlab-wf-result-label">Band</span>
+          <span class="mlab-wf-result-value">${renderText(state.speed.bandMeta.label)}${state.speed.bandMeta.frequencyHz != null ? ` &middot; ${state.speed.bandMeta.frequencyHz.toLocaleString('en-US')}&nbsp;Hz` : ''}</span>
+        </div>`
+      : '';
     body.innerHTML = `
+      <div class="mlab-result-source-row">
+        <span class="ea-badge ${srcBadgeClass}">${srcBadgeLabel}</span>
+      </div>
       <div class="mlab-wf-result">
+        ${bandRow}
         <div class="mlab-wf-result-row">
           <span class="mlab-wf-result-label">Speed deviation</span>
           <span class="mlab-wf-result-value">${r.speedDeviationPercent >= 0 ? '+' : ''}${r.speedDeviationPercent.toFixed(3)}&nbsp;%</span>
@@ -1250,6 +1288,7 @@ function renderSpeedPanel(els: Elements): void {
         </div>
         <p class="mlab-wf-note">${r.sampleCount.toLocaleString('en-US')} cycles analysed &middot; mean ${r.meanFrequencyHz.toFixed(2)}&nbsp;Hz</p>
       </div>
+      <p class="mlab-chain-note">These readings measure playback/capture speed stability and are affected by the test record, turntable and capture chain.</p>
       <div class="mlab-session-controls">
         <button class="ea-button ea-button--primary" type="button" data-mlab-speed-start>Measure again</button>
       </div>

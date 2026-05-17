@@ -79,3 +79,33 @@ After Cloudflare deploy, verify at `https://test-record-coverage.pages.dev/measu
 14. Measurement Lab page loads without console errors.
 15. Coverage badges and panel navigation function correctly.
 16. "02 Measurement coverage" panel remains collapsible.
+
+## S4G MVP measurement flows
+
+### Speed & Wow / Flutter (S4F / S4G)
+
+17. Speed/W&F panel shows a source badge (**Live capture** or **Self-test / Simulated**) in the result view.
+18. Speed/W&F result view shows the selected band label and frequency.
+19. Speed/W&F result view includes the chain-honesty paragraph ("These readings measure playback/capture speed stability and are affected by the test record, turntable and capture chain.").
+20. When no test record is selected the Speed/W&F panel shows "Select a test record with a speed / wow & flutter band".
+21. When the selected test record has no speed bands the panel shows the unavailability message, not the capture UI.
+
+### THD / IMD (S4E / S4G)
+
+22. THD panel idle state shows band selector and availability status before prompting to connect a source.
+23. THD / IMD result view shows source badge and band label.
+24. When no test record is selected the THD panel shows a no-record message, not the connect-source prompt.
+
+### Frequency response (S4D / S4G)
+
+25. Frequency response result view shows source badge and sweep band.
+
+### Channel identity (S4G)
+
+26. JSON export and text report for channel identity include **left_band** and **right_band** metadata.
+
+### Export consistency
+
+27. Downloaded JSON includes `source` and `band` for every completed MVP measurement (speed, channel, freq, thd/imd).
+28. Downloaded text report includes `Source:` and `Band:` lines for speed and THD/IMD sections.
+29. Reference Level Calibration panel present and functional; no fake analyzer states for Planned workflows.

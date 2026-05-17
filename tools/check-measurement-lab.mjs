@@ -1368,6 +1368,68 @@ function checkS4FWowFlutter() {
 
 checkS4FWowFlutter();
 
+// S4G: final QA — source badge, band display, chain text, report consistency, export consistency.
+function checkS4GFinal() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const workflowsSrcPath = join(repoRoot, 'src/modules/measurement-lab/data/measurementWorkflows.ts');
+  if (!existsSync(renderSrcPath) || !existsSync(workflowsSrcPath)) {
+    console.error('S4G static check: source file(s) not found');
+    process.exitCode = 1;
+    return;
+  }
+  const src = readFileSync(renderSrcPath, 'utf8');
+  const workflowsSrc = readFileSync(workflowsSrcPath, 'utf8');
+
+  const checks = [
+    // Part A — Speed result UI: source badge
+    ['Speed result: source badge class present', /mlab-result-source-row[\s\S]{0,400}ea-badge.*srcBadgeClass|srcBadgeClass[\s\S]{0,400}mlab-result-source-row/],
+    ['Speed result: Self-test \/ Simulated badge label', /Self-test \/ Simulated/],
+    ['Speed result: Live capture badge label in speed result', /function renderSpeedPanel[\s\S]{0,3000}Live capture/],
+    // Part A — Speed result UI: band row
+    ['Speed result: band meta label rendered', /function renderSpeedPanel[\s\S]{0,3000}state\.speed\.bandMeta[\s\S]{0,400}\.label/],
+    ['Speed result: band meta frequencyHz rendered', /function renderSpeedPanel[\s\S]{0,3000}state\.speed\.bandMeta[\s\S]{0,400}frequencyHz/],
+    // Part A — Speed result UI: chain-honesty text
+    ['Speed result: chain-honesty paragraph', /These readings measure playback\/capture speed stability and are affected by the test record/],
+    // Part C — buildReportText: Speed source + band
+    ['Report text: Speed source line', /SPEED & WOW[\s\S]{0,400}Source:.*resultSource/],
+    ['Report text: Speed band line', /SPEED & WOW[\s\S]{0,600}state\.speed\.bandMeta[\s\S]{0,200}Band:/],
+    // Part C — buildReportText: Channel left/right band
+    ['Report text: Channel left band line', /CHANNEL IDENTITY[\s\S]{0,600}Left band:/],
+    ['Report text: Channel right band line', /CHANNEL IDENTITY[\s\S]{0,600}Right band:/],
+    // Part C — buildReportText: THD source + band
+    ['Report text: THD source line', /THD[\s\S]{0,400}Source:.*resultSource/],
+    ['Report text: THD band line', /THD[\s\S]{0,600}state\.thd\.bandMeta[\s\S]{0,200}Band:/],
+    // Part B — buildSessionJson export consistency
+    ['JSON export: speed has source', /measurements[\s\S]{0,400}speed[\s\S]{0,400}source.*resultSource/],
+    ['JSON export: speed band via serializer', /serializeSpeedBandMeta\s*\(\s*state\.speed\.bandMeta\s*\)/],
+    ['JSON export: channel has source', /channel_identity[\s\S]{0,400}source.*'live_capture'|source.*chSource/],
+    ['JSON export: channel has left_band', /left_band\s*:/],
+    ['JSON export: channel has right_band', /right_band\s*:/],
+    ['JSON export: freq source', /frequency_response[\s\S]{0,400}source.*resultSource/],
+    ['JSON export: freq band via serializer', /serializeFreqBandMeta\s*\(\s*state\.freq\.selectedBandMeta\s*\)/],
+    ['JSON export: thd/imd source', /serializeThdBandMeta\s*\(\s*state\.thd\.bandMeta\s*\)/],
+    // Final — VTA stays planned
+    ['VTA still planned (not supported)', !/vta_imd_optimizer[\s\S]{0,200}implementationStatus.*'supported'/.test(workflowsSrc)],
+  ];
+
+  let failed = false;
+  for (const [label, pattern] of checks) {
+    const ok = typeof pattern === 'boolean' ? pattern : pattern.test(src);
+    if (!ok) {
+      console.error(`S4G static check FAIL: "${label}" not found`);
+      failed = true;
+    }
+  }
+
+  if (!failed) {
+    console.log('- S4G final QA static check (source badge, band display, chain text, report & export consistency): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS4GFinal();
+
 try {
   await runChecks();
 } catch (error) {
