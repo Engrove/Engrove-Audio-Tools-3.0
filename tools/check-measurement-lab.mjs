@@ -1956,6 +1956,66 @@ function checkS5DVtaComparison() {
 
 checkS5DVtaComparison();
 
+function checkS5D1NoClaim() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const workflowsSrcPath = join(repoRoot, 'src/modules/measurement-lab/data/measurementWorkflows.ts');
+  if (!existsSync(renderSrcPath) || !existsSync(workflowsSrcPath)) {
+    console.error('S5D.1 static check: source file(s) not found');
+    process.exitCode = 1;
+    return;
+  }
+  const src = readFileSync(renderSrcPath, 'utf8');
+  const workflowsSrc = readFileSync(workflowsSrcPath, 'utf8');
+
+  const checks = [
+    // 1. No "optimal SRA" in UI or export
+    ['No "optimal SRA" claim', !/optimal SRA/.test(src)],
+    // 2. No "best-setting" in export warnings
+    ['No "best-setting" in export', !/best-setting/.test(src)],
+    // 3. No "best setting" (space variant)
+    ['No "best setting" claim', !/best setting/.test(src)],
+    // 4. No recommended_height key
+    ['No recommended_height field', !/recommended_height/.test(src)],
+    // 5. No optimal_height key
+    ['No optimal_height field', !/optimal_height/.test(src)],
+    // 6. VTA workflow not supported
+    ['VTA workflow not supported', (() => {
+      const vtaStart = workflowsSrc.indexOf("id: 'vta_imd_optimizer'");
+      if (vtaStart === -1) return false;
+      const blockEnd = workflowsSrc.indexOf('},', vtaStart);
+      if (blockEnd === -1) return false;
+      const block = workflowsSrc.slice(vtaStart, blockEnd + 2);
+      return !/implementationStatus:\s*'supported'/.test(block);
+    })()],
+    // 7. "Experimental candidate only" text still present
+    ['Experimental candidate only text present', /Experimental candidate only/],
+    // 8. Workflow list item uses "experimental" and "candidate"
+    ['Workflow text uses experimental and candidate',
+      /Compare IMD scores[\s\S]{0,200}experimental[\s\S]{0,100}candidate|Compare IMD scores[\s\S]{0,200}candidate[\s\S]{0,100}experimental/],
+    // 9. "final recommendation" language in export warning
+    ['Export warning references final recommendation',
+      /final recommendation[\s\S]{0,80}not implemented/],
+    // 10. No "optimal" in export warnings
+    ['No "optimal" in VTA export warnings', !/vta_imd_optimizer[\s\S]{0,1500}optimal/.test(src)],
+  ];
+
+  let allPass = true;
+  for (const [label, result] of checks) {
+    const ok = typeof result === 'boolean' ? result : result.test(src);
+    if (!ok) {
+      console.error(`S5D.1 static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S5D.1 static source check (VTA Candidate Copy & No-Final-Claim Hardening): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS5D1NoClaim();
+
 try {
   await runChecks();
 } catch (error) {

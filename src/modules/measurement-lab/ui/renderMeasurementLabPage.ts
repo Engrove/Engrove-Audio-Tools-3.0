@@ -953,7 +953,7 @@ function buildSessionJson(): SessionJson {
           })(),
           warnings: [
             'VTA IMD capture gateway preview. Results are experimental and have not been validated.',
-            'Full VTA optimizer (best-setting comparison, run confidence, export hardening) is not yet implemented.',
+            'Full VTA optimizer validation and final recommendation flow are not implemented yet.',
           ],
         };
       })(),
@@ -3389,7 +3389,7 @@ function renderAdvancedPanel(els: Elements): void {
             <li>Click <strong>Measure</strong> to capture real IMD at that height.</li>
             <li>Adjust arm height, add another marker, and measure again.</li>
             <li>Repeat across the full adjustment range.</li>
-            <li>Compare IMD scores — the height producing minimum IMD indicates optimal SRA.</li>
+            <li>Compare IMD scores — the lowest measured IMD becomes an experimental candidate, not a final setting.</li>
           </ol>
         </div>
         <div class="mlab-advanced-run-table" aria-label="VTA IMD run markers">
