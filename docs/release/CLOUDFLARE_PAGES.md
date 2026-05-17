@@ -109,3 +109,26 @@ After Cloudflare deploy, verify at `https://test-record-coverage.pages.dev/measu
 27. Downloaded JSON includes `source` and `band` for every completed MVP measurement (speed, channel, freq, thd/imd).
 28. Downloaded text report includes `Source:` and `Band:` lines for speed and THD/IMD sections.
 29. Reference Level Calibration panel present and functional; no fake analyzer states for Planned workflows.
+
+## S5 Advanced analyzers (S5A / S5A.1)
+
+After Cloudflare deploy, verify at `https://test-record-coverage.pages.dev/measurement-lab`:
+
+30. Advanced analyzers panel (panel 09) is visible below Reference Level Calibration.
+31. VTA / IMD Optimizer displays as **Skeleton** / **Planned** — not as a runnable tool.
+32. With **Ultimate Analogue Test LP** selected, the VTA section shows all four band metadata fields:
+    - f1: **60 Hz**
+    - f2: **4,000 Hz**
+    - Ratio: **4:1**
+    - Standard: **IEC_IMD**
+33. No VTA start button, capture button, or `data-mlab-vta-start` / `data-mlab-vta-capture` attribute is present.
+34. No fake VTA result value or "best setting" text is displayed.
+35. The following five analyzers appear as **Planned** (no Start button):
+    - Anti-skate / Tracking stress
+    - Rumble & noise isolation
+    - Pink noise / Spectral balance
+    - Vertical null / Azimuth
+    - Vertical resonance
+36. Coverage panel badge for VTA / IMD Optimizer links to the Advanced analyzers panel (not the THD panel).
+37. VTA / IMD Optimizer coverage badge remains **Planned**, not **Available**.
+38. All S4 MVP measurement flows (speed, channel, freq, THD/IMD, ref level) remain functional.

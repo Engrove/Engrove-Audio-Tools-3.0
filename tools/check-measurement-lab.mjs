@@ -1430,6 +1430,81 @@ function checkS4GFinal() {
 
 checkS4GFinal();
 
+// S5A: static source checks — Advanced Analyzer Skeleton & VTA IMD Optimizer.
+function checkS5AAdvancedAnalyzers() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const workflowsSrcPath = join(repoRoot, 'src/modules/measurement-lab/data/measurementWorkflows.ts');
+  if (!existsSync(renderSrcPath) || !existsSync(workflowsSrcPath)) {
+    console.error('S5A static check: source file(s) not found');
+    process.exitCode = 1;
+    return;
+  }
+  const src = readFileSync(renderSrcPath, 'utf8');
+  const workflowsSrc = readFileSync(workflowsSrcPath, 'utf8');
+
+  const checks = [
+    // 1. advancedAnalyzersPanelMarkup function exists
+    ['advancedAnalyzersPanelMarkup function defined', /function advancedAnalyzersPanelMarkup\s*\(\s*\)/],
+    // 2. mlab-advanced-panel section ID present
+    ['mlab-advanced-panel section ID emitted', /id="mlab-advanced-panel"/],
+    // 3. WORKFLOW_PANEL_TARGETS maps vta_imd_optimizer to mlab-advanced-panel
+    ['WORKFLOW_PANEL_TARGETS: vta_imd_optimizer → mlab-advanced-panel',
+      /vta_imd_optimizer\s*:\s*'mlab-advanced-panel'/],
+    // 4. getVtaImdBands helper exists
+    ['getVtaImdBands function defined', /function getVtaImdBands\s*\(/],
+    // 5. renderAdvancedPanel function exists
+    ['renderAdvancedPanel function defined', /function renderAdvancedPanel\s*\(/],
+    // 6. Skeleton-only disclaimer text
+    ['Skeleton-only disclaimer: "Analyzer skeleton only"',
+      /Analyzer skeleton only\s*[—\-]\s*VTA IMD optimization is not implemented yet/],
+    // 7a. f1 metadata rendered from band.f1Hz
+    ['VTA metadata: f1Hz rendered', /function renderAdvancedPanel[\s\S]{0,2000}band\.f1Hz/],
+    // 7b. f2 metadata rendered from band.f2Hz
+    ['VTA metadata: f2Hz rendered', /function renderAdvancedPanel[\s\S]{0,2000}band\.f2Hz/],
+    // 7c. ratio rendered from band.ratio
+    ['VTA metadata: ratio rendered', /function renderAdvancedPanel[\s\S]{0,2000}band\.ratio/],
+    // 7d. standard rendered from band.standard
+    ['VTA metadata: standard rendered', /function renderAdvancedPanel[\s\S]{0,2000}band\.standard/],
+    // 8. Empty-state run table message
+    ['VTA run table empty-state message: "No VTA IMD runs captured yet."',
+      /No VTA IMD runs captured yet\./],
+    // 9a–9e. Planned analyzers present
+    ['Planned: Anti-skate / Tracking stress', /Anti-skate\s*\/\s*Tracking stress/],
+    ['Planned: Rumble', /Rumble.*noise isolation|rumble/i],
+    ['Planned: Pink noise', /Pink noise\s*\/\s*Spectral balance/],
+    ['Planned: Vertical null', /Vertical null\s*\/\s*Azimuth/],
+    ['Planned: Vertical resonance', /Vertical resonance/],
+    // 10. VTA workflow remains planned (not supported) in measurementWorkflows.ts
+    ['VTA still planned in measurementWorkflows (not supported)',
+      !/vta_imd_optimizer[\s\S]{0,200}implementationStatus\s*:\s*'supported'/.test(workflowsSrc)],
+    // 11. No VTA start/capture button attributes in renderAdvancedPanel
+    ['No data-mlab-vta-start button in renderAdvancedPanel',
+      !/function renderAdvancedPanel[\s\S]{0,4000}data-mlab-vta-start/.test(src)],
+    ['No data-mlab-vta-capture button in renderAdvancedPanel',
+      !/function renderAdvancedPanel[\s\S]{0,4000}data-mlab-vta-capture/.test(src)],
+    // 12. S4G final QA: VTA still not supported (cross-check via render source)
+    ['S4G cross-check: VTA not supported in workflows source',
+      !/vta_imd_optimizer[\s\S]{0,200}implementationStatus.*'supported'/.test(workflowsSrc)],
+  ];
+
+  let failed = false;
+  for (const [label, pattern] of checks) {
+    const ok = typeof pattern === 'boolean' ? pattern : pattern.test(src);
+    if (!ok) {
+      console.error(`S5A static check FAIL: "${label}"`);
+      failed = true;
+    }
+  }
+
+  if (!failed) {
+    console.log('- S5A static source check (Advanced Analyzer Skeleton & VTA IMD Optimizer): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS5AAdvancedAnalyzers();
+
 try {
   await runChecks();
 } catch (error) {
