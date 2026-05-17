@@ -122,6 +122,7 @@ type LabState = {
   log: string[];
   selectedTestRecordId: string | null;
   testRecords: readonly TestRecord[];
+  testRecordLoadFailed: boolean;
   coverageCollapsed: boolean;
 };
 
@@ -133,7 +134,7 @@ type LabState = {
  * site below; it has no runtime effect.
  */
 const tokenLayoutGeneratedClassNames =
-  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed';
+  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error';
 void tokenLayoutGeneratedClassNames;
 
 const speedMeasurementDurationSeconds = 30;
@@ -222,6 +223,7 @@ const state: LabState = {
   log: [],
   selectedTestRecordId: null,
   testRecords: [],
+  testRecordLoadFailed: false,
   coverageCollapsed: false,
 };
 
@@ -1433,6 +1435,11 @@ function renderCoveragePanel(els: Elements): void {
   const body = els.coverageBody;
   if (!body) return;
 
+  if (state.testRecordLoadFailed) {
+    body.innerHTML = '<p class="ea-muted mlab-coverage-load-error">Test record dataset failed to load. See console or activity log.</p>';
+    return;
+  }
+
   const record = selectedRecord();
   if (!record) {
     body.innerHTML = '<p class="ea-muted">Select a test record above to see which measurements are available.</p>';
@@ -2397,9 +2404,14 @@ export function enableMeasurementLabInteractions(): void {
 
   void loadTestRecordsRuntimeData().then((data) => {
     state.testRecords = data.records;
+    state.testRecordLoadFailed = false;
     if (!state.selectedTestRecordId) {
       const preferred = getPreferredRecord(data.records);
       if (preferred) state.selectedTestRecordId = preferred.id;
+    } else if (!data.records.find(r => r.id === state.selectedTestRecordId)) {
+      appendLog(`Selected test record not found: ${state.selectedTestRecordId ?? ''}. Resetting to preferred profile.`);
+      const preferred = getPreferredRecord(data.records);
+      state.selectedTestRecordId = preferred ? preferred.id : null;
     }
     renderRecordSelector(els);
     renderCoveragePanel(els);
@@ -2408,9 +2420,16 @@ export function enableMeasurementLabInteractions(): void {
     renderFreqPanel(els);
     renderThdPanel(els);
     renderResonancePanel(els);
-  }).catch(() => {
+  }).catch((err: unknown) => {
+    state.testRecordLoadFailed = true;
+    const msg = err instanceof Error && err.message.length > 0 ? err.message : 'unknown load error';
+    const sanitized = msg.slice(0, 200);
+    appendLog(`Test record dataset failed to load: ${sanitized}`);
     if (els.recordSelect) {
       els.recordSelect.innerHTML = '<option value="">Test record profiles unavailable</option>';
+    }
+    if (els.recordDot) {
+      els.recordDot.className = 'ea-dot ea-dot--error';
     }
     renderCoveragePanel(els);
   });

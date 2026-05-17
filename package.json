@@ -17,7 +17,8 @@
     "check:ui-doctrine": "node tools/check-ui-doctrine.mjs",
     "check:measurement-lab": "node tools/check-measurement-lab.mjs",
     "check:korf-geometry": "node tools/check-korf-geometry.mjs",
-    "check:sanitation": "npm run check && npm run check:ui-doctrine && npm run check:integrity && npm run check:render-safe && npm run check:tonearm && npm run check:tonearm-selectors && npm run validate:data && npm run check:measurement-lab && npm run check:korf-geometry",
+    "check:test-record-loader": "node tools/check-test-record-runtime-loader.mjs",
+    "check:sanitation": "npm run check && npm run check:ui-doctrine && npm run check:integrity && npm run check:render-safe && npm run check:tonearm && npm run check:tonearm-selectors && npm run validate:data && npm run check:measurement-lab && npm run check:korf-geometry && npm run check:test-record-loader",
     "check:tokens-layout": "node tools/check-token-layout-drift.mjs"
   },
   "dependencies": {},

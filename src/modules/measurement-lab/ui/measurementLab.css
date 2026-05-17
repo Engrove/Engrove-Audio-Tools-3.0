@@ -473,6 +473,11 @@
   margin-bottom: var(--ea-space-3);
 }
 
+.mlab-coverage-load-error {
+  color: var(--ea-status-error);
+  font-style: italic;
+}
+
 .mlab-coverage-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

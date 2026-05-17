@@ -70,7 +70,7 @@ export type TestBandAnalyzerModule =
 
 export type TestBandSweepDirection = 'ascending' | 'descending';
 export type TestBandSweepScale = 'log' | 'linear';
-export type TestBandStandard = 'SMPTE' | 'CCIF' | 'DIN' | 'IEC' | 'AES';
+export type TestBandStandard = 'SMPTE' | 'CCIF' | 'DIN' | 'IEC' | 'IEC_IMD' | 'AES';
 export type TestBandLevelReference = '0dB_groove' | 'cm_per_sec' | 'peak_velocity';
 
 export type TestBand = {
@@ -227,7 +227,7 @@ const analyzerModules: ReadonlySet<TestBandAnalyzerModule> = new Set([
 ]);
 const sweepDirections: ReadonlySet<TestBandSweepDirection> = new Set(['ascending', 'descending']);
 const sweepScales: ReadonlySet<TestBandSweepScale> = new Set(['log', 'linear']);
-const standards: ReadonlySet<TestBandStandard> = new Set(['SMPTE', 'CCIF', 'DIN', 'IEC', 'AES']);
+const standards: ReadonlySet<TestBandStandard> = new Set(['SMPTE', 'CCIF', 'DIN', 'IEC', 'IEC_IMD', 'AES']);
 const levelReferences: ReadonlySet<TestBandLevelReference> = new Set(['0dB_groove', 'cm_per_sec', 'peak_velocity']);
 
 export const TOOLBOX_3_REQUIRED_PURPOSES: ReadonlySet<TestBandPurpose> = new Set([
