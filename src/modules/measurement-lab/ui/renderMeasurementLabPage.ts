@@ -162,6 +162,24 @@ type SelectedTestRecordMissing = {
   readonly recoveredToLabel: string | null;
 };
 
+// VTA IMD run model (S5B) — manual placeholders only, no real IMD capture.
+type VtaImdRun = {
+  readonly id: string;
+  readonly heightMm: number | null;
+  readonly heightLabel: string;
+  readonly imdPercent: null; // always null — real analyzer not yet built
+  readonly source: 'manual_placeholder';
+  readonly createdAt: string;
+  readonly note: string;
+};
+
+type VtaStateBag = {
+  runs: VtaImdRun[];
+  heightMmInput: string;
+  heightLabelInput: string;
+  noteInput: string;
+};
+
 type RefLevelCapture = {
   readonly stop: () => void;
 };
@@ -209,6 +227,7 @@ type LabState = {
   selectedTestRecordMissing: SelectedTestRecordMissing | null;
   coverageCollapsed: boolean;
   refLevel: RefLevelStateBag;
+  vta: VtaStateBag;
 };
 
 /*
@@ -219,7 +238,7 @@ type LabState = {
  * site below; it has no runtime effect.
  */
 const tokenLayoutGeneratedClassNames =
-  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro';
+  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove';
 void tokenLayoutGeneratedClassNames;
 
 const speedMeasurementDurationSeconds = 30;
@@ -334,6 +353,12 @@ const state: LabState = {
     selectedBandIndex: null,
     capture: null,
     calibrationSet: [],
+  },
+  vta: {
+    runs: [],
+    heightMmInput: '',
+    heightLabelInput: '',
+    noteInput: '',
   },
 };
 
@@ -695,6 +720,7 @@ type SessionJson = {
     imd: object | null;
     resonance: object | null;
     reference_level: object | null;
+    vta_imd_optimizer: object | null;
   };
 };
 
@@ -734,6 +760,18 @@ function serializeThdBandMeta(meta: ThdBandMeta | null) {
         standard: meta.standard,
       }
     : null;
+}
+
+function serializeVtaBandMeta(band: TestBand | null) {
+  if (!band) return null;
+  return {
+    index: band.index,
+    label: band.label,
+    f1_hz: band.f1Hz ?? null,
+    f2_hz: band.f2Hz ?? null,
+    ratio: band.ratio ?? null,
+    standard: band.standard ?? null,
+  };
 }
 
 function buildSessionJson(): SessionJson {
@@ -868,6 +906,27 @@ function buildSessionJson(): SessionJson {
         }));
         if (latest === null && calibration_set.length === 0) return null;
         return { latest, calibration_set };
+      })(),
+      vta_imd_optimizer: (() => {
+        const record = selectedRecord();
+        const vtaBands = getVtaImdBands(record);
+        const band = vtaBands[0] ?? null;
+        if (band === null && state.vta.runs.length === 0) return null;
+        return {
+          status: 'planned' as const,
+          band: serializeVtaBandMeta(band),
+          runs: state.vta.runs.map(r => ({
+            height_mm: r.heightMm,
+            height_label: r.heightLabel,
+            imd_percent: null,
+            source: r.source,
+            note: r.note,
+            created_at: r.createdAt,
+          })),
+          warnings: [
+            'VTA IMD analyzer is not implemented yet. Runs are manual placeholders only.',
+          ],
+        };
       })(),
     },
   };
@@ -2960,7 +3019,52 @@ function renderResonancePanel(els: Elements): void {
   });
 }
 
-// ---- Advanced analyzers panel (S5A skeleton) --------------------------------
+// ---- Advanced analyzers panel (S5A/S5B skeleton) ----------------------------
+
+let vtaRunIdCounter = 0;
+
+function nextVtaRunId(): string {
+  vtaRunIdCounter += 1;
+  return `vta-run-${vtaRunIdCounter}`;
+}
+
+function vtaRunTableMarkup(runs: readonly VtaImdRun[]): string {
+  if (runs.length === 0) {
+    return '<p class="ea-muted mlab-vta-empty-state">No VTA IMD run markers added yet.</p>';
+  }
+  const rows = runs.map(r => {
+    const heightStr = r.heightMm !== null ? `${r.heightMm}&thinsp;mm` : '—';
+    return `
+      <tr>
+        <td class="mlab-vta-run-cell">${heightStr}</td>
+        <td class="mlab-vta-run-cell">${renderText(r.heightLabel || '—')}</td>
+        <td class="mlab-vta-run-cell mlab-vta-run-imd">IMD not measured yet</td>
+        <td class="mlab-vta-run-cell mlab-vta-run-source">Manual placeholder</td>
+        <td class="mlab-vta-run-cell">${renderText(r.note || '—')}</td>
+        <td class="mlab-vta-run-cell">
+          <button class="ea-button ea-button--ghost mlab-vta-run-remove" type="button" data-mlab-vta-remove="${renderText(r.id)}" aria-label="Remove run marker">Remove</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+  return `
+    <div class="mlab-vta-run-scroll">
+      <table class="mlab-vta-run-table" aria-label="VTA IMD run markers">
+        <thead>
+          <tr>
+            <th>Height</th>
+            <th>Label</th>
+            <th>IMD</th>
+            <th>Source</th>
+            <th>Note</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}
 
 function renderAdvancedPanel(els: Elements): void {
   const body = els.advancedBody;
@@ -3002,6 +3106,7 @@ function renderAdvancedPanel(els: Elements): void {
     const ratio = band.ratio ?? '—';
     const standard = band.standard ?? '—';
     const bandLabel = renderText(band.label);
+    const hasClearBtn = state.vta.runs.length > 0;
 
     vtaSectionHtml = `
       <div class="mlab-advanced-item mlab-advanced-item--vta">
@@ -3010,6 +3115,8 @@ function renderAdvancedPanel(els: Elements): void {
           <span class="mlab-coverage-badge mlab-coverage-badge--planned">Skeleton</span>
         </div>
         <p class="mlab-reflevel-info">Analyzer skeleton only — VTA IMD optimization is not implemented yet.</p>
+        <p class="mlab-reflevel-info">Run markers are manual placeholders. They do not contain measured IMD values.</p>
+        <p class="mlab-reflevel-info">Use this to plan arm-height steps before analyzer capture is implemented.</p>
         <table class="ea-form-table" aria-label="VTA/IMD band metadata">
           <tbody>
             <tr class="mlab-advanced-vta-band-row">
@@ -3057,8 +3164,46 @@ function renderAdvancedPanel(els: Elements): void {
             <li>The height producing minimum IMD indicates optimal SRA.</li>
           </ol>
         </div>
-        <div class="mlab-advanced-run-table" aria-label="VTA IMD run log">
-          <p class="ea-muted">No VTA IMD runs captured yet.</p>
+        <div class="mlab-advanced-run-table" aria-label="VTA IMD run markers">
+          <div class="mlab-vta-run-controls">
+            <div class="mlab-vta-add-form">
+              <label class="mlab-vta-input-label" for="mlab-vta-height-mm">Height (mm)</label>
+              <input
+                class="ea-input mlab-vta-height-input"
+                id="mlab-vta-height-mm"
+                type="number"
+                step="0.1"
+                placeholder="e.g. 0.0"
+                value="${renderText(state.vta.heightMmInput)}"
+                aria-label="Arm height in millimetres"
+                data-mlab-vta-height-mm>
+              <label class="mlab-vta-input-label" for="mlab-vta-height-label">Label</label>
+              <input
+                class="ea-input mlab-vta-label-input"
+                id="mlab-vta-height-label"
+                type="text"
+                placeholder="e.g. baseline"
+                maxlength="40"
+                value="${renderText(state.vta.heightLabelInput)}"
+                aria-label="Height label"
+                data-mlab-vta-height-label>
+              <label class="mlab-vta-input-label" for="mlab-vta-note">Note (optional)</label>
+              <input
+                class="ea-input mlab-vta-note-input"
+                id="mlab-vta-note"
+                type="text"
+                placeholder="optional note"
+                maxlength="120"
+                value="${renderText(state.vta.noteInput)}"
+                aria-label="Optional note"
+                data-mlab-vta-note>
+              <div class="mlab-session-controls">
+                <button class="ea-button ea-button--secondary" type="button" data-mlab-vta-add>Add height marker</button>
+                ${hasClearBtn ? `<button class="ea-button ea-button--ghost" type="button" data-mlab-vta-clear>Clear all markers</button>` : ''}
+              </div>
+            </div>
+          </div>
+          ${vtaRunTableMarkup(state.vta.runs)}
         </div>
       </div>
     `;
@@ -3089,6 +3234,54 @@ function renderAdvancedPanel(els: Elements): void {
     <p class="ea-muted mlab-advanced-planned-intro"><strong>Further planned analyzers</strong> — engines not yet built:</p>
     ${plannedHtml}
   `;
+
+  // Wire up VTA form inputs and buttons
+  body.querySelector<HTMLInputElement>('[data-mlab-vta-height-mm]')?.addEventListener('input', (e) => {
+    state.vta.heightMmInput = (e.target as HTMLInputElement).value;
+  });
+  body.querySelector<HTMLInputElement>('[data-mlab-vta-height-label]')?.addEventListener('input', (e) => {
+    state.vta.heightLabelInput = (e.target as HTMLInputElement).value;
+  });
+  body.querySelector<HTMLInputElement>('[data-mlab-vta-note]')?.addEventListener('input', (e) => {
+    state.vta.noteInput = (e.target as HTMLInputElement).value;
+  });
+
+  body.querySelector<HTMLButtonElement>('[data-mlab-vta-add]')?.addEventListener('click', () => {
+    const rawMm = state.vta.heightMmInput.trim();
+    const heightMm = rawMm.length > 0 ? (Number(rawMm.replace(',', '.')) || null) : null;
+    const heightLabel = state.vta.heightLabelInput.trim() || (heightMm !== null ? `${heightMm} mm` : 'unlabelled');
+    const run: VtaImdRun = {
+      id: nextVtaRunId(),
+      heightMm,
+      heightLabel,
+      imdPercent: null,
+      source: 'manual_placeholder',
+      createdAt: new Date().toISOString(),
+      note: state.vta.noteInput.trim(),
+    };
+    state.vta.runs = [...state.vta.runs, run];
+    state.vta.heightMmInput = '';
+    state.vta.heightLabelInput = '';
+    state.vta.noteInput = '';
+    appendLog(`VTA: added height marker "${renderText(heightLabel)}".`);
+    renderAdvancedPanel(els);
+  });
+
+  body.querySelector<HTMLButtonElement>('[data-mlab-vta-clear]')?.addEventListener('click', () => {
+    state.vta.runs = [];
+    appendLog('VTA IMD run markers cleared.');
+    renderAdvancedPanel(els);
+  });
+
+  body.querySelectorAll<HTMLButtonElement>('[data-mlab-vta-remove]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.mlabVtaRemove;
+      if (!id) return;
+      state.vta.runs = state.vta.runs.filter(r => r.id !== id);
+      appendLog(`VTA: removed height marker.`);
+      renderAdvancedPanel(els);
+    });
+  });
 }
 
 function resetChannelMeasurement(): void {
@@ -3838,6 +4031,10 @@ export function enableMeasurementLabInteractions(): void {
     if (state.channel.step !== 'idle' || state.channel.leftCapture !== null || state.channel.rightCapture !== null || state.channel.identityResult !== null) {
       resetChannelMeasurement();
       appendLog('Channel identity capture reset after test record change.');
+    }
+    if (state.vta.runs.length > 0) {
+      state.vta.runs = [];
+      appendLog('VTA IMD run markers cleared after test record change.');
     }
     renderRecordSelector(els);
     renderCoveragePanel(els);

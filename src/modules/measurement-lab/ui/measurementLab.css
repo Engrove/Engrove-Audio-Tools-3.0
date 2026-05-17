@@ -867,6 +867,91 @@ button.mlab-coverage-badge--available:focus-visible {
   margin-bottom: var(--ea-space-2);
 }
 
+/* VTA run marker form & table (S5B) */
+.mlab-vta-run-controls {
+  margin-top: var(--ea-space-3);
+}
+
+.mlab-vta-add-form {
+  display: grid;
+  grid-template-columns: auto 1fr auto 1fr auto 1fr auto;
+  align-items: center;
+  gap: var(--ea-space-2);
+  flex-wrap: wrap;
+}
+
+.mlab-vta-add-form .mlab-session-controls {
+  grid-column: 1 / -1;
+}
+
+.mlab-vta-input-label {
+  font-family: var(--ea-font-ui);
+  font-size: var(--ea-font-size-small);
+  color: var(--ea-text-low);
+  white-space: nowrap;
+}
+
+.mlab-vta-height-input {
+  max-width: 7rem;
+}
+
+.mlab-vta-label-input {
+  max-width: 10rem;
+}
+
+.mlab-vta-note-input {
+  max-width: 18rem;
+}
+
+.mlab-vta-empty-state {
+  margin-top: var(--ea-space-3);
+}
+
+.mlab-vta-run-scroll {
+  overflow-x: auto;
+  margin-top: var(--ea-space-3);
+}
+
+.mlab-vta-run-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--ea-font-data);
+  font-size: var(--ea-font-size-small);
+}
+
+.mlab-vta-run-table th {
+  text-align: left;
+  color: var(--ea-text-low);
+  font-weight: 500;
+  padding: var(--ea-space-1) var(--ea-space-2);
+  border-bottom: 1px solid var(--ea-border-primary);
+  white-space: nowrap;
+}
+
+.mlab-vta-run-cell {
+  padding: var(--ea-space-1) var(--ea-space-2);
+  color: var(--ea-text-medium);
+  border-bottom: 1px solid var(--ea-border-soft);
+  vertical-align: middle;
+}
+
+.mlab-vta-run-imd {
+  color: var(--ea-text-low);
+  font-style: italic;
+}
+
+.mlab-vta-run-source {
+  color: var(--ea-text-low);
+  font-size: var(--ea-font-size-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--ea-letter-label);
+}
+
+.mlab-vta-run-remove {
+  font-size: var(--ea-font-size-micro);
+  padding: 2px var(--ea-space-2);
+}
+
 @media (max-width: 1180px) {
   .mlab-workbench-grid {
     grid-template-columns: 1fr;

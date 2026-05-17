@@ -1465,9 +1465,9 @@ function checkS5AAdvancedAnalyzers() {
     ['VTA metadata: ratio rendered', /function renderAdvancedPanel[\s\S]{0,2000}band\.ratio/],
     // 7d. standard rendered from band.standard
     ['VTA metadata: standard rendered', /function renderAdvancedPanel[\s\S]{0,2000}band\.standard/],
-    // 8. Empty-state run table message
-    ['VTA run table empty-state message: "No VTA IMD runs captured yet."',
-      /No VTA IMD runs captured yet\./],
+    // 8. Empty-state run table message (S5B updated wording)
+    ['VTA run table empty-state message',
+      /No VTA IMD run markers added yet|No VTA IMD runs captured yet/],
     // 9a–9e. Planned analyzers present
     ['Planned: Anti-skate / Tracking stress', /Anti-skate\s*\/\s*Tracking stress/],
     ['Planned: Rumble', /Rumble.*noise isolation|rumble/i],
@@ -1504,6 +1504,91 @@ function checkS5AAdvancedAnalyzers() {
 }
 
 checkS5AAdvancedAnalyzers();
+
+// S5B: static source checks — VTA IMD Run Model & Manual Run Table Skeleton.
+function checkS5BVtaRunModel() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const workflowsSrcPath = join(repoRoot, 'src/modules/measurement-lab/data/measurementWorkflows.ts');
+  if (!existsSync(renderSrcPath) || !existsSync(workflowsSrcPath)) {
+    console.error('S5B static check: source file(s) not found');
+    process.exitCode = 1;
+    return;
+  }
+  const src = readFileSync(renderSrcPath, 'utf8');
+  const workflowsSrc = readFileSync(workflowsSrcPath, 'utf8');
+
+  const checks = [
+    // 1. VtaImdRun type defined
+    ['VtaImdRun type defined', /type VtaImdRun\s*=/],
+    // 2. manual_placeholder source literal in VtaImdRun
+    ['manual_placeholder source in VtaImdRun',
+      /type VtaImdRun[\s\S]{0,400}source\s*:\s*'manual_placeholder'/],
+    // 3. imdPercent typed as null (always null — no fake IMD)
+    ['imdPercent typed as null in VtaImdRun',
+      /type VtaImdRun[\s\S]{0,400}imdPercent\s*:\s*null/],
+    // 4. VtaStateBag defined
+    ['VtaStateBag type defined', /type VtaStateBag\s*=/],
+    // 5. vta state in LabState
+    ['vta field in LabState', /vta\s*:\s*VtaStateBag/],
+    // 6. "Add height marker" button text (not "capture", not "analyze")
+    ['Add height marker button text', /Add height marker/],
+    // 7. "IMD not measured yet" in run table cell
+    ['IMD not measured yet cell', /IMD not measured yet/],
+    // 8. Remove button for individual runs
+    ['data-mlab-vta-remove remove button', /data-mlab-vta-remove/],
+    // 9. Clear all markers button
+    ['data-mlab-vta-clear clear-all button', /data-mlab-vta-clear/],
+    // 10. Record change clears VTA runs
+    ['VTA runs cleared on record change',
+      /state\.vta\.runs\s*=\s*\[\][\s\S]{0,200}test record change|VTA IMD run markers cleared after test record change/],
+    // 11. serializeVtaBandMeta function
+    ['serializeVtaBandMeta function defined', /function serializeVtaBandMeta\s*\(/],
+    // 12. vta_imd_optimizer key in export
+    ['vta_imd_optimizer key in buildSessionJson', /vta_imd_optimizer\s*:/],
+    // 13. status: 'planned' in VTA export
+    ["status: 'planned' in VTA export",
+      /vta_imd_optimizer[\s\S]{0,400}status\s*:\s*'planned'/],
+    // 14. No best_setting / bestSetting in VTA export
+    ['No best_setting in VTA export',
+      !/best_setting|bestSetting/.test(src)],
+    // 15. imd_percent: null in VTA export (not a real value)
+    ['imd_percent: null in VTA export serialization', /imd_percent\s*:\s*null/],
+    // 16. warnings array in VTA export
+    ['warnings array in VTA export', /vta_imd_optimizer[\s\S]{0,600}warnings\s*:\s*\[/],
+    // 17. VTA workflow remains planned (not supported)
+    ['VTA still planned in measurementWorkflows (not supported)',
+      !/vta_imd_optimizer[\s\S]{0,200}implementationStatus\s*:\s*'supported'/.test(workflowsSrc)],
+    // 18. No fake live_capture or self_test source for VTA
+    ['No live_capture VTA source in VtaImdRun',
+      !/type VtaImdRun[\s\S]{0,400}source\s*:.*'live_capture'/.test(src)],
+    // 19. "Run markers are manual placeholders" truth text
+    ['Run markers are manual placeholders truth text',
+      /Run markers are manual placeholders/],
+    // 20. "No VTA IMD run markers added yet" empty-state (or equivalent)
+    ['Empty-state: no VTA run markers added yet',
+      /No VTA IMD run markers added yet|No VTA IMD runs captured yet/],
+    // 21. S5A cross-check still good: skeleton-only disclaimer
+    ['S5A cross-check: Analyzer skeleton only disclaimer',
+      /Analyzer skeleton only\s*[—\-]\s*VTA IMD optimization is not implemented yet/],
+  ];
+
+  let failed = false;
+  for (const [label, pattern] of checks) {
+    const ok = typeof pattern === 'boolean' ? pattern : pattern.test(src);
+    if (!ok) {
+      console.error(`S5B static check FAIL: "${label}"`);
+      failed = true;
+    }
+  }
+
+  if (!failed) {
+    console.log('- S5B static source check (VTA IMD Run Model & Manual Run Table Skeleton): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS5BVtaRunModel();
 
 try {
   await runChecks();
