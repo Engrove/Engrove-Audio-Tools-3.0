@@ -85,7 +85,7 @@ export const MEASUREMENT_WORKFLOWS: readonly MeasurementWorkflow[] = [
   {
     id: 'vta_imd_optimizer',
     label: 'VTA / IMD optimizer',
-    description: 'Minimize IMD at several tonearm-height settings to find optimal SRA.',
+    description: 'Compare IMD at several tonearm-height settings to identify an experimental lowest-IMD candidate for further validation.',
     requiredAnalyzerModule: 'vta_imd_optimizer',
     fallbackPurposes: ['vta_optimization'],
     implementationStatus: 'planned',

@@ -122,7 +122,7 @@ After Cloudflare deploy, verify at `https://test-record-coverage.pages.dev/measu
     - Ratio: **4:1**
     - Standard: **IEC_IMD**
 33. No VTA start button, capture button, or `data-mlab-vta-start` / `data-mlab-vta-capture` attribute is present.
-34. No fake VTA result value or "best setting" text is displayed.
+34. No fake VTA result value, final recommendation, or optimal-setting claim is displayed.
 35. The following five analyzers appear as **Planned** (no Start button):
     - Anti-skate / Tracking stress
     - Rumble & noise isolation

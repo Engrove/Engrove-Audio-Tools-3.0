@@ -1959,26 +1959,63 @@ checkS5DVtaComparison();
 function checkS5D1NoClaim() {
   const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
   const workflowsSrcPath = join(repoRoot, 'src/modules/measurement-lab/data/measurementWorkflows.ts');
-  if (!existsSync(renderSrcPath) || !existsSync(workflowsSrcPath)) {
-    console.error('S5D.1 static check: source file(s) not found');
-    process.exitCode = 1;
-    return;
+  const testRecordsPath = join(repoRoot, 'public/data/audio/v3/runtime/test-records.json');
+  const docsPath = join(repoRoot, 'docs/release/CLOUDFLARE_PAGES.md');
+  for (const p of [renderSrcPath, workflowsSrcPath, testRecordsPath, docsPath]) {
+    if (!existsSync(p)) {
+      console.error(`S5D.1 static check: source file not found: ${p}`);
+      process.exitCode = 1;
+      return;
+    }
   }
   const src = readFileSync(renderSrcPath, 'utf8');
   const workflowsSrc = readFileSync(workflowsSrcPath, 'utf8');
+  const testRecordsSrc = readFileSync(testRecordsPath, 'utf8');
+  const docsSrc = readFileSync(docsPath, 'utf8');
 
-  const checks = [
-    // 1. No "optimal SRA" in UI or export
-    ['No "optimal SRA" claim', !/optimal SRA/.test(src)],
-    // 2. No "best-setting" in export warnings
-    ['No "best-setting" in export', !/best-setting/.test(src)],
-    // 3. No "best setting" (space variant)
-    ['No "best setting" claim', !/best setting/.test(src)],
-    // 4. No recommended_height key
+  let allPass = true;
+
+  // --- render source checks ---
+  const renderChecks = [
+    // 1. No "optimal SRA" in render source
+    ['No "optimal SRA" in render source', !/optimal SRA/.test(src)],
+    // 2. No "best-setting" in render source
+    ['No "best-setting" in render source', !/best-setting/.test(src)],
+    // 3. No "best setting" in render source
+    ['No "best setting" in render source', !/best setting/.test(src)],
+    // 4. No recommended_height
     ['No recommended_height field', !/recommended_height/.test(src)],
-    // 5. No optimal_height key
+    // 5. No optimal_height
     ['No optimal_height field', !/optimal_height/.test(src)],
-    // 6. VTA workflow not supported
+    // 6. "Experimental candidate only" text still present
+    ['Experimental candidate only text present', /Experimental candidate only/],
+    // 7. Workflow list item uses "experimental" and "candidate"
+    ['Workflow text uses experimental and candidate',
+      /experimental[\s\S]{0,200}candidate|candidate[\s\S]{0,200}experimental/],
+    // 8. "final recommendation" language in export warning
+    ['Export warning references final recommendation',
+      /final recommendation[\s\S]{0,80}not implemented/],
+    // 9. No "optimal" in VTA export warnings block
+    ['No "optimal" in VTA export warnings', !/vta_imd_optimizer[\s\S]{0,1500}optimal/.test(src)],
+  ];
+  for (const [label, result] of renderChecks) {
+    const ok = typeof result === 'boolean' ? result : result.test(src);
+    if (!ok) {
+      console.error(`S5D.1 static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+
+  // --- workflow source checks ---
+  const workflowChecks = [
+    // 10. No "optimal SRA" in workflow source
+    ['No "optimal SRA" in workflow source', !/optimal SRA/.test(workflowsSrc)],
+    // 11. No "best-setting" in workflow source
+    ['No "best-setting" in workflow source', !/best-setting/.test(workflowsSrc)],
+    // 12. Workflow description uses "experimental" and "candidate"
+    ['Workflow description uses experimental and candidate',
+      /experimental[\s\S]{0,200}candidate|candidate[\s\S]{0,200}experimental/],
+    // 13. VTA workflow not supported
     ['VTA workflow not supported', (() => {
       const vtaStart = workflowsSrc.indexOf("id: 'vta_imd_optimizer'");
       if (vtaStart === -1) return false;
@@ -1987,26 +2024,46 @@ function checkS5D1NoClaim() {
       const block = workflowsSrc.slice(vtaStart, blockEnd + 2);
       return !/implementationStatus:\s*'supported'/.test(block);
     })()],
-    // 7. "Experimental candidate only" text still present
-    ['Experimental candidate only text present', /Experimental candidate only/],
-    // 8. Workflow list item uses "experimental" and "candidate"
-    ['Workflow text uses experimental and candidate',
-      /Compare IMD scores[\s\S]{0,200}experimental[\s\S]{0,100}candidate|Compare IMD scores[\s\S]{0,200}candidate[\s\S]{0,100}experimental/],
-    // 9. "final recommendation" language in export warning
-    ['Export warning references final recommendation',
-      /final recommendation[\s\S]{0,80}not implemented/],
-    // 10. No "optimal" in export warnings
-    ['No "optimal" in VTA export warnings', !/vta_imd_optimizer[\s\S]{0,1500}optimal/.test(src)],
   ];
-
-  let allPass = true;
-  for (const [label, result] of checks) {
-    const ok = typeof result === 'boolean' ? result : result.test(src);
+  for (const [label, result] of workflowChecks) {
+    const ok = typeof result === 'boolean' ? result : result.test(workflowsSrc);
     if (!ok) {
       console.error(`S5D.1 static check FAIL: "${label}"`);
       allPass = false;
     }
   }
+
+  // --- test-records runtime JSON checks ---
+  const testRecordChecks = [
+    // 14. No "optimal SRA" in test-records runtime JSON
+    ['No "optimal SRA" in test-records JSON', !/optimal SRA/.test(testRecordsSrc)],
+    // 15. No "best-setting" in test-records runtime JSON
+    ['No "best-setting" in test-records JSON', !/best-setting/.test(testRecordsSrc)],
+    // 16. VTA band note uses "experimental" and "candidate"
+    ['VTA band note uses experimental and candidate',
+      /experimental[\s\S]{0,200}candidate|candidate[\s\S]{0,200}experimental/],
+  ];
+  for (const [label, result] of testRecordChecks) {
+    const ok = typeof result === 'boolean' ? result : result.test(testRecordsSrc);
+    if (!ok) {
+      console.error(`S5D.1 static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+
+  // --- docs checks ---
+  const docsChecks = [
+    // 17. No 'best setting' in docs deploy checklist
+    ['No "best setting" in docs checklist', !/best setting/.test(docsSrc)],
+  ];
+  for (const [label, result] of docsChecks) {
+    const ok = typeof result === 'boolean' ? result : result.test(docsSrc);
+    if (!ok) {
+      console.error(`S5D.1 static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+
   if (allPass) {
     console.log('- S5D.1 static source check (VTA Candidate Copy & No-Final-Claim Hardening): PASS');
   } else {

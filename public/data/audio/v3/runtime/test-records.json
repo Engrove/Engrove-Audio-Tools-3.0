@@ -530,7 +530,7 @@
               "f2_hz": 4000,
               "ratio": "4:1",
               "standard": "IEC_IMD",
-              "notes": "Dual-tone IMD reference for VTA/SRA optimization modelled as IEC IMD 60 Hz + 4 kHz in 4:1 amplitude ratio. Measure IMD at several tonearm-height settings; the position giving minimum IMD indicates optimal SRA. Metadata only (S3D) — VTA IMD analyzer not yet implemented."
+              "notes": "Dual-tone IMD reference for VTA/SRA optimization modelled as IEC IMD 60 Hz + 4 kHz in 4:1 amplitude ratio. Measure IMD at several tonearm-height settings; the lowest measured IMD can identify an experimental SRA candidate for further validation. Metadata only (S3D) — VTA IMD analyzer not yet fully validated."
             }
           ]
         },

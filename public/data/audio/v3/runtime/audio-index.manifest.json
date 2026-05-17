@@ -22,8 +22,8 @@
     {
       "path": "/data/audio/v3/runtime/test-records.json",
       "records": 48,
-      "size_bytes": 25872,
-      "sha256": "9cdc3e113aab2a661322a94e37e1bb8de1422a06042955066aaccf09a3c1c0d9"
+      "size_bytes": 25912,
+      "sha256": "ca47a1a3fbb166917ac52d3b849a7febd0bfa613d0c2b3dc96961e4f3dadbaaa"
     }
   ]
 }
