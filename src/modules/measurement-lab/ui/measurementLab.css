@@ -711,6 +711,68 @@ button.mlab-coverage-badge--available:focus-visible {
   margin-bottom: var(--ea-space-2);
 }
 
+.mlab-reflevel-info {
+  font-family: var(--ea-font-ui);
+  font-size: var(--ea-font-size-small);
+  color: var(--ea-text-low);
+  line-height: 1.5;
+  margin-bottom: var(--ea-space-3);
+}
+
+.mlab-reflevel-calset {
+  margin-top: var(--ea-space-4);
+  border-top: 1px solid var(--ea-border-primary);
+  padding-top: var(--ea-space-3);
+}
+
+.mlab-reflevel-calset-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--ea-font-ui);
+  font-size: var(--ea-font-size-small);
+  font-weight: 600;
+  color: var(--ea-text-medium);
+  margin-bottom: var(--ea-space-2);
+}
+
+.mlab-reflevel-calset-scroll {
+  overflow-x: auto;
+}
+
+.mlab-reflevel-calset-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--ea-font-data);
+  font-size: 0.8rem;
+}
+
+.mlab-reflevel-calset-table th {
+  text-align: left;
+  color: var(--ea-text-low);
+  font-weight: 500;
+  padding: var(--ea-space-1) var(--ea-space-2);
+  border-bottom: 1px solid var(--ea-border-primary);
+  white-space: nowrap;
+}
+
+.mlab-reflevel-calset-table td {
+  padding: var(--ea-space-1) var(--ea-space-2);
+  color: var(--ea-text-medium);
+  white-space: nowrap;
+  border-bottom: 1px solid var(--ea-border-subtle, var(--ea-border-primary));
+}
+
+.mlab-reflevel-calset-clip {
+  color: var(--ea-color-error, #d05050);
+  font-weight: 600;
+}
+
+.mlab-reflevel-calset-delta {
+  color: var(--ea-text-low);
+  font-style: italic;
+}
+
 @media (max-width: 1180px) {
   .mlab-workbench-grid {
     grid-template-columns: 1fr;

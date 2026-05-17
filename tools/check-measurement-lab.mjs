@@ -107,6 +107,7 @@ async function runChecks() {
   copySource('src/modules/measurement-lab/engine/thd.ts');
   copySource('src/modules/measurement-lab/engine/resonance.ts');
   copySource('src/modules/measurement-lab/engine/referenceLevel.ts');
+  copySource('src/modules/measurement-lab/engine/referenceCalibrationSet.ts');
   copySource('src/shared/audio-io/levelMetrics.ts');
   compileTempSources();
 
@@ -131,6 +132,9 @@ async function runChecks() {
   const referenceLevelModule = await import(
     pathToFileURL(join(tempRoot, 'dist/modules/measurement-lab/engine/referenceLevel.js')).href
   );
+  const refCalSetModule = await import(
+    pathToFileURL(join(tempRoot, 'dist/modules/measurement-lab/engine/referenceCalibrationSet.js')).href
+  );
   const levelMetricsModule = await import(
     pathToFileURL(join(tempRoot, 'dist/shared/audio-io/levelMetrics.js')).href
   );
@@ -145,6 +149,7 @@ async function runChecks() {
   const { analyseTHD, analyseIMD } = thdModule;
   const { analyseResonance } = resonanceModule;
   const { analyzeReferenceLevel } = referenceLevelModule;
+  const { addOrReplaceEntry, clearCalibrationSet, find1kHzEntry, relativeTo1kHz } = refCalSetModule;
   const { analyseSpeedFlutter } = speedFlutterModule;
   const { analyseChannelCapture, summariseChannelBalance } = crosstalkModule;
   const { computeRmsLinear } = levelMetricsModule;
@@ -488,6 +493,109 @@ async function runChecks() {
   }
   console.log('- ref level: silent input → low confidence + warning (no crash): PASS');
 
+  // --- S4B: Calibration set helper checks ---
+  //
+  // Build a minimal stub result for testing (matches ReferenceLevelResult shape).
+  function makeStubResult(rms, freq) {
+    return {
+      leftRmsDbfs: rms,
+      rightRmsDbfs: rms - 0.5,
+      leftPeakDbfs: rms + 3,
+      rightPeakDbfs: rms + 3,
+      balanceDb: -0.5,
+      headroomDb: -(rms + 3),
+      clipping: false,
+      confidence: 'high',
+      sampleRateHz: 96000,
+      referenceFrequencyHz: freq,
+      referenceLevelDb: -20,
+      warnings: [],
+    };
+  }
+  function makeEntry(bandIndex, bandLabel, freq, source) {
+    return {
+      bandIndex,
+      bandLabel,
+      frequencyHz: freq,
+      nominalLevelDb: -20,
+      source,
+      result: makeStubResult(-20, freq),
+      capturedAt: new Date().toISOString(),
+    };
+  }
+
+  // 21. addOrReplaceEntry: append when no existing entry with same key
+  const e1 = makeEntry('band_1khz', '1 kHz Reference', 1000, 'live_capture');
+  const e2 = makeEntry('band_10khz', '10 kHz Reference', 10000, 'live_capture');
+  const setA = addOrReplaceEntry([], e1);
+  if (setA.length !== 1 || setA[0].bandIndex !== 'band_1khz') {
+    throw new Error('calibration set: addOrReplaceEntry append failed');
+  }
+  const setB = addOrReplaceEntry(setA, e2);
+  if (setB.length !== 2) {
+    throw new Error('calibration set: addOrReplaceEntry second append failed');
+  }
+  console.log('- calibration set: addOrReplaceEntry append: PASS');
+
+  // 22. addOrReplaceEntry: replace existing entry with same bandIndex+source
+  const e1Updated = makeEntry('band_1khz', '1 kHz Reference', 1000, 'live_capture');
+  e1Updated.result = makeStubResult(-21, 1000);
+  const setC = addOrReplaceEntry(setB, e1Updated);
+  if (setC.length !== 2) {
+    throw new Error('calibration set: addOrReplaceEntry replace should not grow the set');
+  }
+  if (setC[0].result.leftRmsDbfs !== -21) {
+    throw new Error('calibration set: addOrReplaceEntry replace did not update the entry');
+  }
+  console.log('- calibration set: addOrReplaceEntry replace (same bandIndex+source): PASS');
+
+  // 23. addOrReplaceEntry: same bandIndex but different source → both kept
+  const e1SelfTest = makeEntry('band_1khz', '1 kHz Reference', 1000, 'self_test');
+  const setD = addOrReplaceEntry(setC, e1SelfTest);
+  if (setD.length !== 3) {
+    throw new Error('calibration set: same bandIndex different source should append');
+  }
+  console.log('- calibration set: same band different source → both kept: PASS');
+
+  // 24. clearCalibrationSet: returns empty array
+  const setE = clearCalibrationSet();
+  if (!Array.isArray(setE) || setE.length !== 0) {
+    throw new Error('calibration set: clearCalibrationSet did not return empty array');
+  }
+  console.log('- calibration set: clearCalibrationSet → []: PASS');
+
+  // 25. find1kHzEntry: finds 1 kHz entry by frequency
+  const found = find1kHzEntry(setD, 'live_capture');
+  if (!found || found.frequencyHz !== 1000) {
+    throw new Error('calibration set: find1kHzEntry did not find 1 kHz entry');
+  }
+  console.log('- calibration set: find1kHzEntry finds 1 kHz by frequency: PASS');
+
+  // 26. find1kHzEntry: returns undefined gracefully when not found (no crash)
+  const notFound = find1kHzEntry([], 'live_capture');
+  if (notFound !== undefined) {
+    throw new Error('calibration set: find1kHzEntry should return undefined for empty set');
+  }
+  console.log('- calibration set: find1kHzEntry returns undefined for empty set (no crash): PASS');
+
+  // 27. relativeTo1kHz: correct delta when reference exists
+  const e10k = makeEntry('band_10khz', '10 kHz Reference', 10000, 'live_capture');
+  e10k.result = makeStubResult(-18, 10000);
+  const ref1k = makeEntry('band_1khz', '1 kHz Reference', 1000, 'live_capture');
+  ref1k.result = makeStubResult(-20, 1000);
+  const delta = relativeTo1kHz(e10k, ref1k);
+  if (Math.abs(delta.deltaLDb - 2) > 0.001) {
+    throw new Error(`calibration set: relativeTo1kHz deltaL expected 2, got ${delta.deltaLDb}`);
+  }
+  console.log('- calibration set: relativeTo1kHz correct delta: PASS');
+
+  // 28. relativeTo1kHz: null deltas when refEntry is undefined (no crash)
+  const deltaNoRef = relativeTo1kHz(e10k, undefined);
+  if (deltaNoRef.deltaLDb !== null || deltaNoRef.deltaRDb !== null) {
+    throw new Error('calibration set: relativeTo1kHz should return null deltas when no reference');
+  }
+  console.log('- calibration set: relativeTo1kHz null deltas when no reference (no crash): PASS');
+
   console.log('PASS measurement lab engine checks');
 }
 
@@ -741,6 +849,72 @@ function checkMobileDesktopNotice() {
 }
 
 checkMobileDesktopNotice();
+
+// S4B: static source checks — multi-band calibration set and live/self-test honesty.
+function checkS4BCalibrationSet() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const calSetSrcPath = join(repoRoot, 'src/modules/measurement-lab/engine/referenceCalibrationSet.ts');
+  const workflowsSrcPath = join(repoRoot, 'src/modules/measurement-lab/data/measurementWorkflows.ts');
+  if (!existsSync(renderSrcPath) || !existsSync(calSetSrcPath) || !existsSync(workflowsSrcPath)) {
+    console.error('S4B static check: source file(s) not found');
+    process.exitCode = 1;
+    return;
+  }
+  const src = readFileSync(renderSrcPath, 'utf8');
+  const calSetSrc = readFileSync(calSetSrcPath, 'utf8');
+  const workflowsSrc = readFileSync(workflowsSrcPath, 'utf8');
+
+  const renderChecks = [
+    ['calibrationSet state field', /calibrationSet\s*:/],
+    ['addOrReplaceEntry called', /addOrReplaceEntry\s*\(/],
+    ['clearCalibrationSet called', /clearCalibrationSet\s*\(/],
+    ['calibration_set in JSON export', /calibration_set/],
+    ['live_capture source preserved', /live_capture/],
+    ['self_test source preserved', /self_test/],
+    ['renderCalibrationSetHtml function', /function renderCalibrationSetHtml\s*\(/],
+    ['attachClearSetListener function', /function attachClearSetListener\s*\(/],
+    ['data-mlab-reflevel-clear attribute', /data-mlab-reflevel-clear/],
+    ['calibration set cleared on record change', /calibrationSet.*clearCalibrationSet|clearCalibrationSet.*calibrationSet/],
+    ['mlab-reflevel-calset CSS class', /mlab-reflevel-calset/],
+    ['mlab-reflevel-info CSS class', /mlab-reflevel-info/],
+  ];
+  const calSetChecks = [
+    ['addOrReplaceEntry export', /export function addOrReplaceEntry\s*\(/],
+    ['clearCalibrationSet export', /export function clearCalibrationSet\s*\(/],
+    ['find1kHzEntry export', /export function find1kHzEntry\s*\(/],
+    ['relativeTo1kHz export', /export function relativeTo1kHz\s*\(/],
+    ['CalibrationSetEntry type export', /export type CalibrationSetEntry/],
+    ['source live_capture | self_test in type', /live_capture.*self_test|self_test.*live_capture/],
+    ['null return for missing reference in relativeTo1kHz', /if\s*\(!refEntry\)\s*return/],
+  ];
+  // Verify VTA/IMD status has NOT been changed to supported
+  const vtaStillPlanned = !/vta_imd_optimizer[\s\S]{0,200}implementationStatus.*supported/.test(workflowsSrc);
+  if (!vtaStillPlanned) {
+    console.error('S4B static check FAIL: vta_imd_optimizer must not be changed to supported');
+    process.exitCode = 1;
+  }
+
+  let failed = false;
+  for (const [label, pattern] of renderChecks) {
+    if (!pattern.test(src)) {
+      console.error(`S4B static check FAIL: "${label}" not found in renderMeasurementLabPage.ts`);
+      failed = true;
+    }
+  }
+  for (const [label, pattern] of calSetChecks) {
+    if (!pattern.test(calSetSrc)) {
+      console.error(`S4B static check FAIL: "${label}" not found in referenceCalibrationSet.ts`);
+      failed = true;
+    }
+  }
+  if (!failed && vtaStillPlanned) {
+    console.log('- S4B static source check (calibration set & live/self-test honesty): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS4BCalibrationSet();
 
 try {
   await runChecks();
