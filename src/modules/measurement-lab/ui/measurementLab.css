@@ -796,6 +796,77 @@ button.mlab-coverage-badge--available:focus-visible {
   margin-top: var(--ea-space-2);
 }
 
+/* Advanced analyzers panel (S5A) */
+.mlab-advanced-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ea-space-2);
+  padding: var(--ea-space-3) 0;
+  border-bottom: 1px solid var(--ea-border-soft);
+}
+
+.mlab-advanced-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.mlab-advanced-item-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ea-space-2);
+}
+
+.mlab-advanced-item-label {
+  color: var(--ea-text-high);
+  font-size: var(--ea-font-size-small);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.mlab-advanced-item--planned .mlab-advanced-item-label {
+  color: var(--ea-text-medium);
+}
+
+.mlab-advanced-item--planned {
+  opacity: 0.75;
+}
+
+.mlab-advanced-item--vta {
+  opacity: 1;
+}
+
+.mlab-advanced-vta-band-row td {
+  background: var(--ea-bg-panel-alt);
+}
+
+.mlab-advanced-run-table {
+  margin-top: var(--ea-space-2);
+}
+
+.mlab-advanced-workflow-steps {
+  margin-top: var(--ea-space-2);
+}
+
+.mlab-advanced-steps-list {
+  margin: var(--ea-space-1) 0 0 var(--ea-space-4);
+  padding: 0;
+  font-family: var(--ea-font-ui);
+  font-size: var(--ea-font-size-small);
+  color: var(--ea-text-medium);
+  line-height: 1.6;
+}
+
+.mlab-advanced-divider {
+  border: none;
+  border-top: 1px solid var(--ea-border-soft);
+  margin: var(--ea-space-4) 0 var(--ea-space-3);
+}
+
+.mlab-advanced-planned-intro {
+  margin-bottom: var(--ea-space-2);
+}
+
 @media (max-width: 1180px) {
   .mlab-workbench-grid {
     grid-template-columns: 1fr;

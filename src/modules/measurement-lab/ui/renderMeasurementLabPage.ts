@@ -47,7 +47,7 @@ const WORKFLOW_PANEL_TARGETS: Readonly<Record<string, string>> = {
   azimuth_crosstalk: 'mlab-channel-panel',
   frequency_response: 'mlab-freq-panel',
   reference_level: 'mlab-reflevel-panel',
-  vta_imd_optimizer: 'mlab-thd-panel',
+  vta_imd_optimizer: 'mlab-advanced-panel',
   vertical_resonance: 'mlab-resonance-panel',
 };
 
@@ -219,7 +219,7 @@ type LabState = {
  * site below; it has no runtime effect.
  */
 const tokenLayoutGeneratedClassNames =
-  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active';
+  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro';
 void tokenLayoutGeneratedClassNames;
 
 const speedMeasurementDurationSeconds = 30;
@@ -587,6 +587,22 @@ function refLevelPanelMarkup(): string {
       </div>
       <div class="ea-panel-body" data-mlab-reflevel-body>
         <p class="ea-muted">Connect a source to analyze reference level.</p>
+      </div>
+    </section>
+  `;
+}
+
+function advancedAnalyzersPanelMarkup(): string {
+  return `
+    <section id="mlab-advanced-panel" data-mlab-tool-panel="vta_imd_optimizer" class="ea-panel" aria-labelledby="mlab-advanced-title">
+      <div class="ea-panel-header">
+        <span class="ea-panel-header-id">09</span>
+        <span id="mlab-advanced-title">Advanced analyzers</span>
+        <span class="ea-panel-header-spacer"></span>
+        <span class="ea-badge">Roadmap</span>
+      </div>
+      <div class="ea-panel-body" data-mlab-advanced-body>
+        <p class="ea-muted">Advanced analyzer workflows are in development. The VTA IMD Optimizer skeleton is shown below when a compatible test record is selected.</p>
       </div>
     </section>
   `;
@@ -1141,6 +1157,7 @@ export function renderMeasurementLabPage(): string {
             ${thdPanelMarkup()}
             ${resonancePanelMarkup()}
             ${refLevelPanelMarkup()}
+            ${advancedAnalyzersPanelMarkup()}
           </div>
           ${visualizationMarkup()}
         </div>
@@ -1188,6 +1205,7 @@ function elements(root: ParentNode) {
     waveformL: root.querySelector<HTMLCanvasElement>('[data-mlab-waveform="L"]'),
     waveformR: root.querySelector<HTMLCanvasElement>('[data-mlab-waveform="R"]'),
     refLevelBody: root.querySelector<HTMLElement>('[data-mlab-reflevel-body]'),
+    advancedBody: root.querySelector<HTMLElement>('[data-mlab-advanced-body]'),
   };
 }
 
@@ -1979,6 +1997,16 @@ function getDistortionBands(record: TestRecord | null): { thdBands: readonly Tes
     b.purpose === 'imd',
   );
   return { thdBands, imdBands };
+}
+
+function getVtaImdBands(record: TestRecord | null): readonly TestBand[] {
+  if (!record) return [];
+  const allBands = record.sides.flatMap(s => [...s.bands]);
+  return allBands.filter(b =>
+    b.analyzerModule === 'vta_imd_optimizer' ||
+    (b.analyzerModules as string[] | undefined)?.includes('vta_imd_optimizer') ||
+    b.purpose === 'vta_optimization',
+  );
 }
 
 function getFrequencyResponseBands(record: TestRecord): readonly TestBand[] {
@@ -2932,6 +2960,137 @@ function renderResonancePanel(els: Elements): void {
   });
 }
 
+// ---- Advanced analyzers panel (S5A skeleton) --------------------------------
+
+function renderAdvancedPanel(els: Elements): void {
+  const body = els.advancedBody;
+  if (!body) return;
+
+  const record = selectedRecord();
+  const vtaBands = getVtaImdBands(record);
+  const hasVtaBand = vtaBands.length > 0;
+
+  // VTA IMD Optimizer skeleton
+  let vtaSectionHtml: string;
+  if (!record) {
+    vtaSectionHtml = `
+      <div class="mlab-advanced-item mlab-advanced-item--vta">
+        <div class="mlab-advanced-item-head">
+          <span class="mlab-advanced-item-label">VTA / IMD optimizer</span>
+          <span class="mlab-coverage-badge mlab-coverage-badge--planned">Skeleton</span>
+        </div>
+        <p class="ea-muted">Select a test record to see VTA/IMD band availability.</p>
+        <p class="mlab-reflevel-info">Analyzer skeleton only — VTA IMD optimization is not implemented yet.</p>
+      </div>
+    `;
+  } else if (!hasVtaBand) {
+    const recTitle = renderText(`${record.manufacturer} — ${record.title}`);
+    vtaSectionHtml = `
+      <div class="mlab-advanced-item mlab-advanced-item--vta">
+        <div class="mlab-advanced-item-head">
+          <span class="mlab-advanced-item-label">VTA / IMD optimizer</span>
+          <span class="mlab-coverage-badge mlab-coverage-badge--unavailable">Not available</span>
+        </div>
+        <p class="ea-muted">No VTA/IMD optimization band found on <strong>${recTitle}</strong>.</p>
+        <p class="mlab-reflevel-info">Analyzer skeleton only — VTA IMD optimization is not implemented yet.</p>
+      </div>
+    `;
+  } else {
+    const band = vtaBands[0]!;
+    const f1 = band.f1Hz !== undefined ? `${band.f1Hz} Hz` : '—';
+    const f2 = band.f2Hz !== undefined ? `${band.f2Hz.toLocaleString('en-US')} Hz` : '—';
+    const ratio = band.ratio ?? '—';
+    const standard = band.standard ?? '—';
+    const bandLabel = renderText(band.label);
+
+    vtaSectionHtml = `
+      <div class="mlab-advanced-item mlab-advanced-item--vta">
+        <div class="mlab-advanced-item-head">
+          <span class="mlab-advanced-item-label">VTA / IMD optimizer</span>
+          <span class="mlab-coverage-badge mlab-coverage-badge--planned">Skeleton</span>
+        </div>
+        <p class="mlab-reflevel-info">Analyzer skeleton only — VTA IMD optimization is not implemented yet.</p>
+        <table class="ea-form-table" aria-label="VTA/IMD band metadata">
+          <tbody>
+            <tr class="mlab-advanced-vta-band-row">
+              <td class="ea-col-status">${statusDot('done')}</td>
+              <td class="ea-col-label">Band
+                <span class="ea-form-table-sublabel">${renderText(band.index)}</span>
+              </td>
+              <td class="ea-col-value">${bandLabel}</td>
+              <td class="ea-col-meta"><span class="ea-badge">VTA/SRA</span></td>
+            </tr>
+            <tr>
+              <td class="ea-col-status">${statusDot('done')}</td>
+              <td class="ea-col-label">f1</td>
+              <td class="ea-col-value">${renderText(f1)}</td>
+              <td class="ea-col-meta"><span class="ea-badge">Hz</span></td>
+            </tr>
+            <tr>
+              <td class="ea-col-status">${statusDot('done')}</td>
+              <td class="ea-col-label">f2</td>
+              <td class="ea-col-value">${renderText(f2)}</td>
+              <td class="ea-col-meta"><span class="ea-badge">Hz</span></td>
+            </tr>
+            <tr>
+              <td class="ea-col-status">${statusDot('done')}</td>
+              <td class="ea-col-label">Ratio</td>
+              <td class="ea-col-value">${renderText(ratio)}</td>
+              <td class="ea-col-meta"><span class="ea-badge">Amplitude</span></td>
+            </tr>
+            <tr>
+              <td class="ea-col-status">${statusDot('done')}</td>
+              <td class="ea-col-label">Standard</td>
+              <td class="ea-col-value">${renderText(standard)}</td>
+              <td class="ea-col-meta"><span class="ea-badge">Spec</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="mlab-advanced-workflow-steps">
+          <p class="mlab-reflevel-info"><strong>Planned workflow</strong></p>
+          <ol class="mlab-advanced-steps-list">
+            <li>Play the VTA/SRA IMD track on your test record.</li>
+            <li>Capture a run at the current tonearm height.</li>
+            <li>Adjust arm height and capture the next run.</li>
+            <li>Repeat across the full adjustment range.</li>
+            <li>Compare IMD score per height setting.</li>
+            <li>The height producing minimum IMD indicates optimal SRA.</li>
+          </ol>
+        </div>
+        <div class="mlab-advanced-run-table" aria-label="VTA IMD run log">
+          <p class="ea-muted">No VTA IMD runs captured yet.</p>
+        </div>
+      </div>
+    `;
+  }
+
+  // Planned advanced analyzers list
+  const plannedItems = [
+    { label: 'Anti-skate / Tracking stress', desc: 'Detect channel-specific breakup during a high-level escalating-amplitude track.' },
+    { label: 'Rumble &amp; noise isolation', desc: 'Measure bearing rumble and low-frequency noise floor from a silent groove.' },
+    { label: 'Pink noise / Spectral balance', desc: 'Verify spectral balance and phono chain noise floor using broadband pink noise.' },
+    { label: 'Vertical null / Azimuth', desc: 'Verify mono-sum null and vertical channel balance with a vertical-modulation tone.' },
+    { label: 'Vertical resonance', desc: 'Detect vertical resonance peaks from a descending vertical modulation sweep.' },
+  ];
+
+  const plannedHtml = plannedItems.map(item => `
+    <div class="mlab-advanced-item mlab-advanced-item--planned">
+      <div class="mlab-advanced-item-head">
+        <span class="mlab-advanced-item-label">${item.label}</span>
+        <span class="mlab-coverage-badge mlab-coverage-badge--planned">Planned</span>
+      </div>
+      <p class="ea-muted">${item.desc}</p>
+    </div>
+  `).join('');
+
+  body.innerHTML = `
+    ${vtaSectionHtml}
+    <hr class="mlab-advanced-divider" aria-hidden="true">
+    <p class="ea-muted mlab-advanced-planned-intro"><strong>Further planned analyzers</strong> — engines not yet built:</p>
+    ${plannedHtml}
+  `;
+}
+
 function resetChannelMeasurement(): void {
   stopChannelMeasurement();
   state.channel.step = 'idle';
@@ -3627,6 +3786,7 @@ export function enableMeasurementLabInteractions(): void {
   renderThdPanel(els);
   renderResonancePanel(els);
   renderRefLevelPanel(els);
+  renderAdvancedPanel(els);
   renderLogPanel(els);
   clearMeterDom(els);
 
@@ -3649,6 +3809,7 @@ export function enableMeasurementLabInteractions(): void {
     renderThdPanel(els);
     renderResonancePanel(els);
     renderRefLevelPanel(els);
+    renderAdvancedPanel(els);
   }).catch((err: unknown) => {
     state.testRecordLoadFailed = true;
     state.selectedTestRecordMissing = null;
@@ -3686,6 +3847,7 @@ export function enableMeasurementLabInteractions(): void {
     renderThdPanel(els);
     renderResonancePanel(els);
     renderRefLevelPanel(els);
+    renderAdvancedPanel(els);
   });
 
   els.coverageToggleBtn?.addEventListener('click', () => {
