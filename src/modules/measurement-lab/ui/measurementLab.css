@@ -984,6 +984,51 @@ button.mlab-coverage-badge--available:focus-visible {
   opacity: 0.6;
 }
 
+.mlab-vta-candidate-badge {
+  font-size: var(--ea-font-size-micro);
+  font-weight: 600;
+  letter-spacing: var(--ea-letter-label);
+  text-transform: uppercase;
+  color: var(--ea-text-low);
+  background: var(--ea-bg-panel);
+  border: 1px solid var(--ea-border-subtle, var(--ea-border-primary));
+  border-radius: var(--ea-radius-pill);
+  padding: 1px var(--ea-space-2);
+  white-space: nowrap;
+  display: inline-block;
+}
+
+.mlab-vta-comparison {
+  margin-top: var(--ea-space-3);
+  padding: var(--ea-space-2) var(--ea-space-3);
+  border-left: 2px solid var(--ea-border-subtle);
+  font-size: var(--ea-font-size-small);
+  color: var(--ea-text-low);
+}
+
+.mlab-vta-comparison-candidate {
+  font-weight: 500;
+  color: var(--ea-text-high);
+  margin-bottom: var(--ea-space-1);
+}
+
+.mlab-vta-comparison-meta {
+  margin-bottom: var(--ea-space-1);
+}
+
+.mlab-vta-comparison-warning {
+  font-size: var(--ea-font-size-micro);
+  color: var(--ea-text-low);
+  margin: 0;
+  opacity: 0.8;
+}
+
+.mlab-vta-comparison-status {
+  margin-top: var(--ea-space-3);
+  padding: var(--ea-space-2) var(--ea-space-3);
+  border-left: 2px solid var(--ea-border-subtle);
+}
+
 @media (max-width: 1180px) {
   .mlab-workbench-grid {
     grid-template-columns: 1fr;

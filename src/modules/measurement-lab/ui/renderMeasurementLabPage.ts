@@ -245,7 +245,7 @@ type LabState = {
  * site below; it has no runtime effect.
  */
 const tokenLayoutGeneratedClassNames =
-  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured';
+  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured mlab-vta-candidate-badge mlab-vta-comparison mlab-vta-comparison-candidate mlab-vta-comparison-meta mlab-vta-comparison-warning mlab-vta-comparison-status';
 void tokenLayoutGeneratedClassNames;
 
 const speedMeasurementDurationSeconds = 30;
@@ -937,6 +937,20 @@ function buildSessionJson(): SessionJson {
             warnings: r.warnings,
             note: r.note,
           })),
+          comparison: (() => {
+            const cmp = deriveVtaImdComparison(state.vta.runs);
+            return {
+              status: cmp.status,
+              measured_count: cmp.measuredCount,
+              placeholder_count: cmp.placeholderCount,
+              candidate_run_id: cmp.candidateRunId,
+              candidate_imd_percent: cmp.candidateImdPercent,
+              candidate_height_mm: cmp.candidateHeightMm,
+              candidate_height_label: cmp.candidateHeightLabel,
+              next_best_delta_percent: cmp.nextBestDeltaPercent,
+              warnings: cmp.warnings,
+            };
+          })(),
           warnings: [
             'VTA IMD capture gateway preview. Results are experimental and have not been validated.',
             'Full VTA optimizer (best-setting comparison, run confidence, export hardening) is not yet implemented.',
@@ -3062,11 +3076,28 @@ function stopVtaCapture(): void {
 function startVtaCapture(els: Elements, runId: string): void {
   const context = state.audioHandle?.context;
   const source = state.preSplitterNode;
-  if (!context || !source || state.captureState !== 'live') return;
-  const band = getVtaImdBands(selectedRecord())[0] ?? null;
-  if (!band || band.f1Hz == null || band.f2Hz == null) return;
-  if (state.vta.capturingRunId !== null) return;
-  if (!state.vta.runs.find(r => r.id === runId)) return;
+  if (!context || !source || state.captureState !== 'live') {
+    appendLog('VTA IMD capture not started — connect a live audio source first.');
+    return;
+  }
+  const vtaBands = getVtaImdBands(selectedRecord());
+  if (vtaBands.length === 0) {
+    appendLog('VTA IMD capture not started — selected test record has no VTA IMD band.');
+    return;
+  }
+  const band = vtaBands[0]!;
+  if (band.f1Hz == null || band.f2Hz == null) {
+    appendLog('VTA IMD capture not started — selected VTA band is missing f1/f2 metadata.');
+    return;
+  }
+  if (state.vta.capturingRunId !== null) {
+    appendLog('VTA IMD capture not started — another VTA capture is already running.');
+    return;
+  }
+  if (!state.vta.runs.find(r => r.id === runId)) {
+    appendLog('VTA IMD capture not started — selected run marker was not found.');
+    return;
+  }
   const f1Hz = band.f1Hz;
   const f2Hz = band.f2Hz;
   state.vta.capturingRunId = runId;
@@ -3105,22 +3136,84 @@ function startVtaCapture(els: Elements, runId: string): void {
   });
 }
 
+type VtaImdComparison = {
+  readonly measuredCount: number;
+  readonly placeholderCount: number;
+  readonly candidateRunId: string | null;
+  readonly candidateImdPercent: number | null;
+  readonly candidateHeightMm: number | null;
+  readonly candidateHeightLabel: string | null;
+  readonly nextBestDeltaPercent: number | null;
+  readonly status: 'not_enough_measured_runs' | 'experimental_candidate';
+  readonly warnings: readonly string[];
+};
+
+function deriveVtaImdComparison(runs: readonly VtaImdRun[]): VtaImdComparison {
+  const measured = runs.filter(
+    r => r.source === 'live_capture'
+      && typeof r.imdPercent === 'number'
+      && Number.isFinite(r.imdPercent),
+  );
+  const measuredCount = measured.length;
+  const placeholderCount = runs.length - measuredCount;
+
+  if (measuredCount < 2) {
+    return {
+      measuredCount,
+      placeholderCount,
+      candidateRunId: null,
+      candidateImdPercent: null,
+      candidateHeightMm: null,
+      candidateHeightLabel: null,
+      nextBestDeltaPercent: null,
+      status: 'not_enough_measured_runs',
+      warnings: ['At least two measured VTA runs are required for comparison.'],
+    };
+  }
+
+  const sorted = [...measured].sort((a, b) => (a.imdPercent as number) - (b.imdPercent as number));
+  const candidate = sorted[0]!;
+  const nextBest = sorted[1]!;
+  const delta = (nextBest.imdPercent as number) - (candidate.imdPercent as number);
+
+  const warnings: string[] = ['Experimental candidate only — not a final VTA recommendation.'];
+  if (delta < 0.1) {
+    warnings.push(`Near-tie detected (delta ${delta.toFixed(3)} %). Results may not be distinguishable.`);
+  }
+
+  return {
+    measuredCount,
+    placeholderCount,
+    candidateRunId: candidate.id,
+    candidateImdPercent: candidate.imdPercent,
+    candidateHeightMm: candidate.heightMm,
+    candidateHeightLabel: candidate.heightLabel,
+    nextBestDeltaPercent: delta,
+    status: 'experimental_candidate',
+    warnings,
+  };
+}
+
 function vtaRunTableMarkup(
   runs: readonly VtaImdRun[],
-  opts: { canCapture: boolean; capturingRunId: string | null; captureElapsed: number },
+  opts: { canCapture: boolean; capturingRunId: string | null; captureElapsed: number; candidateRunId: string | null },
 ): string {
   if (runs.length === 0) {
     return '<p class="ea-muted mlab-vta-empty-state">No VTA IMD run markers added yet.</p>';
   }
-  const { canCapture, capturingRunId, captureElapsed } = opts;
+  const { canCapture, capturingRunId, captureElapsed, candidateRunId } = opts;
   const rows = runs.map(r => {
     const heightStr = r.heightMm !== null ? `${r.heightMm}&thinsp;mm` : '—';
     const isThisCapturing = capturingRunId === r.id;
     const anyCapturing = capturingRunId !== null;
+    const isCandidate = candidateRunId !== null && candidateRunId === r.id;
 
     let imdCell: string;
     if (r.imdPercent !== null) {
-      imdCell = `<span class="mlab-vta-run-measured">${r.imdPercent.toFixed(2)}&thinsp;%</span>`;
+      const candidateBadge = isCandidate
+        ? ` <span class="mlab-vta-candidate-badge">Experimental&nbsp;candidate</span>`
+        : '';
+      imdCell = `<span class="mlab-vta-run-measured">${r.imdPercent.toFixed(2)}&thinsp;%</span>${candidateBadge}`;
     } else if (isThisCapturing) {
       imdCell = `<span class="mlab-vta-capture-progress" aria-live="polite">Capturing&hellip; ${captureElapsed.toFixed(1)}&thinsp;s</span>`;
     } else {
@@ -3197,10 +3290,12 @@ function renderAdvancedPanel(els: Elements): void {
     && vtaBand.f1Hz != null
     && vtaBand.f2Hz != null
     && state.vta.capturingRunId === null;
+  const comparison = deriveVtaImdComparison(state.vta.runs);
   const vtaOpts = {
     canCapture,
     capturingRunId: state.vta.capturingRunId,
     captureElapsed: state.vta.captureElapsed,
+    candidateRunId: comparison.candidateRunId,
   };
 
   let vtaSectionHtml: string;
@@ -3337,6 +3432,37 @@ function renderAdvancedPanel(els: Elements): void {
             </div>
           </div>
           ${vtaRunTableMarkup(state.vta.runs, vtaOpts)}
+          ${(() => {
+            if (comparison.status === 'not_enough_measured_runs') {
+              return `
+                <div class="mlab-vta-comparison mlab-vta-comparison-status">
+                  <span class="ea-muted">Comparison not available — at least two measured VTA runs required.</span>
+                </div>
+              `;
+            }
+            const cLabel = renderText(comparison.candidateHeightLabel ?? '');
+            const cMm = comparison.candidateHeightMm !== null ? `${comparison.candidateHeightMm}&thinsp;mm` : '—';
+            const cImd = comparison.candidateImdPercent !== null ? `${comparison.candidateImdPercent.toFixed(2)}&thinsp;%` : '—';
+            const delta = comparison.nextBestDeltaPercent !== null ? comparison.nextBestDeltaPercent.toFixed(3) : '—';
+            const warnHtml = comparison.warnings.map(w =>
+              `<p class="mlab-vta-comparison-warning">${renderText(w)}</p>`
+            ).join('');
+            return `
+              <div class="mlab-vta-comparison">
+                <div class="mlab-vta-comparison-candidate">
+                  <strong>Experimental candidate:</strong>
+                  <span class="mlab-vta-candidate-badge">Experimental&nbsp;candidate</span>
+                  ${cLabel} &mdash; ${cMm} &mdash; IMD&nbsp;${cImd}
+                </div>
+                <div class="mlab-vta-comparison-meta">
+                  Measured runs: ${comparison.measuredCount} &middot;
+                  Placeholder runs: ${comparison.placeholderCount} &middot;
+                  Delta to next best: ${delta}&thinsp;%
+                </div>
+                ${warnHtml}
+              </div>
+            `;
+          })()}
         </div>
       </div>
     `;

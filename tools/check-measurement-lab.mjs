@@ -1457,9 +1457,9 @@ function checkS5AAdvancedAnalyzers() {
     // 6. VTA status disclaimer text (S5C: "Capture gateway preview" replaces skeleton disclaimer)
     ['VTA status disclaimer present', /[Cc]apture gateway preview|Analyzer skeleton only/],
     // 7a. f1 metadata rendered from band.f1Hz
-    ['VTA metadata: f1Hz rendered', /function renderAdvancedPanel[\s\S]{0,2000}band\.f1Hz/],
+    ['VTA metadata: f1Hz rendered', /function renderAdvancedPanel[\s\S]{0,2200}band\.f1Hz/],
     // 7b. f2 metadata rendered from band.f2Hz
-    ['VTA metadata: f2Hz rendered', /function renderAdvancedPanel[\s\S]{0,2000}band\.f2Hz/],
+    ['VTA metadata: f2Hz rendered', /function renderAdvancedPanel[\s\S]{0,2200}band\.f2Hz/],
     // 7c. ratio rendered from band.ratio
     ['VTA metadata: ratio rendered', /function renderAdvancedPanel[\s\S]{0,2500}band\.ratio/],
     // 7d. standard rendered from band.standard
@@ -1553,7 +1553,7 @@ function checkS5BVtaRunModel() {
     // 15. imd_percent: r.imdPercent in VTA export (S5C: real value or null per run)
     ['imd_percent uses run value in VTA export', /imd_percent\s*:\s*r\.imdPercent/],
     // 16. warnings array in VTA export
-    ['warnings array in VTA export', /vta_imd_optimizer[\s\S]{0,900}warnings\s*:\s*\[/],
+    ['warnings array in VTA export', /vta_imd_optimizer[\s\S]{0,1500}warnings\s*:\s*\[/],
     // 17. VTA workflow remains planned (not supported)
     ['VTA still planned in measurementWorkflows (not supported)',
       !/vta_imd_optimizer[\s\S]{0,200}implementationStatus\s*:\s*'supported'/.test(workflowsSrc)],
@@ -1605,7 +1605,7 @@ function checkS5CVtaCapture() {
     ['startVtaCapture function defined', /function startVtaCapture\s*\(/],
     // 2. analyseIMD called with band f1Hz and f2Hz in VTA capture
     ['analyseIMD called with f1Hz f2Hz in VTA context',
-      /function startVtaCapture[\s\S]{0,1200}analyseIMD\s*\(/],
+      /function startVtaCapture[\s\S]{0,1600}analyseIMD\s*\(/],
     // 3. createSweepCapture used in startVtaCapture
     ['createSweepCapture used in startVtaCapture',
       /function startVtaCapture[\s\S]{0,1200}createSweepCapture\s*\(/],
@@ -1646,7 +1646,7 @@ function checkS5CVtaCapture() {
     // 14. data-mlab-vta-measure button wiring present
     ['data-mlab-vta-measure button wiring', /data-mlab-vta-measure/],
     // 15. warnings array in VTA export still present
-    ['warnings array in VTA export', /vta_imd_optimizer[\s\S]{0,900}warnings\s*:\s*\[/],
+    ['warnings array in VTA export', /vta_imd_optimizer[\s\S]{0,1500}warnings\s*:\s*\[/],
   ];
 
   let allPass = true;
@@ -1843,6 +1843,118 @@ function checkS5C1LifecycleAndMetadata() {
 }
 
 checkS5C1LifecycleAndMetadata();
+
+function checkS5DVtaComparison() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const cssSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/measurementLab.css');
+  if (!existsSync(renderSrcPath) || !existsSync(cssSrcPath)) {
+    console.error('S5D static check: source file(s) not found');
+    process.exitCode = 1;
+    return;
+  }
+  const src = readFileSync(renderSrcPath, 'utf8');
+  const css = readFileSync(cssSrcPath, 'utf8');
+
+  const checks = [
+    // 1. VtaImdComparison type defined
+    ['VtaImdComparison type defined', /type VtaImdComparison\s*=\s*\{/],
+    // 2. deriveVtaImdComparison function defined
+    ['deriveVtaImdComparison function defined', /function deriveVtaImdComparison/],
+    // 3. deriveVtaImdComparison filters live_capture runs
+    ['deriveVtaImdComparison filters live_capture runs',
+      /function deriveVtaImdComparison[\s\S]{0,200}live_capture/],
+    // 4. not_enough_measured_runs status in deriveVtaImdComparison
+    ['not_enough_measured_runs status in deriveVtaImdComparison',
+      /function deriveVtaImdComparison[\s\S]{0,700}not_enough_measured_runs/],
+    // 5. experimental_candidate status in deriveVtaImdComparison
+    ['experimental_candidate status in deriveVtaImdComparison',
+      /function deriveVtaImdComparison[\s\S]{0,1500}experimental_candidate/],
+    // 6. candidateRunId in vtaRunTableMarkup opts
+    ['candidateRunId in vtaRunTableMarkup opts',
+      /function vtaRunTableMarkup[\s\S]{0,200}candidateRunId\s*:\s*string\s*\|\s*null/],
+    // 7. isCandidate variable in vtaRunTableMarkup
+    ['isCandidate variable in vtaRunTableMarkup',
+      /function vtaRunTableMarkup[\s\S]{0,700}isCandidate/],
+    // 8. mlab-vta-candidate-badge rendered in vtaRunTableMarkup
+    ['mlab-vta-candidate-badge in vtaRunTableMarkup',
+      /function vtaRunTableMarkup[\s\S]{0,900}mlab-vta-candidate-badge/],
+    // 9. deriveVtaImdComparison called in renderAdvancedPanel
+    ['deriveVtaImdComparison called in renderAdvancedPanel',
+      /function renderAdvancedPanel[\s\S]{0,600}deriveVtaImdComparison/],
+    // 10. candidateRunId: comparison.candidateRunId in vtaOpts
+    ['candidateRunId: comparison.candidateRunId in vtaOpts',
+      /candidateRunId\s*:\s*comparison\.candidateRunId/],
+    // 11. mlab-vta-comparison class rendered in Advanced panel
+    ['mlab-vta-comparison rendered in Advanced panel', /mlab-vta-comparison/],
+    // 12. comparison key in buildSessionJson VTA export (after vta_imd_optimizer)
+    ['comparison key in VTA export',
+      /vta_imd_optimizer[\s\S]{0,900}comparison\s*:/],
+    // 13. status: cmp.status in comparison export
+    ['status: cmp.status in comparison export',
+      /comparison\s*:\s*\(\s*\(\s*\)\s*=>[\s\S]{0,200}status\s*:\s*cmp\.status/],
+    // 14. measured_count in comparison export
+    ['measured_count in comparison export',
+      /comparison\s*:\s*\(\s*\(\s*\)\s*=>[\s\S]{0,200}measured_count\s*:\s*cmp\.measuredCount/],
+    // 15. candidate_imd_percent in comparison export (not best_setting)
+    ['candidate_imd_percent in comparison export',
+      /comparison\s*:\s*\(\s*\(\s*\)\s*=>[\s\S]{0,400}candidate_imd_percent\s*:\s*cmp\.candidateImdPercent/],
+    // 16. next_best_delta_percent in comparison export
+    ['next_best_delta_percent in comparison export',
+      /comparison\s*:\s*\(\s*\(\s*\)\s*=>[\s\S]{0,600}next_best_delta_percent\s*:\s*cmp\.nextBestDeltaPercent/],
+    // 17. Guard log: connect a live audio source first
+    ['startVtaCapture guard log — no live source',
+      /VTA IMD capture not started.*connect a live audio source first/],
+    // 18. Guard log: selected test record has no VTA IMD band
+    ['startVtaCapture guard log — no VTA IMD band',
+      /VTA IMD capture not started.*selected test record has no VTA IMD band/],
+    // 19. Guard log: missing f1/f2 metadata
+    ['startVtaCapture guard log — missing f1/f2',
+      /VTA IMD capture not started.*selected VTA band is missing f1\/f2 metadata/],
+    // 20. Guard log: another VTA capture running
+    ['startVtaCapture guard log — another capture running',
+      /VTA IMD capture not started.*another VTA capture is already running/],
+    // 21. Guard log: run marker not found
+    ['startVtaCapture guard log — run marker not found',
+      /VTA IMD capture not started.*selected run marker was not found/],
+    // 22. tokenLayoutGeneratedClassNames updated with mlab-vta-candidate-badge
+    ['tokenLayoutGeneratedClassNames includes mlab-vta-candidate-badge',
+      /tokenLayoutGeneratedClassNames[\s\S]{0,900}mlab-vta-candidate-badge/],
+    // 23. No best_setting / recommended_height / optimal_height
+    ['No best_setting or recommendation fields',
+      !/best_setting|bestSetting|recommended_height|optimal_height/.test(src)],
+  ];
+
+  let allPass = true;
+  for (const [label, result] of checks) {
+    const ok = typeof result === 'boolean' ? result : (result instanceof RegExp ? result.test(src) : result);
+    if (!ok) {
+      console.error(`S5D static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  // CSS checks run against css file
+  const cssChecks = [
+    ['mlab-vta-candidate-badge CSS defined', /\.mlab-vta-candidate-badge\s*\{/],
+    ['mlab-vta-comparison CSS defined', /\.mlab-vta-comparison\s*\{/],
+    ['mlab-vta-comparison-candidate CSS defined', /\.mlab-vta-comparison-candidate\s*\{/],
+    ['mlab-vta-comparison-meta CSS defined', /\.mlab-vta-comparison-meta\s*\{/],
+    ['mlab-vta-comparison-warning CSS defined', /\.mlab-vta-comparison-warning\s*\{/],
+    ['mlab-vta-comparison-status CSS defined', /\.mlab-vta-comparison-status\s*\{/],
+  ];
+  for (const [label, rx] of cssChecks) {
+    if (!rx.test(css)) {
+      console.error(`S5D static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S5D static source check (VTA IMD Run Comparison & Experimental Best-Run Candidate): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS5DVtaComparison();
 
 try {
   await runChecks();
