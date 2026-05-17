@@ -666,6 +666,82 @@ function checkReferenceLevelFoundation() {
 
 checkReferenceLevelFoundation();
 
+// S4A.1: static source checks — mobile/desktop optimization notice.
+function checkMobileDesktopNotice() {
+  const noticeSrcPath = join(repoRoot, 'src/shared/ui/mobileDesktopNotice.ts');
+  const mainSrcPath = join(repoRoot, 'src/main.ts');
+  if (!existsSync(noticeSrcPath)) {
+    console.error('S4A.1 static check FAIL: src/shared/ui/mobileDesktopNotice.ts not found');
+    process.exitCode = 1;
+    return;
+  }
+  if (!existsSync(mainSrcPath)) {
+    console.error('S4A.1 static check FAIL: src/main.ts not found');
+    process.exitCode = 1;
+    return;
+  }
+  const src = readFileSync(noticeSrcPath, 'utf8');
+  const mainSrc = readFileSync(mainSrcPath, 'utf8');
+
+  const checks = [
+    // Export
+    ['mountMobileDesktopNotice export', /export function mountMobileDesktopNotice\s*\(/],
+    // Small-screen detection (matchMedia with 767px breakpoint)
+    ['matchMedia max-width 767px', /matchMedia\s*\(.*767px/],
+    // sessionStorage key
+    ['sessionStorage key engrove-mobile-desktop-notice-dismissed', /engrove-mobile-desktop-notice-dismissed/],
+    // In-memory fallback
+    ['in-memory dismissed fallback', /dismissedInMemory/],
+    // Text content: PC/desktop
+    ['text: optimized for desktop / PC', /Optimized for desktop|optimized for desktop|PC or desktop|desktop.*PC/],
+    // Text content: Measurement Lab
+    ['text: Measurement Lab', /Measurement Lab/],
+    // Text content: audio interface
+    ['text: audio interface', /audio interface/],
+    // Text content: line-in
+    ['text: line-in connection', /line.in/],
+    // Text content: phono
+    ['text: phono', /phono/],
+    // Accessibility: role dialog
+    ['accessibility: role="dialog"', /role=["']dialog["']/],
+    // Accessibility: aria-modal
+    ['accessibility: aria-modal="true"', /aria-modal=["']true["']/],
+    // Accessibility: aria-labelledby
+    ['accessibility: aria-labelledby', /aria-labelledby/],
+    // Accessibility: aria-describedby
+    ['accessibility: aria-describedby', /aria-describedby/],
+    // Escape key handling
+    ['Escape key handling', /e\.key\s*===\s*['"]Escape['"]/],
+  ];
+
+  const mainChecks = [
+    ['main.ts imports mountMobileDesktopNotice', /import.*mountMobileDesktopNotice.*from/],
+    ['main.ts calls mountMobileDesktopNotice()', /mountMobileDesktopNotice\s*\(\s*\)/],
+  ];
+
+  let failed = false;
+  for (const [label, pattern] of checks) {
+    if (!pattern.test(src)) {
+      console.error(`S4A.1 static check FAIL: "${label}" not found in mobileDesktopNotice.ts`);
+      failed = true;
+    }
+  }
+  for (const [label, pattern] of mainChecks) {
+    if (!pattern.test(mainSrc)) {
+      console.error(`S4A.1 static check FAIL: "${label}" not found in main.ts`);
+      failed = true;
+    }
+  }
+
+  if (!failed) {
+    console.log('- S4A.1 static source check (mobile desktop notice): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkMobileDesktopNotice();
+
 try {
   await runChecks();
 } catch (error) {
