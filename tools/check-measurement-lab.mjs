@@ -1454,17 +1454,16 @@ function checkS5AAdvancedAnalyzers() {
     ['getVtaImdBands function defined', /function getVtaImdBands\s*\(/],
     // 5. renderAdvancedPanel function exists
     ['renderAdvancedPanel function defined', /function renderAdvancedPanel\s*\(/],
-    // 6. Skeleton-only disclaimer text
-    ['Skeleton-only disclaimer: "Analyzer skeleton only"',
-      /Analyzer skeleton only\s*[—\-]\s*VTA IMD optimization is not implemented yet/],
+    // 6. VTA status disclaimer text (S5C: "Capture gateway preview" replaces skeleton disclaimer)
+    ['VTA status disclaimer present', /[Cc]apture gateway preview|Analyzer skeleton only/],
     // 7a. f1 metadata rendered from band.f1Hz
     ['VTA metadata: f1Hz rendered', /function renderAdvancedPanel[\s\S]{0,2000}band\.f1Hz/],
     // 7b. f2 metadata rendered from band.f2Hz
     ['VTA metadata: f2Hz rendered', /function renderAdvancedPanel[\s\S]{0,2000}band\.f2Hz/],
     // 7c. ratio rendered from band.ratio
-    ['VTA metadata: ratio rendered', /function renderAdvancedPanel[\s\S]{0,2000}band\.ratio/],
+    ['VTA metadata: ratio rendered', /function renderAdvancedPanel[\s\S]{0,2500}band\.ratio/],
     // 7d. standard rendered from band.standard
-    ['VTA metadata: standard rendered', /function renderAdvancedPanel[\s\S]{0,2000}band\.standard/],
+    ['VTA metadata: standard rendered', /function renderAdvancedPanel[\s\S]{0,2500}band\.standard/],
     // 8. Empty-state run table message (S5B updated wording)
     ['VTA run table empty-state message',
       /No VTA IMD run markers added yet|No VTA IMD runs captured yet/],
@@ -1523,9 +1522,9 @@ function checkS5BVtaRunModel() {
     // 2. manual_placeholder source literal in VtaImdRun
     ['manual_placeholder source in VtaImdRun',
       /type VtaImdRun[\s\S]{0,400}source\s*:\s*'manual_placeholder'/],
-    // 3. imdPercent typed as null (always null — no fake IMD)
-    ['imdPercent typed as null in VtaImdRun',
-      /type VtaImdRun[\s\S]{0,400}imdPercent\s*:\s*null/],
+    // 3. imdPercent typed as number | null (S5C: allows real captured values)
+    ['imdPercent typed as number | null in VtaImdRun',
+      /type VtaImdRun[\s\S]{0,400}imdPercent\s*:\s*number\s*\|\s*null/],
     // 4. VtaStateBag defined
     ['VtaStateBag type defined', /type VtaStateBag\s*=/],
     // 5. vta state in LabState
@@ -1551,25 +1550,24 @@ function checkS5BVtaRunModel() {
     // 14. No best_setting / bestSetting in VTA export
     ['No best_setting in VTA export',
       !/best_setting|bestSetting/.test(src)],
-    // 15. imd_percent: null in VTA export (not a real value)
-    ['imd_percent: null in VTA export serialization', /imd_percent\s*:\s*null/],
+    // 15. imd_percent: r.imdPercent in VTA export (S5C: real value or null per run)
+    ['imd_percent uses run value in VTA export', /imd_percent\s*:\s*r\.imdPercent/],
     // 16. warnings array in VTA export
     ['warnings array in VTA export', /vta_imd_optimizer[\s\S]{0,600}warnings\s*:\s*\[/],
     // 17. VTA workflow remains planned (not supported)
     ['VTA still planned in measurementWorkflows (not supported)',
       !/vta_imd_optimizer[\s\S]{0,200}implementationStatus\s*:\s*'supported'/.test(workflowsSrc)],
-    // 18. No fake live_capture or self_test source for VTA
-    ['No live_capture VTA source in VtaImdRun',
-      !/type VtaImdRun[\s\S]{0,400}source\s*:.*'live_capture'/.test(src)],
+    // 18. live_capture in VtaImdRun source union (S5C: gateway capture enabled)
+    ['live_capture in VtaImdRun source union',
+      /type VtaImdRun[\s\S]{0,400}source\s*:.*'live_capture'/],
     // 19. "Run markers are manual placeholders" truth text
     ['Run markers are manual placeholders truth text',
       /Run markers are manual placeholders/],
     // 20. "No VTA IMD run markers added yet" empty-state (or equivalent)
     ['Empty-state: no VTA run markers added yet',
       /No VTA IMD run markers added yet|No VTA IMD runs captured yet/],
-    // 21. S5A cross-check still good: skeleton-only disclaimer
-    ['S5A cross-check: Analyzer skeleton only disclaimer',
-      /Analyzer skeleton only\s*[—\-]\s*VTA IMD optimization is not implemented yet/],
+    // 21. S5C: capture gateway preview text (replaces S5A skeleton disclaimer)
+    ['S5C capture gateway preview disclaimer', /[Cc]apture gateway preview/],
   ];
 
   let failed = false;
@@ -1589,6 +1587,84 @@ function checkS5BVtaRunModel() {
 }
 
 checkS5BVtaRunModel();
+
+// S5C: static source checks — VTA IMD Capture Gateway & Real IMD Engine Binding.
+function checkS5CVtaCapture() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const workflowsSrcPath = join(repoRoot, 'src/modules/measurement-lab/data/measurementWorkflows.ts');
+  if (!existsSync(renderSrcPath) || !existsSync(workflowsSrcPath)) {
+    console.error('S5C static check: source file(s) not found');
+    process.exitCode = 1;
+    return;
+  }
+  const src = readFileSync(renderSrcPath, 'utf8');
+  const workflowsSrc = readFileSync(workflowsSrcPath, 'utf8');
+
+  const checks = [
+    // 1. startVtaCapture function defined
+    ['startVtaCapture function defined', /function startVtaCapture\s*\(/],
+    // 2. analyseIMD called with band f1Hz and f2Hz in VTA capture
+    ['analyseIMD called with f1Hz f2Hz in VTA context',
+      /function startVtaCapture[\s\S]{0,1200}analyseIMD\s*\(/],
+    // 3. createSweepCapture used in startVtaCapture
+    ['createSweepCapture used in startVtaCapture',
+      /function startVtaCapture[\s\S]{0,1200}createSweepCapture\s*\(/],
+    // 4. capturingRunId in VtaStateBag
+    ['capturingRunId in VtaStateBag', /type VtaStateBag[\s\S]{0,400}capturingRunId\s*:/],
+    // 5. VTA capture guard checks audioHandle and captureState === 'live'
+    ['VTA capture guard checks audioHandle and captureState',
+      /function startVtaCapture[\s\S]{0,600}audioHandle[\s\S]{0,300}captureState/],
+    // 6. VTA band guard checks f1Hz and f2Hz before capture
+    ['VTA band guard checks f1Hz and f2Hz',
+      /function startVtaCapture[\s\S]{0,600}f1Hz[\s\S]{0,150}f2Hz/],
+    // 7. live_capture source assigned after successful capture
+    ["live_capture source assigned on capture complete",
+      /source\s*:\s*'live_capture'/],
+    // 8. imdPercent: number | null in VtaImdRun
+    ['imdPercent: number | null in VtaImdRun',
+      /type VtaImdRun[\s\S]{0,400}imdPercent\s*:\s*number\s*\|\s*null/],
+    // 9. imd_percent: r.imdPercent in export (not hardcoded null)
+    ['imd_percent: r.imdPercent in export', /imd_percent\s*:\s*r\.imdPercent/],
+    // 10. No best_setting / bestSetting / recommended_height / optimal_height
+    ['No best_setting or recommended_height in source',
+      !/best_setting|bestSetting|recommended_height|optimal_height/.test(src)],
+    // 11. VTA implementationStatus stays planned (not supported)
+    ["VTA implementationStatus stays 'planned'", (() => {
+      const vtaStart = workflowsSrc.indexOf("id: 'vta_imd_optimizer'");
+      if (vtaStart === -1) return false;
+      const blockEnd = workflowsSrc.indexOf('},', vtaStart);
+      if (blockEnd === -1) return false;
+      const block = workflowsSrc.slice(vtaStart, blockEnd + 2);
+      return /implementationStatus:\s*'planned'/.test(block) &&
+             !/implementationStatus:\s*'supported'/.test(block);
+    })()],
+    // 12. status: 'planned' in VTA export (not supported/complete)
+    ["status: 'planned' in VTA export", /vta_imd_optimizer[\s\S]{0,400}status\s*:\s*'planned'/],
+    // 13. manual_placeholder run creation still has imdPercent: null
+    ['manual_placeholder run creation still has imdPercent: null',
+      /imdPercent\s*:\s*null[\s\S]{0,200}source\s*:\s*'manual_placeholder'|source\s*:\s*'manual_placeholder'[\s\S]{0,200}imdPercent\s*:\s*null/],
+    // 14. data-mlab-vta-measure button wiring present
+    ['data-mlab-vta-measure button wiring', /data-mlab-vta-measure/],
+    // 15. warnings array in VTA export still present
+    ['warnings array in VTA export', /vta_imd_optimizer[\s\S]{0,600}warnings\s*:\s*\[/],
+  ];
+
+  let allPass = true;
+  for (const [label, result] of checks) {
+    const ok = typeof result === 'boolean' ? result : result.test(src);
+    if (!ok) {
+      console.error(`S5C static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S5C static source check (VTA IMD Capture Gateway & Real IMD Engine Binding): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS5CVtaCapture();
 
 // S5B.1: static source checks — VTA Height Input Parsing & Run Marker QA Hardening.
 function checkS5B1HeightParsing() {

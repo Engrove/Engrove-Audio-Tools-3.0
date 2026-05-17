@@ -162,13 +162,13 @@ type SelectedTestRecordMissing = {
   readonly recoveredToLabel: string | null;
 };
 
-// VTA IMD run model (S5B) — manual placeholders only, no real IMD capture.
+// VTA IMD run model (S5C) — manual_placeholder gains live_capture after gateway capture.
 type VtaImdRun = {
   readonly id: string;
   readonly heightMm: number | null;
   readonly heightLabel: string;
-  readonly imdPercent: null; // always null — real analyzer not yet built
-  readonly source: 'manual_placeholder';
+  readonly imdPercent: number | null; // null until live_capture completes
+  readonly source: 'manual_placeholder' | 'live_capture';
   readonly createdAt: string;
   readonly note: string;
 };
@@ -178,6 +178,9 @@ type VtaStateBag = {
   heightMmInput: string;
   heightLabelInput: string;
   noteInput: string;
+  capturingRunId: string | null;
+  captureElapsed: number;
+  capture: SweepCapture | null;
 };
 
 type RefLevelCapture = {
@@ -238,7 +241,7 @@ type LabState = {
  * site below; it has no runtime effect.
  */
 const tokenLayoutGeneratedClassNames =
-  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove';
+  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured';
 void tokenLayoutGeneratedClassNames;
 
 const speedMeasurementDurationSeconds = 30;
@@ -359,6 +362,9 @@ const state: LabState = {
     heightMmInput: '',
     heightLabelInput: '',
     noteInput: '',
+    capturingRunId: null,
+    captureElapsed: 0,
+    capture: null,
   },
 };
 
@@ -918,13 +924,14 @@ function buildSessionJson(): SessionJson {
           runs: state.vta.runs.map(r => ({
             height_mm: r.heightMm,
             height_label: r.heightLabel,
-            imd_percent: null,
+            imd_percent: r.imdPercent,
             source: r.source,
             note: r.note,
             created_at: r.createdAt,
           })),
           warnings: [
-            'VTA IMD analyzer is not implemented yet. Runs are manual placeholders only.',
+            'VTA IMD capture gateway preview. Results are experimental and have not been validated.',
+            'Full VTA optimizer (best-setting comparison, run confidence, export hardening) is not yet implemented.',
           ],
         };
       })(),
@@ -3035,21 +3042,93 @@ function nextVtaRunId(): string {
   return `vta-run-${vtaRunIdCounter}`;
 }
 
-function vtaRunTableMarkup(runs: readonly VtaImdRun[]): string {
+function startVtaCapture(els: Elements, runId: string): void {
+  const context = state.audioHandle?.context;
+  const source = state.preSplitterNode;
+  if (!context || !source || state.captureState !== 'live') return;
+  const band = getVtaImdBands(selectedRecord())[0] ?? null;
+  if (!band || band.f1Hz == null || band.f2Hz == null) return;
+  if (state.vta.capturingRunId !== null) return;
+  if (!state.vta.runs.find(r => r.id === runId)) return;
+  const f1Hz = band.f1Hz;
+  const f2Hz = band.f2Hz;
+  state.vta.capturingRunId = runId;
+  state.vta.captureElapsed = 0;
+  renderAdvancedPanel(els);
+  state.vta.capture = createSweepCapture(context, source, 5, {
+    onProgress: (elapsed) => {
+      state.vta.captureElapsed = elapsed;
+      renderAdvancedPanel(els);
+    },
+    onDone: (samples) => {
+      state.vta.capture = null;
+      state.vta.capturingRunId = null;
+      state.vta.captureElapsed = 0;
+      const stillExists = state.vta.runs.find(r => r.id === runId);
+      if (!stillExists) {
+        renderAdvancedPanel(els);
+        return;
+      }
+      const result = analyseIMD(samples, context.sampleRate, f1Hz, f2Hz);
+      state.vta.runs = state.vta.runs.map((r): VtaImdRun =>
+        r.id === runId
+          ? { ...r, imdPercent: result.imdPercent, source: 'live_capture' }
+          : r,
+      );
+      appendLog(`VTA: captured IMD ${result.imdPercent.toFixed(2)} % for "${renderText(stillExists.heightLabel)}".`);
+      renderAdvancedPanel(els);
+    },
+  });
+}
+
+function vtaRunTableMarkup(
+  runs: readonly VtaImdRun[],
+  opts: { canCapture: boolean; capturingRunId: string | null; captureElapsed: number },
+): string {
   if (runs.length === 0) {
     return '<p class="ea-muted mlab-vta-empty-state">No VTA IMD run markers added yet.</p>';
   }
+  const { canCapture, capturingRunId, captureElapsed } = opts;
   const rows = runs.map(r => {
     const heightStr = r.heightMm !== null ? `${r.heightMm}&thinsp;mm` : '—';
+    const isThisCapturing = capturingRunId === r.id;
+    const anyCapturing = capturingRunId !== null;
+
+    let imdCell: string;
+    if (r.imdPercent !== null) {
+      imdCell = `<span class="mlab-vta-run-measured">${r.imdPercent.toFixed(2)}&thinsp;%</span>`;
+    } else if (isThisCapturing) {
+      imdCell = `<span class="mlab-vta-capture-progress" aria-live="polite">Capturing&hellip; ${captureElapsed.toFixed(1)}&thinsp;s</span>`;
+    } else {
+      imdCell = 'IMD not measured yet';
+    }
+
+    const sourceCell = r.source === 'live_capture' ? 'Measured'
+      : isThisCapturing ? 'Capturing&hellip;'
+      : 'Manual placeholder';
+
+    let measureBtn = '';
+    if (isThisCapturing) {
+      measureBtn = `<span class="mlab-vta-capture-progress">Capturing&hellip;</span>`;
+    } else if (canCapture && !anyCapturing) {
+      const btnLabel = r.imdPercent !== null ? 'Re-measure' : 'Measure';
+      measureBtn = `<button class="ea-button ea-button--secondary mlab-vta-measure-btn" type="button" data-mlab-vta-measure="${renderText(r.id)}" aria-label="${btnLabel} IMD">${btnLabel}</button>`;
+    }
+
+    const removeBtn = !isThisCapturing
+      ? `<button class="ea-button ea-button--ghost mlab-vta-run-remove" type="button" data-mlab-vta-remove="${renderText(r.id)}" aria-label="Remove run marker">Remove</button>`
+      : '';
+
     return `
       <tr>
         <td class="mlab-vta-run-cell">${heightStr}</td>
         <td class="mlab-vta-run-cell">${renderText(r.heightLabel || '—')}</td>
-        <td class="mlab-vta-run-cell mlab-vta-run-imd">IMD not measured yet</td>
-        <td class="mlab-vta-run-cell mlab-vta-run-source">Manual placeholder</td>
+        <td class="mlab-vta-run-cell mlab-vta-run-imd">${imdCell}</td>
+        <td class="mlab-vta-run-cell mlab-vta-run-source">${sourceCell}</td>
         <td class="mlab-vta-run-cell">${renderText(r.note || '—')}</td>
         <td class="mlab-vta-run-cell">
-          <button class="ea-button ea-button--ghost mlab-vta-run-remove" type="button" data-mlab-vta-remove="${renderText(r.id)}" aria-label="Remove run marker">Remove</button>
+          ${measureBtn}
+          ${removeBtn}
         </td>
       </tr>
     `;
@@ -3081,17 +3160,29 @@ function renderAdvancedPanel(els: Elements): void {
   const vtaBands = getVtaImdBands(record);
   const hasVtaBand = vtaBands.length > 0;
 
-  // VTA IMD Optimizer skeleton
+  // VTA IMD Optimizer — capture gateway
+  const vtaBand = vtaBands.length > 0 ? vtaBands[0]! : null;
+  const canCapture = state.captureState === 'live'
+    && vtaBand !== null
+    && vtaBand.f1Hz != null
+    && vtaBand.f2Hz != null
+    && state.vta.capturingRunId === null;
+  const vtaOpts = {
+    canCapture,
+    capturingRunId: state.vta.capturingRunId,
+    captureElapsed: state.vta.captureElapsed,
+  };
+
   let vtaSectionHtml: string;
   if (!record) {
     vtaSectionHtml = `
       <div class="mlab-advanced-item mlab-advanced-item--vta">
         <div class="mlab-advanced-item-head">
           <span class="mlab-advanced-item-label">VTA / IMD optimizer</span>
-          <span class="mlab-coverage-badge mlab-coverage-badge--planned">Skeleton</span>
+          <span class="mlab-coverage-badge mlab-coverage-badge--planned">Capture preview</span>
         </div>
         <p class="ea-muted">Select a test record to see VTA/IMD band availability.</p>
-        <p class="mlab-reflevel-info">Analyzer skeleton only — VTA IMD optimization is not implemented yet.</p>
+        <p class="mlab-reflevel-info">Capture gateway preview — full VTA optimizer not yet validated.</p>
       </div>
     `;
   } else if (!hasVtaBand) {
@@ -3103,7 +3194,7 @@ function renderAdvancedPanel(els: Elements): void {
           <span class="mlab-coverage-badge mlab-coverage-badge--unavailable">Not available</span>
         </div>
         <p class="ea-muted">No VTA/IMD optimization band found on <strong>${recTitle}</strong>.</p>
-        <p class="mlab-reflevel-info">Analyzer skeleton only — VTA IMD optimization is not implemented yet.</p>
+        <p class="mlab-reflevel-info">Capture gateway preview — full VTA optimizer not yet validated.</p>
       </div>
     `;
   } else {
@@ -3114,16 +3205,21 @@ function renderAdvancedPanel(els: Elements): void {
     const standard = band.standard ?? '—';
     const bandLabel = renderText(band.label);
     const hasClearBtn = state.vta.runs.length > 0;
+    const addDisabled = state.vta.capturingRunId !== null ? ' disabled' : '';
+    const captureHint = state.captureState === 'live' && canCapture
+      ? 'Click <strong>Measure</strong> next to a run marker to capture real IMD at that height.'
+      : state.captureState === 'live' && state.vta.capturingRunId !== null
+      ? '<span class="mlab-vta-capture-progress" aria-live="polite">Capture in progress&hellip;</span>'
+      : 'Connect a device to capture IMD at each arm height.';
 
     vtaSectionHtml = `
       <div class="mlab-advanced-item mlab-advanced-item--vta">
         <div class="mlab-advanced-item-head">
           <span class="mlab-advanced-item-label">VTA / IMD optimizer</span>
-          <span class="mlab-coverage-badge mlab-coverage-badge--planned">Skeleton</span>
+          <span class="mlab-coverage-badge mlab-coverage-badge--partial">Capture preview</span>
         </div>
-        <p class="mlab-reflevel-info">Analyzer skeleton only — VTA IMD optimization is not implemented yet.</p>
-        <p class="mlab-reflevel-info">Run markers are manual placeholders. They do not contain measured IMD values.</p>
-        <p class="mlab-reflevel-info">Use this to plan arm-height steps before analyzer capture is implemented.</p>
+        <p class="mlab-reflevel-info">Capture gateway preview — full VTA optimizer not yet validated.</p>
+        <p class="mlab-reflevel-info">Run markers are manual placeholders until measured. ${captureHint}</p>
         <table class="ea-form-table" aria-label="VTA/IMD band metadata">
           <tbody>
             <tr class="mlab-advanced-vta-band-row">
@@ -3161,14 +3257,14 @@ function renderAdvancedPanel(els: Elements): void {
           </tbody>
         </table>
         <div class="mlab-advanced-workflow-steps">
-          <p class="mlab-reflevel-info"><strong>Planned workflow</strong></p>
+          <p class="mlab-reflevel-info"><strong>Workflow</strong></p>
           <ol class="mlab-advanced-steps-list">
             <li>Play the VTA/SRA IMD track on your test record.</li>
-            <li>Capture a run at the current tonearm height.</li>
-            <li>Adjust arm height and capture the next run.</li>
+            <li>Add a height marker for the current tonearm position.</li>
+            <li>Click <strong>Measure</strong> to capture real IMD at that height.</li>
+            <li>Adjust arm height, add another marker, and measure again.</li>
             <li>Repeat across the full adjustment range.</li>
-            <li>Compare IMD score per height setting.</li>
-            <li>The height producing minimum IMD indicates optimal SRA.</li>
+            <li>Compare IMD scores — the height producing minimum IMD indicates optimal SRA.</li>
           </ol>
         </div>
         <div class="mlab-advanced-run-table" aria-label="VTA IMD run markers">
@@ -3183,7 +3279,7 @@ function renderAdvancedPanel(els: Elements): void {
                 placeholder="e.g. 0.0"
                 value="${renderText(state.vta.heightMmInput)}"
                 aria-label="Arm height in millimetres"
-                data-mlab-vta-height-mm>
+                data-mlab-vta-height-mm${addDisabled}>
               <label class="mlab-vta-input-label" for="mlab-vta-height-label">Label</label>
               <input
                 class="ea-input mlab-vta-label-input"
@@ -3193,7 +3289,7 @@ function renderAdvancedPanel(els: Elements): void {
                 maxlength="40"
                 value="${renderText(state.vta.heightLabelInput)}"
                 aria-label="Height label"
-                data-mlab-vta-height-label>
+                data-mlab-vta-height-label${addDisabled}>
               <label class="mlab-vta-input-label" for="mlab-vta-note">Note (optional)</label>
               <input
                 class="ea-input mlab-vta-note-input"
@@ -3203,14 +3299,14 @@ function renderAdvancedPanel(els: Elements): void {
                 maxlength="120"
                 value="${renderText(state.vta.noteInput)}"
                 aria-label="Optional note"
-                data-mlab-vta-note>
+                data-mlab-vta-note${addDisabled}>
               <div class="mlab-session-controls">
-                <button class="ea-button ea-button--secondary" type="button" data-mlab-vta-add>Add height marker</button>
+                <button class="ea-button ea-button--secondary" type="button" data-mlab-vta-add${addDisabled}>Add height marker</button>
                 ${hasClearBtn ? `<button class="ea-button ea-button--ghost" type="button" data-mlab-vta-clear>Clear all markers</button>` : ''}
               </div>
             </div>
           </div>
-          ${vtaRunTableMarkup(state.vta.runs)}
+          ${vtaRunTableMarkup(state.vta.runs, vtaOpts)}
         </div>
       </div>
     `;
@@ -3274,6 +3370,12 @@ function renderAdvancedPanel(els: Elements): void {
   });
 
   body.querySelector<HTMLButtonElement>('[data-mlab-vta-clear]')?.addEventListener('click', () => {
+    if (state.vta.capture) {
+      state.vta.capture.stop();
+      state.vta.capture = null;
+    }
+    state.vta.capturingRunId = null;
+    state.vta.captureElapsed = 0;
     state.vta.runs = [];
     appendLog('VTA IMD run markers cleared.');
     renderAdvancedPanel(els);
@@ -3286,6 +3388,14 @@ function renderAdvancedPanel(els: Elements): void {
       state.vta.runs = state.vta.runs.filter(r => r.id !== id);
       appendLog(`VTA: removed height marker.`);
       renderAdvancedPanel(els);
+    });
+  });
+
+  body.querySelectorAll<HTMLButtonElement>('[data-mlab-vta-measure]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.mlabVtaMeasure;
+      if (!id) return;
+      startVtaCapture(els, id);
     });
   });
 }
@@ -4038,7 +4148,13 @@ export function enableMeasurementLabInteractions(): void {
       resetChannelMeasurement();
       appendLog('Channel identity capture reset after test record change.');
     }
-    if (state.vta.runs.length > 0) {
+    if (state.vta.capturingRunId !== null || state.vta.runs.length > 0) {
+      if (state.vta.capture) {
+        state.vta.capture.stop();
+        state.vta.capture = null;
+      }
+      state.vta.capturingRunId = null;
+      state.vta.captureElapsed = 0;
       state.vta.runs = [];
       appendLog('VTA IMD run markers cleared after test record change.');
     }

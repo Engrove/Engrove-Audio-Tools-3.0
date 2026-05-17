@@ -952,6 +952,22 @@ button.mlab-coverage-badge--available:focus-visible {
   padding: 2px var(--ea-space-2);
 }
 
+.mlab-vta-measure-btn {
+  font-size: var(--ea-font-size-micro);
+  padding: 2px var(--ea-space-2);
+}
+
+.mlab-vta-capture-progress {
+  font-size: var(--ea-font-size-small);
+  color: var(--ea-text-low);
+  white-space: nowrap;
+}
+
+.mlab-vta-run-measured {
+  font-weight: 600;
+  color: var(--ea-text-high);
+}
+
 @media (max-width: 1180px) {
   .mlab-workbench-grid {
     grid-template-columns: 1fr;
