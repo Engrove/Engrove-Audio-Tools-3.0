@@ -37,6 +37,7 @@ import {
   relativeTo1kHz,
   type CalibrationSetEntry,
 } from '../engine/referenceCalibrationSet';
+import { computeChannelIdentity, type ChannelIdentityResult } from '../engine/channelIdentity';
 import { loadTestRecordsRuntimeData, getPreferredRecord, type TestRecord, type TestBand, type TestBandPurpose } from '../data/loadTestRecords';
 import { computeAllWorkflowCoverage, MEASUREMENT_WORKFLOWS, type WorkflowAvailability } from '../data/measurementWorkflows';
 
@@ -79,6 +80,10 @@ type ChannelStateBag = {
   leftCapture: ChannelCaptureMetrics | null;
   rightCapture: ChannelCaptureMetrics | null;
   capture: StereoCapture | null;
+  identityResult: ChannelIdentityResult | null;
+  source: 'live_capture' | 'self_test' | null;
+  leftBandIndex: string | null;
+  rightBandIndex: string | null;
 };
 
 type FreqState = {
@@ -234,6 +239,10 @@ const state: LabState = {
     leftCapture: null,
     rightCapture: null,
     capture: null,
+    identityResult: null,
+    source: null,
+    leftBandIndex: null,
+    rightBandIndex: null,
   },
   freq: {
     active: false,
@@ -614,7 +623,7 @@ type SessionJson = {
   selection: { cartridge: null; tonearm: null; test_record: string | null };
   measurements: {
     speed: object | null;
-    channel_balance: object | null;
+    channel_identity: object | null;
     frequency_response: object | null;
     thd: object | null;
     imd: object | null;
@@ -627,16 +636,26 @@ function buildSessionJson(): SessionJson {
   const deviceLabel = state.devices.find(d => d.deviceId === state.selectedDeviceId)?.label ?? null;
 
   const speedResult = state.speed.result;
-  const channelResult = (() => {
-    const { leftCapture, rightCapture } = state.channel;
+  const channelIdentityResult = (() => {
+    const { leftCapture, rightCapture, identityResult, source, leftBandIndex, rightBandIndex } = state.channel;
     if (!leftCapture || !rightCapture) return null;
-    const bal = summariseChannelBalance(leftCapture, rightCapture);
     return {
+      source: source ?? 'live_capture',
+      left_band: leftBandIndex,
+      right_band: rightBandIndex,
       left_rms_dbfs: leftCapture.leftRmsDbFs,
       right_rms_dbfs: rightCapture.rightRmsDbFs,
-      balance_db: bal.balanceDb,
-      left_to_right_crosstalk_db: bal.leftToRightCrosstalkDb,
-      right_to_left_crosstalk_db: bal.rightToLeftCrosstalkDb,
+      result: identityResult
+        ? {
+            identity: identityResult.identity,
+            confidence: identityResult.confidence,
+            wanted_balance_db: identityResult.wantedBalanceDb,
+            left_to_right_crosstalk_db: identityResult.leftToRightCrosstalkDb,
+            right_to_left_crosstalk_db: identityResult.rightToLeftCrosstalkDb,
+            crosstalk_symmetry_delta_db: identityResult.crosstalkSymmetryDeltaDb,
+            warnings: identityResult.warnings,
+          }
+        : null,
     };
   })();
 
@@ -674,7 +693,7 @@ function buildSessionJson(): SessionJson {
             classification: classifyWf(speedResult.unweightedWfPercent).label,
           }
         : null,
-      channel_balance: channelResult,
+      channel_identity: channelIdentityResult,
       frequency_response: freqResult
         ? {
             fft_size: freqResult.fftSize,
@@ -827,16 +846,26 @@ function buildReportText(): string {
     lines.push('');
   }
 
-  // Channel
-  const { leftCapture, rightCapture } = state.channel;
+  // Channel identity
+  const { leftCapture, rightCapture, identityResult: chIdentity, source: chSource } = state.channel;
   if (leftCapture && rightCapture) {
-    const bal = summariseChannelBalance(leftCapture, rightCapture);
-    lines.push('CHANNEL BALANCE & CROSSTALK');
-    lines.push(`  Left RMS:              ${leftCapture.leftRmsDbFs.toFixed(2)} dBFS`);
-    lines.push(`  Right RMS:             ${rightCapture.rightRmsDbFs.toFixed(2)} dBFS`);
-    lines.push(`  Channel balance:       ${(bal.balanceDb ?? 0).toFixed(2)} dB`);
-    lines.push(`  L→R crosstalk:         ${(bal.leftToRightCrosstalkDb ?? 0).toFixed(1)} dB`);
-    lines.push(`  R→L crosstalk:         ${(bal.rightToLeftCrosstalkDb ?? 0).toFixed(1)} dB`);
+    lines.push('CHANNEL IDENTITY & CROSSTALK');
+    lines.push(`  Source:                ${chSource ?? 'live_capture'}`);
+    if (chIdentity) {
+      lines.push(`  Identity:              ${chIdentity.identity}`);
+      lines.push(`  Confidence:            ${chIdentity.confidence}`);
+      lines.push(`  Balance (R−L wanted):  ${chIdentity.wantedBalanceDb != null ? chIdentity.wantedBalanceDb.toFixed(2) + ' dB' : 'n/a'}`);
+      lines.push(`  L→R crosstalk:         ${chIdentity.leftToRightCrosstalkDb.toFixed(1)} dB`);
+      lines.push(`  R→L crosstalk:         ${chIdentity.rightToLeftCrosstalkDb.toFixed(1)} dB`);
+      if (chIdentity.warnings.length > 0) {
+        chIdentity.warnings.forEach(w => lines.push(`  Warning:               ${w}`));
+      }
+    } else {
+      lines.push(`  Left RMS:              ${leftCapture.leftRmsDbFs.toFixed(2)} dBFS`);
+      lines.push(`  Right RMS:             ${rightCapture.rightRmsDbFs.toFixed(2)} dBFS`);
+      lines.push(`  L→R crosstalk:         ${leftCapture.crosstalkDb.toFixed(1)} dB`);
+      lines.push(`  R→L crosstalk:         ${rightCapture.crosstalkDb.toFixed(1)} dB`);
+    }
     lines.push('');
   }
 
@@ -1167,6 +1196,12 @@ function captureRowMarkup(label: string, capture: ChannelCaptureMetrics): string
   `;
 }
 
+function channelIdentityBadgeHtml(identity: string): string {
+  if (identity === 'normal') return '<span class="ea-badge ea-badge--manufacturer">Normal</span>';
+  if (identity === 'possible_swapped') return '<span class="ea-badge ea-badge--setup">Possibly swapped</span>';
+  return '<span class="ea-badge">Inconclusive</span>';
+}
+
 function renderChannelPanel(els: Elements): void {
   const body = els.channelBody;
   if (!body) return;
@@ -1177,6 +1212,9 @@ function renderChannelPanel(els: Elements): void {
   }
 
   const ch = state.channel;
+  const record = selectedRecord();
+  const { leftBand, rightBand } = record ? getChannelIdentityBands(record) : { leftBand: null, rightBand: null };
+  const isSelfTest = state.sourceMode === 'self-test';
 
   const recordingStep = ch.step === 'left-recording' || ch.step === 'right-recording';
   if (recordingStep) {
@@ -1209,7 +1247,16 @@ function renderChannelPanel(els: Elements): void {
   }
 
   if (ch.step === 'done' && ch.leftCapture && ch.rightCapture) {
-    const summary = summariseChannelBalance(ch.leftCapture, ch.rightCapture);
+    const identity = ch.identityResult;
+    const warningsHtml = identity && identity.warnings.length > 0
+      ? identity.warnings.map(w => `<p class="mlab-channel-warning">${renderText(w)}</p>`).join('')
+      : '';
+    const sourceLabel = ch.source === 'self_test'
+      ? '<span class="ea-badge">Self-test</span>'
+      : '<span class="ea-badge ea-badge--manufacturer">Live</span>';
+    const selfTestNote = ch.source === 'self_test'
+      ? `<p class="mlab-channel-selftest-note">Self-test uses a mono sine — channel separation is not meaningful. Results are indicative only.</p>`
+      : '';
     body.innerHTML = `
       <table class="ea-form-table" aria-label="Channel measurement summary">
         <tbody>
@@ -1218,19 +1265,40 @@ function renderChannelPanel(els: Elements): void {
         </tbody>
       </table>
       <div class="mlab-wf-result">
+        ${identity ? `
         <div class="mlab-wf-result-row">
-          <span class="mlab-wf-result-label">Channel balance (R − L)</span>
-          <span class="mlab-wf-result-value">${fmtDb(summary.balanceDb)}</span>
+          <span class="mlab-wf-result-label">Channel identity</span>
+          <span class="mlab-wf-result-value">${channelIdentityBadgeHtml(identity.identity)}</span>
+        </div>
+        <div class="mlab-wf-result-row">
+          <span class="mlab-wf-result-label">Source</span>
+          <span class="mlab-wf-result-value">${sourceLabel} <span class="ea-badge">Confidence: ${renderText(identity.confidence)}</span></span>
+        </div>
+        <div class="mlab-wf-result-row">
+          <span class="mlab-wf-result-label">Balance (R − L wanted)</span>
+          <span class="mlab-wf-result-value">${fmtDb(identity.wantedBalanceDb)}</span>
         </div>
         <div class="mlab-wf-result-row">
           <span class="mlab-wf-result-label">Crosstalk L → R</span>
-          <span class="mlab-wf-result-value">${fmtCrosstalk(summary.leftToRightCrosstalkDb)}</span>
+          <span class="mlab-wf-result-value">${fmtCrosstalk(identity.leftToRightCrosstalkDb)}</span>
         </div>
         <div class="mlab-wf-result-row">
           <span class="mlab-wf-result-label">Crosstalk R → L</span>
-          <span class="mlab-wf-result-value">${fmtCrosstalk(summary.rightToLeftCrosstalkDb)}</span>
+          <span class="mlab-wf-result-value">${fmtCrosstalk(identity.rightToLeftCrosstalkDb)}</span>
         </div>
-        <p class="mlab-wf-note">Negative crosstalk values are better; well-set-up cartridges land at -25 to -35 dB across the audio band.</p>
+        ` : `
+        <div class="mlab-wf-result-row">
+          <span class="mlab-wf-result-label">Crosstalk L → R</span>
+          <span class="mlab-wf-result-value">${fmtCrosstalk(ch.leftCapture.crosstalkDb)}</span>
+        </div>
+        <div class="mlab-wf-result-row">
+          <span class="mlab-wf-result-label">Crosstalk R → L</span>
+          <span class="mlab-wf-result-value">${fmtCrosstalk(ch.rightCapture.crosstalkDb)}</span>
+        </div>
+        `}
+        <p class="mlab-wf-note">Negative crosstalk values are better; well-set-up cartridges land at −25 to −35&nbsp;dB across the audio band.</p>
+        ${warningsHtml}
+        ${selfTestNote}
       </div>
       <div class="mlab-session-controls">
         <button class="ea-button ea-button--ghost" type="button" data-mlab-channel-reset>Start over</button>
@@ -1244,8 +1312,11 @@ function renderChannelPanel(els: Elements): void {
   }
 
   if (ch.step === 'left-done' && ch.leftCapture) {
+    const rightBandInfo = rightBand
+      ? `<p class="mlab-channel-info">Next: cue band <strong>${renderText(rightBand.index)}</strong> — ${renderText(rightBand.label)}.</p>`
+      : '<p class="ea-muted">Step 1 of 2 complete. Cue the R-channel reference band on the test record.</p>';
     body.innerHTML = `
-      <p class="ea-muted">Step 1 of 2 complete. Cue the R-channel reference band on the test record.</p>
+      ${rightBandInfo}
       <table class="ea-form-table" aria-label="Step 1 result">
         <tbody>
           ${captureRowMarkup('L-band capture', ch.leftCapture)}
@@ -1267,9 +1338,15 @@ function renderChannelPanel(els: Elements): void {
   }
 
   // Idle (no captures yet)
+  const leftBandInfo = leftBand
+    ? `<p class="mlab-channel-info">Step 1 of 2: cue band <strong>${renderText(leftBand.index)}</strong> — ${renderText(leftBand.label)}. Each capture is ${channelMeasurementDurationSeconds}&nbsp;seconds.</p>`
+    : `<p class="ea-muted">Step 1 of 2: cue the L-channel reference band on the test record (typically 1&nbsp;kHz, L only). Each capture is ${channelMeasurementDurationSeconds}&nbsp;seconds.</p>`;
+  const selfTestNotice = isSelfTest
+    ? `<p class="mlab-channel-selftest-note">Self-test mode uses a mono oscillator — channel identity result will be indicative only.</p>`
+    : '';
   body.innerHTML = `
-    <p class="ea-muted">Step 1 of 2: cue the L-channel reference band on the test record (typically 1&nbsp;kHz, L only). Each capture is ${channelMeasurementDurationSeconds}&nbsp;seconds.</p>
-    ${recordHint('crosstalk')}
+    ${leftBandInfo}
+    ${selfTestNotice}
     <div class="mlab-session-controls">
       <button class="ea-button ea-button--primary" type="button" data-mlab-channel-start-l>Start L-band capture</button>
     </div>
@@ -1510,6 +1587,24 @@ function isThdResult(r: ThdResult | ImdResult | null): r is ThdResult {
 
 function getReferenceBands(record: TestRecord): readonly TestBand[] {
   return record.sides.flatMap(s => [...s.bands]).filter(b => b.analyzerModule === 'reference_calibration');
+}
+
+function getChannelIdentityBands(record: TestRecord): { leftBand: TestBand | null; rightBand: TestBand | null } {
+  const allBands = record.sides.flatMap(s => [...s.bands]);
+  // Prefer bands with explicit analyzerModule/analyzerModules for channel_identity
+  const identityBands = allBands.filter(
+    b => b.analyzerModule === 'channel_identity' || (b.analyzerModules as string[] | undefined)?.includes('channel_identity'),
+  );
+  if (identityBands.length >= 2) {
+    const left = identityBands.find(b => b.channel === 'L') ?? identityBands[0] ?? null;
+    const right = identityBands.find(b => b.channel === 'R') ?? identityBands[1] ?? null;
+    return { leftBand: left, rightBand: right };
+  }
+  // Fallback: purpose === 'crosstalk' bands with L/R channels
+  const crosstalkBands = allBands.filter(b => b.purpose === 'crosstalk');
+  const left = crosstalkBands.find(b => b.channel === 'L') ?? null;
+  const right = crosstalkBands.find(b => b.channel === 'R') ?? null;
+  return { leftBand: left, rightBand: right };
 }
 
 function selectedReferenceBand(): TestBand | null {
@@ -2336,6 +2431,10 @@ function resetChannelMeasurement(): void {
   state.channel.elapsedSeconds = 0;
   state.channel.leftCapture = null;
   state.channel.rightCapture = null;
+  state.channel.identityResult = null;
+  state.channel.source = null;
+  state.channel.leftBandIndex = null;
+  state.channel.rightBandIndex = null;
 }
 
 function stopChannelMeasurement(): void {
@@ -2351,9 +2450,18 @@ function startChannelCapture(els: Elements, which: 'left' | 'right'): void {
   const source = state.preSplitterNode;
   if (!context || !source || state.captureState !== 'live') return;
 
+  const captureSource = state.sourceMode === 'self-test' ? 'self_test' as const : 'live_capture' as const;
+  const record = selectedRecord();
+  const { leftBand, rightBand } = record ? getChannelIdentityBands(record) : { leftBand: null, rightBand: null };
+
   stopChannelMeasurement();
   state.channel.step = which === 'left' ? 'left-recording' : 'right-recording';
   state.channel.elapsedSeconds = 0;
+  if (which === 'left') {
+    state.channel.source = captureSource;
+    state.channel.leftBandIndex = leftBand?.index ?? null;
+    state.channel.rightBandIndex = rightBand?.index ?? null;
+  }
   renderChannelPanel(els);
 
   state.channel.capture = createStereoChannelCapture(
@@ -2375,7 +2483,15 @@ function startChannelCapture(els: Elements, which: 'left' | 'right'): void {
         } else {
           state.channel.rightCapture = result;
           state.channel.step = 'done';
-          appendLog('Channel balance & crosstalk complete.');
+          const src = state.channel.source ?? captureSource;
+          if (state.channel.leftCapture) {
+            state.channel.identityResult = computeChannelIdentity(
+              state.channel.leftCapture,
+              result,
+              src,
+            );
+          }
+          appendLog('Channel identity & crosstalk complete.');
         }
         renderChannelPanel(els);
       },

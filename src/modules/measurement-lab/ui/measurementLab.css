@@ -773,6 +773,29 @@ button.mlab-coverage-badge--available:focus-visible {
   font-style: italic;
 }
 
+.mlab-channel-info {
+  font-family: var(--ea-font-ui);
+  font-size: var(--ea-font-size-small);
+  color: var(--ea-text-low);
+  line-height: 1.5;
+  margin-bottom: var(--ea-space-3);
+}
+
+.mlab-channel-warning {
+  font-family: var(--ea-font-ui);
+  font-size: var(--ea-font-size-small);
+  color: var(--ea-color-warning, #c48a00);
+  margin-top: var(--ea-space-2);
+}
+
+.mlab-channel-selftest-note {
+  font-family: var(--ea-font-ui);
+  font-size: var(--ea-font-size-small);
+  color: var(--ea-text-low);
+  font-style: italic;
+  margin-top: var(--ea-space-2);
+}
+
 @media (max-width: 1180px) {
   .mlab-workbench-grid {
     grid-template-columns: 1fr;

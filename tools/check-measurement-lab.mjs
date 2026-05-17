@@ -108,6 +108,7 @@ async function runChecks() {
   copySource('src/modules/measurement-lab/engine/resonance.ts');
   copySource('src/modules/measurement-lab/engine/referenceLevel.ts');
   copySource('src/modules/measurement-lab/engine/referenceCalibrationSet.ts');
+  copySource('src/modules/measurement-lab/engine/channelIdentity.ts');
   copySource('src/shared/audio-io/levelMetrics.ts');
   compileTempSources();
 
@@ -135,6 +136,9 @@ async function runChecks() {
   const refCalSetModule = await import(
     pathToFileURL(join(tempRoot, 'dist/modules/measurement-lab/engine/referenceCalibrationSet.js')).href
   );
+  const channelIdentityModule = await import(
+    pathToFileURL(join(tempRoot, 'dist/modules/measurement-lab/engine/channelIdentity.js')).href
+  );
   const levelMetricsModule = await import(
     pathToFileURL(join(tempRoot, 'dist/shared/audio-io/levelMetrics.js')).href
   );
@@ -150,6 +154,7 @@ async function runChecks() {
   const { analyseResonance } = resonanceModule;
   const { analyzeReferenceLevel } = referenceLevelModule;
   const { addOrReplaceEntry, clearCalibrationSet, find1kHzEntry, relativeTo1kHz } = refCalSetModule;
+  const { computeChannelIdentity } = channelIdentityModule;
   const { analyseSpeedFlutter } = speedFlutterModule;
   const { analyseChannelCapture, summariseChannelBalance } = crosstalkModule;
   const { computeRmsLinear } = levelMetricsModule;
@@ -596,6 +601,79 @@ async function runChecks() {
   }
   console.log('- calibration set: relativeTo1kHz null deltas when no reference (no crash): PASS');
 
+  // --- S4C: Channel identity engine checks ---
+  //
+  // Build ChannelCaptureMetrics stubs with controlled linear/dBFS values.
+  // ChannelCaptureMetrics: leftRmsLinear, rightRmsLinear, leftRmsDbFs, rightRmsDbFs,
+  //   onChannel, crosstalkDb, sampleCount
+  function makeCapture(leftLinear, rightLinear, onChannel) {
+    const leftDbFs = leftLinear > 0 ? 20 * Math.log10(leftLinear) : -Infinity;
+    const rightDbFs = rightLinear > 0 ? 20 * Math.log10(rightLinear) : -Infinity;
+    const wantedLinear = onChannel === 'left' ? leftLinear : rightLinear;
+    const offLinear = onChannel === 'left' ? rightLinear : leftLinear;
+    const crosstalkDb = wantedLinear > 0 && offLinear > 0
+      ? 20 * Math.log10(offLinear / wantedLinear)
+      : -Infinity;
+    return {
+      leftRmsLinear: leftLinear,
+      rightRmsLinear: rightLinear,
+      leftRmsDbFs: leftDbFs,
+      rightRmsDbFs: rightDbFs,
+      onChannel,
+      crosstalkDb,
+      sampleCount: 96000 * 10,
+    };
+  }
+
+  // 29. Normal identity: L-band signal stronger on L, R-band stronger on R
+  const normLCapture = makeCapture(0.5, 0.002, 'left');   // L=−6 dBFS, R=−54 dBFS → −48 dB crosstalk
+  const normRCapture = makeCapture(0.002, 0.5, 'right');  // L=−54 dBFS, R=−6 dBFS → −48 dB crosstalk
+  const normResult = computeChannelIdentity(normLCapture, normRCapture, 'live_capture');
+  if (normResult.identity !== 'normal') {
+    throw new Error(`channel identity: expected 'normal', got '${normResult.identity}'`);
+  }
+  if (normResult.confidence !== 'high') {
+    throw new Error(`channel identity: expected confidence='high', got '${normResult.confidence}'`);
+  }
+  assertWithin('channel identity: wantedBalanceDb (matched)', normResult.wantedBalanceDb ?? Infinity, 0, 0.1);
+  console.log('- channel identity: normal wiring detected at high confidence: PASS');
+
+  // 30. Possible swapped: L-band signal stronger on R by ≥3 dB, R-band stronger on L by ≥3 dB
+  const swpLCapture = makeCapture(0.002, 0.5, 'left');  // L weak, R strong → swapped
+  const swpRCapture = makeCapture(0.5, 0.002, 'right'); // L strong, R weak → swapped
+  const swpResult = computeChannelIdentity(swpLCapture, swpRCapture, 'live_capture');
+  if (swpResult.identity !== 'possible_swapped') {
+    throw new Error(`channel identity: expected 'possible_swapped', got '${swpResult.identity}'`);
+  }
+  if (!swpResult.warnings.some(w => w.toLowerCase().includes('swap'))) {
+    throw new Error('channel identity: expected swap warning for possible_swapped result');
+  }
+  console.log('- channel identity: possible_swapped detected with swap warning: PASS');
+
+  // 31. Low signal → confidence = 'low', low-signal warning(s) present
+  const lowLCapture = makeCapture(0.0001, 0.00001, 'left');  // −80 dBFS, very low
+  const lowRCapture = makeCapture(0.00001, 0.0001, 'right'); // very low
+  const lowResult = computeChannelIdentity(lowLCapture, lowRCapture, 'live_capture');
+  if (lowResult.confidence !== 'low') {
+    throw new Error(`channel identity: expected confidence='low' for very low signal, got '${lowResult.confidence}'`);
+  }
+  if (lowResult.warnings.length === 0) {
+    throw new Error('channel identity: expected warnings for low signal');
+  }
+  console.log('- channel identity: low signal → confidence=low with warnings: PASS');
+
+  // 32. Self-test source label is preserved; self-test warning present
+  const stLCapture = makeCapture(0.5, 0.003, 'left');
+  const stRCapture = makeCapture(0.003, 0.5, 'right');
+  const stResult = computeChannelIdentity(stLCapture, stRCapture, 'self_test');
+  if (stResult.source !== 'self_test') {
+    throw new Error(`channel identity: expected source='self_test', got '${stResult.source}'`);
+  }
+  if (!stResult.warnings.some(w => w.toLowerCase().includes('self-test') || w.toLowerCase().includes('self_test'))) {
+    throw new Error('channel identity: expected self-test warning for self_test source');
+  }
+  console.log('- channel identity: self_test source preserved + self-test warning: PASS');
+
   console.log('PASS measurement lab engine checks');
 }
 
@@ -915,6 +993,88 @@ function checkS4BCalibrationSet() {
 }
 
 checkS4BCalibrationSet();
+
+// S4C: static source checks — channel identity & crosstalk live workflow.
+function checkS4CChannelIdentity() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const engineSrcPath = join(repoRoot, 'src/modules/measurement-lab/engine/channelIdentity.ts');
+  const cssSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/measurementLab.css');
+  if (!existsSync(renderSrcPath) || !existsSync(engineSrcPath) || !existsSync(cssSrcPath)) {
+    console.error('S4C static check: source file(s) not found');
+    process.exitCode = 1;
+    return;
+  }
+  const src = readFileSync(renderSrcPath, 'utf8');
+  const engineSrc = readFileSync(engineSrcPath, 'utf8');
+  const cssSrc = readFileSync(cssSrcPath, 'utf8');
+
+  const renderChecks = [
+    ['computeChannelIdentity import', /computeChannelIdentity/],
+    ['ChannelIdentityResult type used', /ChannelIdentityResult/],
+    ['identityResult state field', /identityResult\s*:/],
+    ['source state field on ChannelStateBag', /source\s*:\s*'live_capture'\s*\|\s*'self_test'\s*\|\s*null/],
+    ['leftBandIndex state field', /leftBandIndex\s*:/],
+    ['rightBandIndex state field', /rightBandIndex\s*:/],
+    ['getChannelIdentityBands function', /function getChannelIdentityBands\s*\(/],
+    ['computeChannelIdentity called in startChannelCapture', /computeChannelIdentity\s*\(/],
+    ['identityResult cleared in resetChannelMeasurement', /identityResult\s*=\s*null/],
+    ['channel_identity in SessionJson (not channel_balance)', /channel_identity\s*:/],
+    ['channel_balance absent from SessionJson type', !/channel_balance\s*:/.test(src)],
+    ['CHANNEL IDENTITY & CROSSTALK in report', /CHANNEL IDENTITY & CROSSTALK/],
+    ['mlab-channel-info CSS class emitted', /mlab-channel-info/],
+    ['mlab-channel-warning CSS class emitted', /mlab-channel-warning/],
+    ['mlab-channel-selftest-note CSS class emitted', /mlab-channel-selftest-note/],
+  ];
+  const engineChecks = [
+    ['computeChannelIdentity export', /export function computeChannelIdentity\s*\(/],
+    ['ChannelIdentityResult type export', /export type ChannelIdentityResult/],
+    ['ChannelIdentityStatus type export', /export type ChannelIdentityStatus/],
+    ['normal identity status', /'normal'/],
+    ['possible_swapped identity status', /'possible_swapped'/],
+    ['inconclusive identity status', /'inconclusive'/],
+    ['source field in result', /source\s*:/],
+    ['confidence field in result', /confidence\s*:/],
+    ['warnings array in result', /warnings\s*:/],
+    ['wantedBalanceDb computed', /wantedBalanceDb/],
+    ['crosstalkSymmetryDeltaDb computed', /crosstalkSymmetryDeltaDb/],
+    ['SWAPPED_MARGIN_DB constant', /SWAPPED_MARGIN_DB/],
+    ['LOW_SIGNAL_DBFS constant', /LOW_SIGNAL_DBFS/],
+  ];
+  const cssChecks = [
+    ['mlab-channel-info CSS rule', /\.mlab-channel-info/],
+    ['mlab-channel-warning CSS rule', /\.mlab-channel-warning/],
+    ['mlab-channel-selftest-note CSS rule', /\.mlab-channel-selftest-note/],
+  ];
+
+  let failed = false;
+  for (const [label, pattern] of renderChecks) {
+    const ok = typeof pattern === 'boolean' ? pattern : pattern.test(src);
+    if (!ok) {
+      console.error(`S4C static check FAIL: "${label}" not found in renderMeasurementLabPage.ts`);
+      failed = true;
+    }
+  }
+  for (const [label, pattern] of engineChecks) {
+    if (!pattern.test(engineSrc)) {
+      console.error(`S4C static check FAIL: "${label}" not found in channelIdentity.ts`);
+      failed = true;
+    }
+  }
+  for (const [label, pattern] of cssChecks) {
+    if (!pattern.test(cssSrc)) {
+      console.error(`S4C static check FAIL: "${label}" not found in measurementLab.css`);
+      failed = true;
+    }
+  }
+
+  if (!failed) {
+    console.log('- S4C static source check (channel identity & crosstalk live workflow): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS4CChannelIdentity();
 
 try {
   await runChecks();
