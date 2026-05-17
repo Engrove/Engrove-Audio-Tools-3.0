@@ -968,6 +968,22 @@ button.mlab-coverage-badge--available:focus-visible {
   color: var(--ea-text-high);
 }
 
+.mlab-vta-confidence {
+  font-size: var(--ea-font-size-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--ea-letter-label);
+  display: inline-block;
+}
+
+.mlab-vta-confidence--experimental {
+  color: var(--ea-text-low);
+}
+
+.mlab-vta-confidence--not-measured {
+  color: var(--ea-text-low);
+  opacity: 0.6;
+}
+
 @media (max-width: 1180px) {
   .mlab-workbench-grid {
     grid-template-columns: 1fr;

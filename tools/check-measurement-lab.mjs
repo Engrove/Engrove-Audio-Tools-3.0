@@ -1553,7 +1553,7 @@ function checkS5BVtaRunModel() {
     // 15. imd_percent: r.imdPercent in VTA export (S5C: real value or null per run)
     ['imd_percent uses run value in VTA export', /imd_percent\s*:\s*r\.imdPercent/],
     // 16. warnings array in VTA export
-    ['warnings array in VTA export', /vta_imd_optimizer[\s\S]{0,600}warnings\s*:\s*\[/],
+    ['warnings array in VTA export', /vta_imd_optimizer[\s\S]{0,900}warnings\s*:\s*\[/],
     // 17. VTA workflow remains planned (not supported)
     ['VTA still planned in measurementWorkflows (not supported)',
       !/vta_imd_optimizer[\s\S]{0,200}implementationStatus\s*:\s*'supported'/.test(workflowsSrc)],
@@ -1646,7 +1646,7 @@ function checkS5CVtaCapture() {
     // 14. data-mlab-vta-measure button wiring present
     ['data-mlab-vta-measure button wiring', /data-mlab-vta-measure/],
     // 15. warnings array in VTA export still present
-    ['warnings array in VTA export', /vta_imd_optimizer[\s\S]{0,600}warnings\s*:\s*\[/],
+    ['warnings array in VTA export', /vta_imd_optimizer[\s\S]{0,900}warnings\s*:\s*\[/],
   ];
 
   let allPass = true;
@@ -1760,6 +1760,89 @@ function checkS5B1HeightParsing() {
 }
 
 checkS5B1HeightParsing();
+
+// S5C.1: static source checks — VTA Capture Lifecycle Hardening & Measurement Metadata Scaffold.
+function checkS5C1LifecycleAndMetadata() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const workflowsSrcPath = join(repoRoot, 'src/modules/measurement-lab/data/measurementWorkflows.ts');
+  if (!existsSync(renderSrcPath) || !existsSync(workflowsSrcPath)) {
+    console.error('S5C.1 static check: source file(s) not found');
+    process.exitCode = 1;
+    return;
+  }
+  const src = readFileSync(renderSrcPath, 'utf8');
+  const workflowsSrc = readFileSync(workflowsSrcPath, 'utf8');
+
+  const checks = [
+    // 1. stopVtaCapture helper defined
+    ['stopVtaCapture function defined', /function stopVtaCapture\s*\(\)/],
+    // 2. stopVtaCapture is idempotent — nulls capture, capturingRunId, captureElapsed
+    ['stopVtaCapture clears capture state',
+      /function stopVtaCapture[\s\S]{0,300}capturingRunId\s*=\s*null[\s\S]{0,100}captureElapsed\s*=\s*0/],
+    // 3. stopVtaCapture does not clear runs
+    ['stopVtaCapture does not clear runs',
+      !(/function stopVtaCapture[\s\S]{0,400}vta\.runs\s*=/.test(src))],
+    // 4. teardownAudio calls stopVtaCapture
+    ['teardownAudio calls stopVtaCapture',
+      /function teardownAudio[\s\S]{0,600}stopVtaCapture\s*\(\)/],
+    // 5. disconnectMeasurementLab renders Advanced panel
+    ['disconnectMeasurementLab renders Advanced panel',
+      /function disconnectMeasurementLab[\s\S]{0,600}renderAdvancedPanel\s*\(\s*els\s*\)/],
+    // 6. VTA clear handler uses stopVtaCapture
+    ['VTA clear handler uses stopVtaCapture',
+      /data-mlab-vta-clear[\s\S]{0,300}stopVtaCapture\s*\(\)|stopVtaCapture\s*\(\)[\s\S]{0,300}data-mlab-vta-clear/],
+    // 7. Record-change handler uses stopVtaCapture
+    ['Record-change handler uses stopVtaCapture',
+      /stopVtaCapture\s*\(\)[\s\S]{0,200}VTA IMD run markers cleared after test record change/],
+    // 8. measuredAt in VtaImdRun type
+    ['measuredAt in VtaImdRun', /type VtaImdRun[\s\S]{0,600}measuredAt\s*:\s*string\s*\|\s*null/],
+    // 9. sampleCount in VtaImdRun type
+    ['sampleCount in VtaImdRun', /type VtaImdRun[\s\S]{0,600}sampleCount\s*:\s*number\s*\|\s*null/],
+    // 10. confidence in VtaImdRun type
+    ['confidence in VtaImdRun', /type VtaImdRun[\s\S]{0,600}confidence\s*:\s*'not_measured'\s*\|\s*'experimental'/],
+    // 11. warnings in VtaImdRun type
+    ['warnings in VtaImdRun', /type VtaImdRun[\s\S]{0,600}warnings\s*:\s*readonly\s+string\[\]/],
+    // 12. manual_placeholder run has confidence: 'not_measured'
+    ["manual_placeholder run has confidence: 'not_measured'",
+      /source\s*:\s*'manual_placeholder'[\s\S]{0,300}confidence\s*:\s*'not_measured'|confidence\s*:\s*'not_measured'[\s\S]{0,300}source\s*:\s*'manual_placeholder'/],
+    // 13. live_capture result gets confidence: 'experimental'
+    ["live_capture gets confidence: 'experimental'",
+      /confidence\s*:\s*'experimental'/],
+    // 14. measured_at in VTA export
+    ['measured_at in VTA export', /measured_at\s*:\s*r\.measuredAt/],
+    // 15. sample_count in VTA export
+    ['sample_count in VTA export', /sample_count\s*:\s*r\.sampleCount/],
+    // 16. VTA implementationStatus stays planned
+    ["VTA implementationStatus stays 'planned'", (() => {
+      const vtaStart = workflowsSrc.indexOf("id: 'vta_imd_optimizer'");
+      if (vtaStart === -1) return false;
+      const blockEnd = workflowsSrc.indexOf('},', vtaStart);
+      if (blockEnd === -1) return false;
+      const block = workflowsSrc.slice(vtaStart, blockEnd + 2);
+      return /implementationStatus:\s*'planned'/.test(block) &&
+             !/implementationStatus:\s*'supported'/.test(block);
+    })()],
+    // 17. No best_setting / recommended_height / optimal_height
+    ['No best_setting or recommendation fields',
+      !/best_setting|bestSetting|recommended_height|optimal_height/.test(src)],
+  ];
+
+  let allPass = true;
+  for (const [label, result] of checks) {
+    const ok = typeof result === 'boolean' ? result : result.test(src);
+    if (!ok) {
+      console.error(`S5C.1 static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S5C.1 static source check (VTA Capture Lifecycle Hardening & Measurement Metadata Scaffold): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS5C1LifecycleAndMetadata();
 
 try {
   await runChecks();

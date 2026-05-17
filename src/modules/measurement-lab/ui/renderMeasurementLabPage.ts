@@ -162,14 +162,18 @@ type SelectedTestRecordMissing = {
   readonly recoveredToLabel: string | null;
 };
 
-// VTA IMD run model (S5C) — manual_placeholder gains live_capture after gateway capture.
+// VTA IMD run model (S5C.1) — captures measuredAt, sampleCount, confidence and warnings.
 type VtaImdRun = {
   readonly id: string;
   readonly heightMm: number | null;
   readonly heightLabel: string;
-  readonly imdPercent: number | null; // null until live_capture completes
+  readonly imdPercent: number | null;
   readonly source: 'manual_placeholder' | 'live_capture';
   readonly createdAt: string;
+  readonly measuredAt: string | null;
+  readonly sampleCount: number | null;
+  readonly confidence: 'not_measured' | 'experimental';
+  readonly warnings: readonly string[];
   readonly note: string;
 };
 
@@ -241,7 +245,7 @@ type LabState = {
  * site below; it has no runtime effect.
  */
 const tokenLayoutGeneratedClassNames =
-  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured';
+  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured';
 void tokenLayoutGeneratedClassNames;
 
 const speedMeasurementDurationSeconds = 30;
@@ -926,8 +930,12 @@ function buildSessionJson(): SessionJson {
             height_label: r.heightLabel,
             imd_percent: r.imdPercent,
             source: r.source,
-            note: r.note,
             created_at: r.createdAt,
+            measured_at: r.measuredAt,
+            sample_count: r.sampleCount,
+            confidence: r.confidence,
+            warnings: r.warnings,
+            note: r.note,
           })),
           warnings: [
             'VTA IMD capture gateway preview. Results are experimental and have not been validated.',
@@ -3042,6 +3050,15 @@ function nextVtaRunId(): string {
   return `vta-run-${vtaRunIdCounter}`;
 }
 
+function stopVtaCapture(): void {
+  if (state.vta.capture) {
+    state.vta.capture.stop();
+    state.vta.capture = null;
+  }
+  state.vta.capturingRunId = null;
+  state.vta.captureElapsed = 0;
+}
+
 function startVtaCapture(els: Elements, runId: string): void {
   const context = state.audioHandle?.context;
   const source = state.preSplitterNode;
@@ -3061,18 +3078,25 @@ function startVtaCapture(els: Elements, runId: string): void {
       renderAdvancedPanel(els);
     },
     onDone: (samples) => {
-      state.vta.capture = null;
-      state.vta.capturingRunId = null;
-      state.vta.captureElapsed = 0;
+      stopVtaCapture();
       const stillExists = state.vta.runs.find(r => r.id === runId);
       if (!stillExists) {
         renderAdvancedPanel(els);
         return;
       }
       const result = analyseIMD(samples, context.sampleRate, f1Hz, f2Hz);
+      const measuredAt = new Date().toISOString();
       state.vta.runs = state.vta.runs.map((r): VtaImdRun =>
         r.id === runId
-          ? { ...r, imdPercent: result.imdPercent, source: 'live_capture' }
+          ? {
+              ...r,
+              imdPercent: result.imdPercent,
+              source: 'live_capture',
+              measuredAt,
+              sampleCount: result.sampleCount,
+              confidence: 'experimental',
+              warnings: ['VTA IMD capture gateway preview — result is experimental.'],
+            }
           : r,
       );
       appendLog(`VTA: captured IMD ${result.imdPercent.toFixed(2)} % for "${renderText(stillExists.heightLabel)}".`);
@@ -3103,9 +3127,15 @@ function vtaRunTableMarkup(
       imdCell = 'IMD not measured yet';
     }
 
-    const sourceCell = r.source === 'live_capture' ? 'Measured'
+    const sourceLabel = r.source === 'live_capture' ? 'Measured'
       : isThisCapturing ? 'Capturing&hellip;'
       : 'Manual placeholder';
+    const confidenceLabel = r.confidence === 'experimental'
+      ? '<br><span class="mlab-vta-confidence mlab-vta-confidence--experimental">experimental</span>'
+      : r.confidence === 'not_measured' && !isThisCapturing
+      ? '<br><span class="mlab-vta-confidence mlab-vta-confidence--not-measured">not measured</span>'
+      : '';
+    const sourceCell = `${sourceLabel}${confidenceLabel}`;
 
     let measureBtn = '';
     if (isThisCapturing) {
@@ -3359,6 +3389,10 @@ function renderAdvancedPanel(els: Elements): void {
       imdPercent: null,
       source: 'manual_placeholder',
       createdAt: new Date().toISOString(),
+      measuredAt: null,
+      sampleCount: null,
+      confidence: 'not_measured',
+      warnings: [],
       note: state.vta.noteInput.trim(),
     };
     state.vta.runs = [...state.vta.runs, run];
@@ -3370,12 +3404,7 @@ function renderAdvancedPanel(els: Elements): void {
   });
 
   body.querySelector<HTMLButtonElement>('[data-mlab-vta-clear]')?.addEventListener('click', () => {
-    if (state.vta.capture) {
-      state.vta.capture.stop();
-      state.vta.capture = null;
-    }
-    state.vta.capturingRunId = null;
-    state.vta.captureElapsed = 0;
+    stopVtaCapture();
     state.vta.runs = [];
     appendLog('VTA IMD run markers cleared.');
     renderAdvancedPanel(els);
@@ -3844,6 +3873,7 @@ async function teardownAudio(): Promise<void> {
   state.resonance.result = null;
   stopRefLevelCapture();
   state.refLevel.result = null;
+  stopVtaCapture();
   if (state.selfTestOscillator) {
     try { state.selfTestOscillator.stop(); } catch { /* already stopped */ }
     try { state.selfTestOscillator.disconnect(); } catch { /* not connected */ }
@@ -4058,6 +4088,7 @@ async function disconnectMeasurementLab(els: Elements): Promise<void> {
   renderThdPanel(els);
   renderResonancePanel(els);
   renderRefLevelPanel(els);
+  renderAdvancedPanel(els);
 }
 
 async function refreshDeviceList(els: Elements): Promise<void> {
@@ -4149,12 +4180,7 @@ export function enableMeasurementLabInteractions(): void {
       appendLog('Channel identity capture reset after test record change.');
     }
     if (state.vta.capturingRunId !== null || state.vta.runs.length > 0) {
-      if (state.vta.capture) {
-        state.vta.capture.stop();
-        state.vta.capture = null;
-      }
-      state.vta.capturingRunId = null;
-      state.vta.captureElapsed = 0;
+      stopVtaCapture();
       state.vta.runs = [];
       appendLog('VTA IMD run markers cleared after test record change.');
     }
