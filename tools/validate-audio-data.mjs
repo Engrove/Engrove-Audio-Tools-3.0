@@ -90,7 +90,7 @@ const supportedTestBandAnalyzerModules = new Set([
 ]);
 const supportedTestBandSweepDirections = new Set(['ascending', 'descending']);
 const supportedTestBandSweepScales = new Set(['log', 'linear']);
-const supportedTestBandStandards = new Set(['SMPTE', 'CCIF', 'DIN', 'IEC', 'AES']);
+const supportedTestBandStandards = new Set(['SMPTE', 'CCIF', 'DIN', 'IEC', 'IEC_IMD', 'AES']);
 const supportedTestBandLevelReferences = new Set(['0dB_groove', 'cm_per_sec', 'peak_velocity']);
 const analyzerReadyPurposes = new Set([
   'vta_optimization',

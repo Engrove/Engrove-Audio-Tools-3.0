@@ -526,7 +526,11 @@
               "purpose": "vta_optimization",
               "signal_type": "dual_tone",
               "analyzer_module": "vta_imd_optimizer",
-              "notes": "Dual-tone IMD reference for VTA/SRA optimization. Measure IMD at several tonearm-height settings; the position giving minimum IMD indicates optimal SRA. Source status: publisher listing only — exact frequency pair (f1_hz/f2_hz) and standard must be verified against the physical insert before automated analysis can run."
+              "f1_hz": 60,
+              "f2_hz": 4000,
+              "ratio": "4:1",
+              "standard": "IEC_IMD",
+              "notes": "Dual-tone IMD reference for VTA/SRA optimization modelled as IEC IMD 60 Hz + 4 kHz in 4:1 amplitude ratio. Measure IMD at several tonearm-height settings; the position giving minimum IMD indicates optimal SRA. Metadata only (S3D) — VTA IMD analyzer not yet implemented."
             }
           ]
         },
