@@ -86,6 +86,7 @@ export type TestBand = {
   readonly notes?: string;
   readonly signalType?: TestBandSignalType;
   readonly analyzerModule?: TestBandAnalyzerModule;
+  readonly analyzerModules?: readonly TestBandAnalyzerModule[];
   readonly levelDb?: number;
   readonly levelStartDb?: number;
   readonly levelEndDb?: number;
@@ -140,6 +141,7 @@ type RawTestBand = {
   notes?: unknown;
   signal_type?: unknown;
   analyzer_module?: unknown;
+  analyzer_modules?: unknown;
   level_db?: unknown;
   level_start_db?: unknown;
   level_end_db?: unknown;
@@ -235,6 +237,14 @@ export const TOOLBOX_3_REQUIRED_PURPOSES: ReadonlySet<TestBandPurpose> = new Set
 
 function transformBand(raw: RawTestBand, location: string): TestBand {
   const duration = expectFinite(raw.duration_seconds, `${location}.duration_seconds`);
+  let parsedAnalyzerModules: readonly TestBandAnalyzerModule[] | undefined;
+  if (raw.analyzer_modules !== undefined) {
+    if (!Array.isArray(raw.analyzer_modules)) {
+      throw new Error(`${location}.analyzer_modules must be an array.`);
+    }
+    parsedAnalyzerModules = raw.analyzer_modules.map((m, i) =>
+      expectMember(m, analyzerModules, `${location}.analyzer_modules[${i}]`));
+  }
   return {
     index: expectString(raw.index, `${location}.index`) as string,
     label: expectString(raw.label, `${location}.label`) as string,
@@ -248,6 +258,7 @@ function transformBand(raw: RawTestBand, location: string): TestBand {
     notes: expectString(raw.notes, `${location}.notes`, true),
     signalType: raw.signal_type === undefined ? undefined : expectMember(raw.signal_type, signalTypes, `${location}.signal_type`),
     analyzerModule: raw.analyzer_module === undefined ? undefined : expectMember(raw.analyzer_module, analyzerModules, `${location}.analyzer_module`),
+    analyzerModules: parsedAnalyzerModules,
     levelDb: expectFinite(raw.level_db, `${location}.level_db`, true),
     levelStartDb: expectFinite(raw.level_start_db, `${location}.level_start_db`, true),
     levelEndDb: expectFinite(raw.level_end_db, `${location}.level_end_db`, true),

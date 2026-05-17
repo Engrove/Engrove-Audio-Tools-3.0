@@ -6,7 +6,7 @@
  * roster drives availability — not the record name or manufacturer.
  */
 
-import type { TestBandAnalyzerModule, TestBandPurpose, TestRecord } from './loadTestRecords';
+import type { TestBand, TestBandAnalyzerModule, TestBandPurpose, TestRecord } from './loadTestRecords';
 
 export type WorkflowImplementationStatus =
   | 'supported'   // engine exists; measurement is fully runnable
@@ -138,13 +138,19 @@ export const MEASUREMENT_WORKFLOWS: readonly MeasurementWorkflow[] = [
   },
 ];
 
+function bandSupportsAnalyzer(band: TestBand, requiredAnalyzerModule: TestBandAnalyzerModule): boolean {
+  if (band.analyzerModule === requiredAnalyzerModule) return true;
+  if (band.analyzerModules?.includes(requiredAnalyzerModule)) return true;
+  return false;
+}
+
 /*
  * Computes availability of a single workflow for a given test record.
  *
  * Rules:
- *   available  — record has a band with the exact analyzer_module AND engine is supported
- *   planned    — record has a band with the exact analyzer_module AND engine is planned
- *   partial    — record has bands with a fallback purpose but not the exact analyzer_module
+ *   available  — record has a band with the exact analyzer_module OR in analyzer_modules, AND engine is supported
+ *   planned    — record has a band with the exact analyzer_module OR in analyzer_modules, AND engine is planned
+ *   partial    — record has bands with a fallback purpose but analyzer_module not mapped
  *   unavailable — record has no bands relevant to this workflow
  */
 export function computeWorkflowCoverage(
@@ -153,7 +159,7 @@ export function computeWorkflowCoverage(
 ): WorkflowCoverage {
   const allBands = record.sides.flatMap(s => [...s.bands]);
 
-  const preciseBands = allBands.filter(b => b.analyzerModule === workflow.requiredAnalyzerModule);
+  const preciseBands = allBands.filter(b => bandSupportsAnalyzer(b, workflow.requiredAnalyzerModule));
   if (preciseBands.length > 0) {
     const matchingBands = preciseBands.map(b => `${b.index}: ${b.label}`);
     if (workflow.implementationStatus === 'supported') {

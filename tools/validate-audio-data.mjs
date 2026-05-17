@@ -413,6 +413,31 @@ function validateTestRecordBand(record, side, band, location) {
   if ('analyzer_module' in band && !supportedTestBandAnalyzerModules.has(band.analyzer_module)) {
     add('error', 'test_records.band_analyzer_module_invalid', `${location}.analyzer_module`, `analyzer_module "${band.analyzer_module}" is not in the closed vocabulary.`);
   }
+  if ('analyzer_modules' in band) {
+    if (!Array.isArray(band.analyzer_modules)) {
+      add('error', 'test_records.band_analyzer_modules_not_array', `${location}.analyzer_modules`, 'analyzer_modules must be an array when present.');
+    } else {
+      if (band.analyzer_modules.length === 0) {
+        add('error', 'test_records.band_analyzer_modules_empty', `${location}.analyzer_modules`, 'analyzer_modules must not be an empty array.');
+      }
+      const seen = new Set();
+      for (let i = 0; i < band.analyzer_modules.length; i += 1) {
+        const m = band.analyzer_modules[i];
+        if (!supportedTestBandAnalyzerModules.has(m)) {
+          add('error', 'test_records.band_analyzer_modules_item_invalid', `${location}.analyzer_modules[${i}]`, `analyzer_modules item "${m}" is not in the closed vocabulary.`);
+        } else if (seen.has(m)) {
+          add('error', 'test_records.band_analyzer_modules_duplicate', `${location}.analyzer_modules[${i}]`, `analyzer_modules contains duplicate "${m}".`);
+        } else {
+          seen.add(m);
+        }
+      }
+      if ('analyzer_module' in band && supportedTestBandAnalyzerModules.has(band.analyzer_module)) {
+        if (!band.analyzer_modules.includes(band.analyzer_module)) {
+          add('error', 'test_records.band_analyzer_modules_missing_primary', `${location}.analyzer_modules`, `analyzer_modules must include the primary analyzer_module "${band.analyzer_module}" when both are present.`);
+        }
+      }
+    }
+  }
   if ('sweep_direction' in band && !supportedTestBandSweepDirections.has(band.sweep_direction)) {
     add('error', 'test_records.band_sweep_direction_invalid', `${location}.sweep_direction`, `sweep_direction must be one of ${[...supportedTestBandSweepDirections].join(', ')}.`);
   }

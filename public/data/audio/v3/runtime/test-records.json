@@ -60,6 +60,8 @@
               "frequency_hz": 3150,
               "duration_seconds": 60,
               "purpose": "speed",
+              "signal_type": "single_tone",
+              "analyzer_module": "wow_flutter",
               "notes": "DIN 45 545 reference tone for platter speed and wow & flutter analysis."
             },
             {
@@ -70,6 +72,9 @@
               "frequency_hz": 1000,
               "duration_seconds": 30,
               "purpose": "crosstalk",
+              "signal_type": "single_tone",
+              "analyzer_module": "channel_identity",
+              "analyzer_modules": ["channel_identity", "azimuth_crosstalk"],
               "notes": "Tone present on the left channel only. Used together with the R band to measure channel separation."
             },
             {
@@ -80,6 +85,9 @@
               "frequency_hz": 1000,
               "duration_seconds": 30,
               "purpose": "crosstalk",
+              "signal_type": "single_tone",
+              "analyzer_module": "channel_identity",
+              "analyzer_modules": ["channel_identity", "azimuth_crosstalk"],
               "notes": "Tone present on the right channel only."
             },
             {
@@ -90,6 +98,9 @@
               "frequency_hz": 1000,
               "duration_seconds": 30,
               "purpose": "crosstalk",
+              "signal_type": "single_tone",
+              "analyzer_module": "azimuth_crosstalk",
+              "analyzer_modules": ["azimuth_crosstalk", "vertical_modulation"],
               "notes": "Vertical-only modulation used for azimuth alignment."
             }
           ]
@@ -106,6 +117,10 @@
               "to_hz": 20000,
               "duration_seconds": 60,
               "purpose": "freq_response",
+              "signal_type": "sweep",
+              "analyzer_module": "frequency_response",
+              "sweep_direction": "ascending",
+              "sweep_scale": "log",
               "notes": "RIAA-encoded logarithmic sweep used for cartridge frequency-response analysis."
             },
             {
@@ -117,6 +132,10 @@
               "to_hz": 30,
               "duration_seconds": 30,
               "purpose": "resonance",
+              "signal_type": "sweep",
+              "analyzer_module": "lf_resonance",
+              "sweep_direction": "ascending",
+              "sweep_scale": "log",
               "notes": "Slow sweep through the cartridge-arm fundamental resonance region."
             }
           ]
@@ -162,7 +181,10 @@
               "channel": "L",
               "frequency_hz": 1000,
               "duration_seconds": 30,
-              "purpose": "crosstalk"
+              "purpose": "crosstalk",
+              "signal_type": "single_tone",
+              "analyzer_module": "channel_identity",
+              "analyzer_modules": ["channel_identity", "azimuth_crosstalk"]
             },
             {
               "index": "A4",
@@ -171,7 +193,10 @@
               "channel": "R",
               "frequency_hz": 1000,
               "duration_seconds": 30,
-              "purpose": "crosstalk"
+              "purpose": "crosstalk",
+              "signal_type": "single_tone",
+              "analyzer_module": "channel_identity",
+              "analyzer_modules": ["channel_identity", "azimuth_crosstalk"]
             },
             {
               "index": "A5",
@@ -180,7 +205,9 @@
               "channel": "both",
               "frequency_hz": 3150,
               "duration_seconds": 60,
-              "purpose": "speed"
+              "purpose": "speed",
+              "signal_type": "single_tone",
+              "analyzer_module": "wow_flutter"
             }
           ]
         }
@@ -232,7 +259,9 @@
               "channel": "both",
               "frequency_hz": 3150,
               "duration_seconds": 60,
-              "purpose": "speed"
+              "purpose": "speed",
+              "signal_type": "single_tone",
+              "analyzer_module": "wow_flutter"
             },
             {
               "index": "A5",
@@ -241,7 +270,10 @@
               "channel": "L",
               "frequency_hz": 1000,
               "duration_seconds": 30,
-              "purpose": "crosstalk"
+              "purpose": "crosstalk",
+              "signal_type": "single_tone",
+              "analyzer_module": "channel_identity",
+              "analyzer_modules": ["channel_identity", "azimuth_crosstalk"]
             },
             {
               "index": "A6",
@@ -250,7 +282,10 @@
               "channel": "R",
               "frequency_hz": 1000,
               "duration_seconds": 30,
-              "purpose": "crosstalk"
+              "purpose": "crosstalk",
+              "signal_type": "single_tone",
+              "analyzer_module": "channel_identity",
+              "analyzer_modules": ["channel_identity", "azimuth_crosstalk"]
             }
           ]
         }
@@ -294,7 +329,9 @@
               "channel": "both",
               "frequency_hz": 3150,
               "duration_seconds": 60,
-              "purpose": "speed"
+              "purpose": "speed",
+              "signal_type": "single_tone",
+              "analyzer_module": "wow_flutter"
             },
             {
               "index": "A4",
@@ -303,7 +340,10 @@
               "channel": "L",
               "frequency_hz": 1000,
               "duration_seconds": 30,
-              "purpose": "crosstalk"
+              "purpose": "crosstalk",
+              "signal_type": "single_tone",
+              "analyzer_module": "channel_identity",
+              "analyzer_modules": ["channel_identity", "azimuth_crosstalk"]
             },
             {
               "index": "A5",
@@ -312,7 +352,10 @@
               "channel": "R",
               "frequency_hz": 1000,
               "duration_seconds": 30,
-              "purpose": "crosstalk"
+              "purpose": "crosstalk",
+              "signal_type": "single_tone",
+              "analyzer_module": "channel_identity",
+              "analyzer_modules": ["channel_identity", "azimuth_crosstalk"]
             }
           ]
         }
@@ -340,6 +383,7 @@
               "purpose": "crosstalk",
               "signal_type": "single_tone",
               "analyzer_module": "channel_identity",
+              "analyzer_modules": ["channel_identity", "azimuth_crosstalk"],
               "level_db": 0,
               "level_reference": "0dB_groove",
               "notes": "Tone present on the left channel only. Used for channel identity, reversed-channel detection and crosstalk measurement."
@@ -354,6 +398,7 @@
               "purpose": "crosstalk",
               "signal_type": "single_tone",
               "analyzer_module": "channel_identity",
+              "analyzer_modules": ["channel_identity", "azimuth_crosstalk"],
               "level_db": 0,
               "level_reference": "0dB_groove",
               "notes": "Tone present on the right channel only."
@@ -630,7 +675,9 @@
               "channel": "both",
               "frequency_hz": 3150,
               "duration_seconds": 60,
-              "purpose": "speed"
+              "purpose": "speed",
+              "signal_type": "single_tone",
+              "analyzer_module": "wow_flutter"
             }
           ]
         }
