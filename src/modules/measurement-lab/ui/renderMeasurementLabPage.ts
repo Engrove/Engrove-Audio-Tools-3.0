@@ -29,7 +29,7 @@ import { computeFrequencyResponse, type FreqResponseResult } from '../engine/fre
 import { computeRiaaMagnitudeDb } from '../engine/iriaaFilter';
 import { analyseTHD, analyseIMD, type ThdResult, type ImdResult } from '../engine/thd';
 import { analyseResonance, type ResonanceResult, type ResonanceSweepType } from '../engine/resonance';
-import { loadTestRecordsRuntimeData, getPreferredRecord, recordCoverageScore, TOOLBOX_3_REQUIRED_PURPOSES, type TestRecord, type TestBandPurpose } from '../data/loadTestRecords';
+import { loadTestRecordsRuntimeData, getPreferredRecord, type TestRecord, type TestBandPurpose } from '../data/loadTestRecords';
 
 type SourceMode = 'live' | 'self-test';
 type CaptureState = 'idle' | 'connecting' | 'live' | 'error';
@@ -329,7 +329,6 @@ function audioSourcePanelMarkup(): string {
               <td class="ea-col-status"><span class="ea-dot ea-dot--planned" data-mlab-record-dot aria-hidden="true"></span></td>
               <td class="ea-col-label">Test record
                 <span class="ea-form-table-sublabel">Profile for band guidance</span>
-                <span data-mlab-record-rec class="ea-form-table-sublabel"></span>
               </td>
               <td class="ea-col-value">
                 <select class="ea-input" data-mlab-record aria-label="Test record profile">
@@ -851,7 +850,6 @@ function elements(root: ParentNode) {
     selfTestBtn: root.querySelector<HTMLButtonElement>('[data-mlab-run-self-test]'),
     recordSelect: root.querySelector<HTMLSelectElement>('[data-mlab-record]'),
     recordDot: root.querySelector<HTMLElement>('[data-mlab-record-dot]'),
-    recordRec: root.querySelector<HTMLElement>('[data-mlab-record-rec]'),
     waveformL: root.querySelector<HTMLCanvasElement>('[data-mlab-waveform="L"]'),
     waveformR: root.querySelector<HTMLCanvasElement>('[data-mlab-waveform="R"]'),
   };
@@ -1360,12 +1358,6 @@ function recordHint(purpose: TestBandPurpose): string {
   return `<p class="ea-muted">Selected record has no ${renderText(purpose.replace(/_/g, ' '))} band; supply a suitable signal manually.</p>`;
 }
 
-const PREFERRED_REC_TAGLINE = 'Recommended for Toolbox 3.0: Analogue Productions Ultimate Analogue Test LP — broadest coverage for current and planned analyzer modules.';
-
-function purposeLabel(p: TestBandPurpose): string {
-  return p.replace(/_/g, ' ');
-}
-
 function renderRecordSelector(els: Elements): void {
   if (!els.recordSelect) return;
   const none = '<option value="">— No record selected —</option>';
@@ -1388,20 +1380,6 @@ function renderRecordSelector(els: Elements): void {
   }
   if (els.recordDot) {
     els.recordDot.className = `ea-dot ea-dot--${state.selectedTestRecordId ? 'done' : 'planned'}`;
-  }
-  if (els.recordRec) {
-    const rec = state.testRecords.find(r => r.id === state.selectedTestRecordId);
-    const lines: string[] = [renderText(PREFERRED_REC_TAGLINE)];
-    if (rec) {
-      const score = recordCoverageScore(rec, TOOLBOX_3_REQUIRED_PURPOSES);
-      let coverageLine = `Selected: covers ${score.covered}/${score.total} planned analyzer purposes.`;
-      if (score.missing.length > 0) {
-        const miss = score.missing.map(purposeLabel).join(', ');
-        coverageLine += ` Missing: ${miss}.`;
-      }
-      lines.push(renderText(coverageLine));
-    }
-    els.recordRec.innerHTML = lines.map(l => `<span>${l}</span>`).join('<br>');
   }
 }
 
