@@ -472,6 +472,62 @@ function checkTestRecordUIStates() {
 
 checkTestRecordUIStates();
 
+// S3G: static source checks — coverage-to-panel navigation and wrap-up invariants.
+function checkCoverageNavigation() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const loaderSrcPath = join(repoRoot, 'src/modules/measurement-lab/data/loadTestRecords.ts');
+  if (!existsSync(renderSrcPath) || !existsSync(loaderSrcPath)) {
+    console.error('S3G static check: source file(s) not found');
+    process.exitCode = 1;
+    return;
+  }
+  const src = readFileSync(renderSrcPath, 'utf8');
+  const loaderSrc = readFileSync(loaderSrcPath, 'utf8');
+
+  const checks = [
+    ['WORKFLOW_PANEL_TARGETS mapping', /WORKFLOW_PANEL_TARGETS/],
+    ['mlab-speed-panel id in markup', /id="mlab-speed-panel"/],
+    ['mlab-channel-panel id in markup', /id="mlab-channel-panel"/],
+    ['mlab-freq-panel id in markup', /id="mlab-freq-panel"/],
+    ['mlab-thd-panel id in markup', /id="mlab-thd-panel"/],
+    ['mlab-resonance-panel id in markup', /id="mlab-resonance-panel"/],
+    ['data-mlab-tool-panel attribute', /data-mlab-tool-panel=/],
+    ['data-mlab-goto-panel attribute', /data-mlab-goto-panel=/],
+    ['mlab-panel--target-highlight class', /mlab-panel--target-highlight/],
+    ['highlightTargetPanel function', /function highlightTargetPanel\s*\(/],
+    ['mlab-coverage-nav-btn class', /mlab-coverage-nav-btn/],
+    ['IEC_IMD in runtime loader', /IEC_IMD/],
+  ];
+
+  // Check "Recommended for Toolbox 3.0" is absent from option rendering
+  const optionRenderRegion = src.match(/function renderRecordSelector[\s\S]{0,1500}/)?.[0] ?? '';
+  if (/Recommended for Toolbox/.test(optionRenderRegion)) {
+    console.error('S3G static check FAIL: "Recommended for Toolbox" found in renderRecordSelector — must not appear in option labels');
+    process.exitCode = 1;
+  }
+
+  let failed = false;
+  for (const [label, pattern] of checks.slice(0, 11)) {
+    if (!pattern.test(src)) {
+      console.error(`S3G static check FAIL: "${label}" pattern not found in renderMeasurementLabPage.ts`);
+      failed = true;
+    }
+  }
+  // IEC_IMD check is on the loader source
+  if (!checks[11][1].test(loaderSrc)) {
+    console.error('S3G static check FAIL: IEC_IMD not found in loadTestRecords.ts');
+    failed = true;
+  }
+
+  if (!failed) {
+    console.log('- S3G static source check (coverage navigation wrap-up): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkCoverageNavigation();
+
 try {
   await runChecks();
 } catch (error) {

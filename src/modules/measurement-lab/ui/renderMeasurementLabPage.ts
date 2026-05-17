@@ -32,6 +32,15 @@ import { analyseResonance, type ResonanceResult, type ResonanceSweepType } from 
 import { loadTestRecordsRuntimeData, getPreferredRecord, type TestRecord, type TestBandPurpose } from '../data/loadTestRecords';
 import { computeAllWorkflowCoverage, MEASUREMENT_WORKFLOWS, type WorkflowAvailability } from '../data/measurementWorkflows';
 
+const WORKFLOW_PANEL_TARGETS: Readonly<Record<string, string>> = {
+  wow_flutter: 'mlab-speed-panel',
+  channel_identity: 'mlab-channel-panel',
+  azimuth_crosstalk: 'mlab-channel-panel',
+  frequency_response: 'mlab-freq-panel',
+  vta_imd_optimizer: 'mlab-thd-panel',
+  vertical_resonance: 'mlab-resonance-panel',
+};
+
 type SourceMode = 'live' | 'self-test';
 type CaptureState = 'idle' | 'connecting' | 'live' | 'error';
 
@@ -141,7 +150,7 @@ type LabState = {
  * site below; it has no runtime effect.
  */
 const tokenLayoutGeneratedClassNames =
-  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error';
+  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight';
 void tokenLayoutGeneratedClassNames;
 
 const speedMeasurementDurationSeconds = 30;
@@ -408,7 +417,7 @@ function audioSourcePanelMarkup(): string {
 
 function speedPanelMarkup(): string {
   return `
-    <section class="ea-panel" aria-labelledby="mlab-speed-title">
+    <section id="mlab-speed-panel" data-mlab-tool-panel="wow_flutter" class="ea-panel" aria-labelledby="mlab-speed-title">
       <div class="ea-panel-header">
         <span class="ea-panel-header-id">03</span>
         <span id="mlab-speed-title">Speed &amp; Wow·Flutter</span>
@@ -422,7 +431,7 @@ function speedPanelMarkup(): string {
 
 function channelPanelMarkup(): string {
   return `
-    <section class="ea-panel" aria-labelledby="mlab-channel-title">
+    <section id="mlab-channel-panel" data-mlab-tool-panel="channel_identity" class="ea-panel" aria-labelledby="mlab-channel-title">
       <div class="ea-panel-header">
         <span class="ea-panel-header-id">04</span>
         <span id="mlab-channel-title">Channel balance &amp; crosstalk</span>
@@ -436,7 +445,7 @@ function channelPanelMarkup(): string {
 
 function freqPanelMarkup(): string {
   return `
-    <section class="ea-panel" aria-labelledby="mlab-freq-title">
+    <section id="mlab-freq-panel" data-mlab-tool-panel="frequency_response" class="ea-panel" aria-labelledby="mlab-freq-title">
       <div class="ea-panel-header">
         <span class="ea-panel-header-id">05</span>
         <span id="mlab-freq-title">Frequency response</span>
@@ -450,7 +459,7 @@ function freqPanelMarkup(): string {
 
 function thdPanelMarkup(): string {
   return `
-    <section class="ea-panel" aria-labelledby="mlab-thd-title">
+    <section id="mlab-thd-panel" data-mlab-tool-panel="vta_imd_optimizer" class="ea-panel" aria-labelledby="mlab-thd-title">
       <div class="ea-panel-header">
         <span class="ea-panel-header-id">06</span>
         <span id="mlab-thd-title">THD &amp; IMD</span>
@@ -464,7 +473,7 @@ function thdPanelMarkup(): string {
 
 function resonancePanelMarkup(): string {
   return `
-    <section class="ea-panel" aria-labelledby="mlab-resonance-title">
+    <section id="mlab-resonance-panel" data-mlab-tool-panel="vertical_resonance" class="ea-panel" aria-labelledby="mlab-resonance-title">
       <div class="ea-panel-header">
         <span class="ea-panel-header-id">07</span>
         <span id="mlab-resonance-title">Resonance peak</span>
@@ -1376,6 +1385,16 @@ function isThdResult(r: ThdResult | ImdResult | null): r is ThdResult {
   return r !== null && 'thdPercent' in r;
 }
 
+function highlightTargetPanel(panelId: string): void {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  panel.classList.remove('mlab-panel--target-highlight');
+  void panel.offsetHeight; // restart animation if same panel targeted twice
+  panel.classList.add('mlab-panel--target-highlight');
+  setTimeout(() => panel.classList.remove('mlab-panel--target-highlight'), 1600);
+}
+
 function resolveSelectedTestRecord(
   records: readonly TestRecord[],
   selectedId: string | null,
@@ -1502,7 +1521,16 @@ function renderCoveragePanel(els: Elements): void {
   const cards = coverageList.map(cov => {
     const workflow = MEASUREMENT_WORKFLOWS.find(w => w.id === cov.workflowId);
     if (!workflow) return '';
+    const panelTarget = WORKFLOW_PANEL_TARGETS[cov.workflowId];
+    const isNavigable = cov.availability === 'available' && Boolean(panelTarget);
     const ariaDisabled = cov.availability === 'unavailable' ? ' aria-disabled="true"' : '';
+    const navHtml = isNavigable
+      ? `<div class="mlab-coverage-card-foot">
+          <button class="mlab-coverage-nav-btn" type="button"
+                  data-mlab-goto-panel="${renderText(panelTarget)}"
+                  aria-label="${renderText(`Go to ${workflow.label} tool`)}">Go to tool</button>
+        </div>`
+      : '';
     return `
       <div class="mlab-coverage-card mlab-coverage-card--${cov.availability}" role="listitem"${ariaDisabled}>
         <div class="mlab-coverage-card-head">
@@ -1511,6 +1539,7 @@ function renderCoveragePanel(els: Elements): void {
         </div>
         <p class="mlab-coverage-card-desc">${renderText(workflow.description)}</p>
         <p class="mlab-coverage-reason">${renderText(cov.reason)}</p>
+        ${navHtml}
       </div>
     `;
   }).join('');
@@ -1531,6 +1560,12 @@ function renderCoveragePanel(els: Elements): void {
     </div>
     ${helpHtml}
   `;
+  body.querySelectorAll<HTMLButtonElement>('[data-mlab-goto-panel]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.mlabGotoPanel;
+      if (target) highlightTargetPanel(target);
+    });
+  });
 }
 
 function renderThdPanel(els: Elements): void {
