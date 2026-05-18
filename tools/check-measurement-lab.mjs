@@ -1391,8 +1391,8 @@ function checkS4GFinal() {
     // Part A — Speed result UI: chain-honesty text
     ['Speed result: chain-honesty paragraph', /These readings measure playback\/capture speed stability and are affected by the test record/],
     // Part C — buildReportText: Speed source + band
-    ['Report text: Speed source line', /SPEED & WOW[\s\S]{0,400}Source:.*resultSource/],
-    ['Report text: Speed band line', /SPEED & WOW[\s\S]{0,600}state\.speed\.bandMeta[\s\S]{0,200}Band:/],
+    ['Report text: Speed source line', /SPEED & WOW[\s\S]{0,800}Source:.*resultSource/],
+    ['Report text: Speed band line', /SPEED & WOW[\s\S]{0,1300}state\.speed\.bandMeta[\s\S]{0,200}Band:/],
     // Part C — buildReportText: Channel left/right band
     ['Report text: Channel left band line', /CHANNEL IDENTITY[\s\S]{0,600}Left band:/],
     ['Report text: Channel right band line', /CHANNEL IDENTITY[\s\S]{0,600}Right band:/],
@@ -1400,7 +1400,7 @@ function checkS4GFinal() {
     ['Report text: THD source line', /THD[\s\S]{0,400}Source:.*resultSource/],
     ['Report text: THD band line', /THD[\s\S]{0,600}state\.thd\.bandMeta[\s\S]{0,200}Band:/],
     // Part B — buildSessionJson export consistency
-    ['JSON export: speed has source', /measurements[\s\S]{0,400}speed[\s\S]{0,400}source.*resultSource/],
+    ['JSON export: speed has source', /measurements[\s\S]{0,400}speed[\s\S]{0,1100}source.*resultSource/],
     ['JSON export: speed band via serializer', /serializeSpeedBandMeta\s*\(\s*state\.speed\.bandMeta\s*\)/],
     ['JSON export: channel has source', /channel_identity[\s\S]{0,400}source.*'live_capture'|source.*chSource/],
     ['JSON export: channel has left_band', /left_band\s*:/],
@@ -2452,19 +2452,19 @@ function checkS5H1SpeedReferenceBinding() {
   const startFnSrc = startFnIdx >= 0 ? src.slice(startFnIdx, startFnIdx + 1500) : '';
 
   const checks = [
-    // 1. nominalReferenceHz defined inside startSpeedMeasurement
-    ['nominalReferenceHz defined in startSpeedMeasurement',
-      /function startSpeedMeasurement[\s\S]{0,400}nominalReferenceHz/],
-    // 2. createSpeedFlutterCapture receives nominalReferenceHz (not state.speed.referenceHz directly)
-    ['createSpeedFlutterCapture uses nominalReferenceHz',
-      /createSpeedFlutterCapture[\s\S]{0,200}nominalReferenceHz/],
+    // 1. startSpeedMeasurement delegates nominal computation to deriveSpeedMeasurementSettings (S5H.2 arch)
+    ['startSpeedMeasurement calls deriveSpeedMeasurementSettings',
+      /function startSpeedMeasurement[\s\S]{0,900}deriveSpeedMeasurementSettings/],
+    // 2. createSpeedFlutterCapture receives settings.nominalFrequencyHz (S5H.2 arch)
+    ['createSpeedFlutterCapture uses settings.nominalFrequencyHz',
+      /createSpeedFlutterCapture[\s\S]{0,300}settings\.nominalFrequencyHz/],
     // 3. state.speed.referenceHz = band.frequencyHz no longer present in startSpeedMeasurement
     ['No state.speed.referenceHz = band.frequencyHz in startSpeedMeasurement', (() => {
       return !/state\.speed\.referenceHz\s*=\s*band\.frequencyHz/.test(startFnSrc);
     })()],
-    // 4. nominalFrequencyHz33 map used in startSpeedMeasurement
-    ['nominalFrequencyHz33 used in startSpeedMeasurement',
-      /function startSpeedMeasurement[\s\S]{0,400}nominalFrequencyHz33/],
+    // 4. deriveSpeedMeasurementSettings uses 3150 Hz fallback (S5H.2 arch)
+    ['deriveSpeedMeasurementSettings uses 3150 Hz fallback',
+      /function deriveSpeedMeasurementSettings[\s\S]{0,800}3150/],
     // 5. nominalFrequencyHz33 map has '45' entry (4253 literal or computed from 45/33.333*3150)
     ['nominalFrequencyHz33 map has 45 RPM entry',
       /nominalFrequencyHz33[\s\S]{0,200}'45'\s*:[\s\S]{0,100}(?:4253|45\s*\/\s*33\.?3)/],
@@ -2505,3 +2505,101 @@ try {
   console.error('FAIL measurement lab engine checks:', error.message || error);
   process.exitCode = 1;
 }
+
+function checkS5H2EditableSpeedParams() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const cssSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/measurementLab.css');
+  if (!existsSync(renderSrcPath)) {
+    console.error('S5H.2 static check: renderMeasurementLabPage.ts not found');
+    process.exitCode = 1;
+    return;
+  }
+  if (!existsSync(cssSrcPath)) {
+    console.error('S5H.2 static check: measurementLab.css not found');
+    process.exitCode = 1;
+    return;
+  }
+  const uiSrc = readFileSync(renderSrcPath, 'utf8');
+  const cssSrc = readFileSync(cssSrcPath, 'utf8');
+
+  // Build regexes via constructor to avoid shell heredoc escape issues
+  const reMeasParamSrcType = new RegExp('type MeasurementParameterSource\\s*=');
+  const reCapDurSrcType = new RegExp('type CaptureDurationSource\\s*=');
+  const reSettingsType = new RegExp('type SpeedMeasurementSettings\\s*=\\s*\\{');
+  const reSettingsNomDef = new RegExp('nominalFrequencyHzDefault\\s*:');
+  const reSettingsCapDur = new RegExp('captureDurationSeconds\\s*:');
+  const reParseFloat = new RegExp('function parsePositiveFloat\\s*\\(');
+  const reDerive = new RegExp('function deriveSpeedMeasurementSettings\\s*\\(');
+  const reNomInput = new RegExp('nominalFrequencyHzInput\\s*:');
+  const reCapInput = new RegExp('captureDurationSecondsInput\\s*:');
+  const reLastSettings = new RegExp('lastSettings\\s*:');
+  const reRunNomDef = new RegExp('nominalFrequencyHzDefault\\s*:\\s*number');
+  const reRunNomSrc = new RegExp('nominalFrequencySource\\s*:\\s*MeasurementParameterSource');
+  const reRunCapSrc = new RegExp('captureDurationSource\\s*:\\s*CaptureDurationSource');
+  const reExportNomDef = new RegExp('nominal_frequency_hz_default\\s*:\\s*r\\.nominalFrequencyHzDefault');
+  const reExportNomSrc = new RegExp('nominal_frequency_source\\s*:\\s*r\\.nominalFrequencySource');
+  const reExportCapSec = new RegExp('capture_duration_seconds\\s*:\\s*r\\.captureDurationSeconds');
+  const reExportCapSrc = new RegExp('capture_duration_source\\s*:\\s*r\\.captureDurationSource');
+  const reExportLatestNom = new RegExp('nominal_frequency_hz\\s*:\\s*ls\\s*\\?');
+  const reReportNomSrc = /Nominal frequency[\s\S]{0,200}repNomSource/;
+  const reReportCapSrc = /Capture duration[\s\S]{0,200}repDurSource/;
+  const reRunNomSrcRep = /nomSrc\s*=\s*run\.nominalFrequencySource/;
+  const reRunCapSrcRep = /run\.captureDurationSource/;
+  const reIdleForm = /Measurement settings[\s\S]{0,600}mlab-speed-settings-input/;
+  const reResultPanel = /Measurement parameters used[\s\S]{0,300}mlab-speed-settings-row/;
+  const reNomSourceFn = /nominalSourceLabel\s*\(/;
+  const reNoHardcode4253 = /deriveSpeedMeasurementSettings[\s\S]{0,800}nominalDefault\s*=\s*4253/;
+  const re45Formula = new RegExp('45\\s*/\\s*33\\.?3');
+
+  const checks = [
+    ['MeasurementParameterSource type declared', reMeasParamSrcType.test(uiSrc)],
+    ['CaptureDurationSource type declared', reCapDurSrcType.test(uiSrc)],
+    ['SpeedMeasurementSettings type declared', reSettingsType.test(uiSrc)],
+    ['SpeedMeasurementSettings has nominalFrequencyHzDefault', reSettingsNomDef.test(uiSrc)],
+    ['SpeedMeasurementSettings has captureDurationSeconds', reSettingsCapDur.test(uiSrc)],
+    ['parsePositiveFloat helper exists', reParseFloat.test(uiSrc)],
+    ['deriveSpeedMeasurementSettings helper exists', reDerive.test(uiSrc)],
+    ['deriveSpeedMeasurementSettings uses test_record_metadata', /test_record_metadata/.test(uiSrc)],
+    ['deriveSpeedMeasurementSettings uses speed_context_formula', /speed_context_formula/.test(uiSrc)],
+    ['deriveSpeedMeasurementSettings uses fallback_default', /fallback_default/.test(uiSrc)],
+    ['deriveSpeedMeasurementSettings 45 RPM uses formula not hardcode', re45Formula.test(uiSrc)],
+    ['SpeedState has nominalFrequencyHzInput field', reNomInput.test(uiSrc)],
+    ['SpeedState has captureDurationSecondsInput field', reCapInput.test(uiSrc)],
+    ['SpeedState has lastSettings field', reLastSettings.test(uiSrc)],
+    ['SpeedMeasurementRun has nominalFrequencyHzDefault:number', reRunNomDef.test(uiSrc)],
+    ['SpeedMeasurementRun has nominalFrequencySource:MeasurementParameterSource', reRunNomSrc.test(uiSrc)],
+    ['SpeedMeasurementRun has captureDurationSource:CaptureDurationSource', reRunCapSrc.test(uiSrc)],
+    ['buildSessionJson runs include nominal_frequency_hz_default', reExportNomDef.test(uiSrc)],
+    ['buildSessionJson runs include nominal_frequency_source', reExportNomSrc.test(uiSrc)],
+    ['buildSessionJson runs include capture_duration_seconds', reExportCapSec.test(uiSrc)],
+    ['buildSessionJson runs include capture_duration_source', reExportCapSrc.test(uiSrc)],
+    ['buildSessionJson latest uses lastSettings for nominalFrequencyHz', reExportLatestNom.test(uiSrc)],
+    ['buildReportText latest shows nominal source', reReportNomSrc.test(uiSrc)],
+    ['buildReportText latest shows capture duration source', reReportCapSrc.test(uiSrc)],
+    ['buildReportText run history shows nominalFrequencySource', reRunNomSrcRep.test(uiSrc)],
+    ['buildReportText run history shows captureDurationSource', reRunCapSrcRep.test(uiSrc)],
+    ['CSS mlab-speed-settings class present', cssSrc.includes('.mlab-speed-settings {')],
+    ['CSS mlab-speed-settings-input class present', cssSrc.includes('.mlab-speed-settings-input')],
+    ['CSS mlab-speed-settings-src class present', cssSrc.includes('.mlab-speed-settings-src')],
+    ['CSS mlab-speed-settings-reset class present', cssSrc.includes('.mlab-speed-settings-reset')],
+    ['Idle state shows Measurement settings form', reIdleForm.test(uiSrc)],
+    ['Result view shows Measurement parameters used panel', reResultPanel.test(uiSrc)],
+    ['Result view uses nominalSourceLabel helper', reNomSourceFn.test(uiSrc)],
+    ['No hardcoded 4253 as nominalDefault in deriveSpeedMeasurementSettings', !reNoHardcode4253.test(uiSrc)],
+  ];
+
+  let allPass = true;
+  for (const [label, ok] of checks) {
+    if (!ok) {
+      console.error(`S5H.2 static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S5H.2 static source check (Editable Speed Measurement Parameters): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS5H2EditableSpeedParams();

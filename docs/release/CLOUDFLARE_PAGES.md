@@ -175,3 +175,21 @@ After Cloudflare deploy, verify at `https://test-record-coverage.pages.dev/measu
 70. JSON export `measurements.speed.runs` array contains all session speed runs with `speed_context`, `rpm`, `nominal_frequency_hz`, `measured_frequency_hz`, `speed_error_percent`, `wow_flutter_percent`.
 71. Text report **SPEED & WOW·FLUTTER** section shows latest result and all speed runs.
 72. VTA workflow status remains **Planned** — no `best_setting`, `recommended_height`, or `optimal_height` in export.
+
+## S5H.2 Editable measurement parameters & test-record-derived defaults (S5H.2)
+
+73. **Measurement settings** panel is visible in the Speed & W&F idle state.
+74. Nominal analysis frequency defaults to the selected test record band frequency (provenance: **Test record metadata**) at 33⅓ RPM.
+75. At 45 RPM, nominal defaults to `round(45 / 33.333 × band Hz)` (provenance: **Speed context formula**).
+76. When no test record band is available, nominal falls back to 3,150 Hz (33⅓) or 4,253 Hz (45) with provenance: **Fallback default**.
+77. Nominal frequency input field accepts user overrides; provenance changes to **User override**.
+78. Capture duration input field accepts user overrides (default 30 s); provenance changes to **User override**.
+79. **Reset speed settings to defaults** button clears both input fields.
+80. After a measurement, result view shows a **Measurement parameters used** panel with the nominal frequency (used value, default, source) and capture duration (used value, source).
+81. JSON export `measurements.speed.runs` entries include `nominal_frequency_hz_default`, `nominal_frequency_hz`, `nominal_frequency_source`, `capture_duration_seconds`, `capture_duration_source`.
+82. JSON export `measurements.speed.latest` includes the same five provenance fields.
+83. Text report **SPEED & WOW·FLUTTER** latest result shows `Nominal frequency:` with default, used value and source.
+84. Text report latest result shows `Capture duration:` with value and source.
+85. Text report speed run history rows include nominal Hz default, source, and capture duration source.
+86. Decimal-comma input (e.g. "3150,5") is accepted and normalised correctly.
+87. VTA workflow status remains **Planned** throughout.

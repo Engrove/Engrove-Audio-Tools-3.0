@@ -74,13 +74,36 @@ type SpeedBandMeta = {
 
 type SpeedContext = '33_33' | '45';
 
+type MeasurementParameterSource =
+  | 'test_record_metadata'
+  | 'speed_context_formula'
+  | 'user_override'
+  | 'fallback_default';
+
+type CaptureDurationSource = 'default' | 'user_override';
+
+type SpeedMeasurementSettings = {
+  readonly speedContext: SpeedContext;
+  readonly rpm: number;
+  readonly nominalFrequencyHzDefault: number;
+  readonly nominalFrequencyHz: number;
+  readonly nominalFrequencySource: MeasurementParameterSource;
+  readonly captureDurationSecondsDefault: number;
+  readonly captureDurationSeconds: number;
+  readonly captureDurationSource: CaptureDurationSource;
+};
+
 type SpeedMeasurementRun = {
   readonly id: string;
   readonly createdAt: string;
   readonly source: 'live_capture' | 'self_test';
   readonly speedContext: SpeedContext;
   readonly rpm: number;
+  readonly nominalFrequencyHzDefault: number;
   readonly nominalFrequencyHz: number;
+  readonly nominalFrequencySource: MeasurementParameterSource;
+  readonly captureDurationSeconds: number;
+  readonly captureDurationSource: CaptureDurationSource;
   readonly measuredFrequencyHz: number | null;
   readonly speedErrorPercent: number | null;
   readonly wowFlutterPercent: number | null;
@@ -91,10 +114,13 @@ type SpeedMeasurementRun = {
 type SpeedState = {
   referenceHz: number;
   speedContext: SpeedContext;
+  nominalFrequencyHzInput: string;
+  captureDurationSecondsInput: string;
   active: boolean;
   elapsedSeconds: number;
   result: SpeedFlutterResult | null;
   resultSource: 'live_capture' | 'self_test' | null;
+  lastSettings: SpeedMeasurementSettings | null;
   bandMeta: SpeedBandMeta | null;
   capture: SpeedFlutterCapture | null;
   runs: SpeedMeasurementRun[];
@@ -264,12 +290,72 @@ type LabState = {
  * site below; it has no runtime effect.
  */
 const tokenLayoutGeneratedClassNames =
-  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured mlab-vta-candidate-badge mlab-vta-comparison mlab-vta-comparison-candidate mlab-vta-comparison-meta mlab-vta-comparison-warning mlab-vta-comparison-status mlab-vta-comparison-confidence mlab-vta-confidence-level mlab-vta-confidence-level--insufficient mlab-vta-confidence-level--low mlab-vta-confidence-level--medium mlab-vta-confidence-level--high mlab-vta-confidence-reason mlab-vta-gate mlab-vta-gate-head mlab-vta-gate-summary mlab-vta-gate-status mlab-vta-gate-status--not-ready mlab-vta-gate-status--candidate mlab-vta-gate-status--review mlab-vta-gate-msg mlab-vta-gate-table mlab-vta-gate-row mlab-vta-gate-pass mlab-vta-gate-pass--ok mlab-vta-gate-pass--fail mlab-vta-gate-label mlab-vta-gate-detail mlab-vta-policy mlab-vta-policy-head mlab-vta-policy-status-row mlab-vta-policy-status mlab-vta-policy-status--experimental mlab-vta-policy-status--review-not-supported mlab-vta-policy-reason mlab-vta-policy-req-head mlab-vta-policy-req-list mlab-vta-policy-req mlab-guided-order-panel mlab-guided-order-body mlab-guided-order-intro mlab-guided-order-list mlab-guided-order-item mlab-guided-order-item--first mlab-guided-order-step-head mlab-guided-order-track mlab-guided-order-name mlab-guided-order-first-badge mlab-guided-order-detail mlab-guided-order-workflow mlab-speed-ctx-row mlab-speed-ctx-label mlab-speed-ctx-btn mlab-speed-ctx-btn--active mlab-speed-ctx-note mlab-speed-ctx-badge mlab-speed-history mlab-speed-history-head mlab-speed-history-clear mlab-speed-history-empty mlab-speed-history-scroll mlab-speed-history-table mlab-speed-history-row mlab-speed-history-cell';
+  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured mlab-vta-candidate-badge mlab-vta-comparison mlab-vta-comparison-candidate mlab-vta-comparison-meta mlab-vta-comparison-warning mlab-vta-comparison-status mlab-vta-comparison-confidence mlab-vta-confidence-level mlab-vta-confidence-level--insufficient mlab-vta-confidence-level--low mlab-vta-confidence-level--medium mlab-vta-confidence-level--high mlab-vta-confidence-reason mlab-vta-gate mlab-vta-gate-head mlab-vta-gate-summary mlab-vta-gate-status mlab-vta-gate-status--not-ready mlab-vta-gate-status--candidate mlab-vta-gate-status--review mlab-vta-gate-msg mlab-vta-gate-table mlab-vta-gate-row mlab-vta-gate-pass mlab-vta-gate-pass--ok mlab-vta-gate-pass--fail mlab-vta-gate-label mlab-vta-gate-detail mlab-vta-policy mlab-vta-policy-head mlab-vta-policy-status-row mlab-vta-policy-status mlab-vta-policy-status--experimental mlab-vta-policy-status--review-not-supported mlab-vta-policy-reason mlab-vta-policy-req-head mlab-vta-policy-req-list mlab-vta-policy-req mlab-guided-order-panel mlab-guided-order-body mlab-guided-order-intro mlab-guided-order-list mlab-guided-order-item mlab-guided-order-item--first mlab-guided-order-step-head mlab-guided-order-track mlab-guided-order-name mlab-guided-order-first-badge mlab-guided-order-detail mlab-guided-order-workflow mlab-speed-ctx-row mlab-speed-ctx-label mlab-speed-ctx-btn mlab-speed-ctx-btn--active mlab-speed-ctx-note mlab-speed-ctx-badge mlab-speed-history mlab-speed-history-head mlab-speed-history-clear mlab-speed-history-empty mlab-speed-history-scroll mlab-speed-history-table mlab-speed-history-row mlab-speed-history-cell mlab-speed-settings mlab-speed-settings--result mlab-speed-settings-head mlab-speed-settings-hint mlab-speed-settings-row mlab-speed-settings-label mlab-speed-settings-value mlab-speed-settings-input-group mlab-speed-settings-input mlab-speed-settings-unit mlab-speed-settings-src mlab-speed-settings-reset';
 void tokenLayoutGeneratedClassNames;
 
 const speedMeasurementDurationSeconds = 30;
 const defaultSpeedReferenceHz = 3150;
 const nominalFrequencyHz33: Record<SpeedContext, number> = { '33_33': 3150, '45': Math.round((45 / 33.333) * 3150) };
+
+function parsePositiveFloat(input: string): number | null {
+  const normalized = input.trim().replace(',', '.');
+  if (normalized === '') return null;
+  const v = parseFloat(normalized);
+  return Number.isFinite(v) && v > 0 ? v : null;
+}
+
+function deriveSpeedMeasurementSettings(args: {
+  readonly band: SpeedBandMeta | null;
+  readonly speedContext: SpeedContext;
+  readonly nominalFrequencyInput: string;
+  readonly captureDurationInput: string;
+}): SpeedMeasurementSettings {
+  const { band, speedContext, nominalFrequencyInput, captureDurationInput } = args;
+  const rpm = speedContext === '45' ? 45 : 33.333;
+
+  // Derive default nominal from band metadata and context
+  let nominalDefault: number;
+  let defaultSource: MeasurementParameterSource;
+  const bandHz = band?.frequencyHz ?? null;
+  if (speedContext === '33_33') {
+    if (bandHz !== null) {
+      nominalDefault = bandHz;
+      defaultSource = 'test_record_metadata';
+    } else {
+      nominalDefault = 3150;
+      defaultSource = 'fallback_default';
+    }
+  } else {
+    if (bandHz !== null) {
+      nominalDefault = Math.round((45 / 33.333) * bandHz);
+      defaultSource = 'speed_context_formula';
+    } else {
+      nominalDefault = Math.round((45 / 33.333) * 3150);
+      defaultSource = 'fallback_default';
+    }
+  }
+
+  // Apply user override if valid
+  const userNominal = parsePositiveFloat(nominalFrequencyInput);
+  const nominalFrequencyHz = userNominal !== null ? Math.round(userNominal) : nominalDefault;
+  const nominalSource: MeasurementParameterSource = userNominal !== null ? 'user_override' : defaultSource;
+
+  // Capture duration
+  const userDuration = parsePositiveFloat(captureDurationInput);
+  const captureDurationSeconds = userDuration !== null ? userDuration : speedMeasurementDurationSeconds;
+  const captureDurationSource: CaptureDurationSource = userDuration !== null ? 'user_override' : 'default';
+
+  return {
+    speedContext,
+    rpm,
+    nominalFrequencyHzDefault: nominalDefault,
+    nominalFrequencyHz,
+    nominalFrequencySource: nominalSource,
+    captureDurationSecondsDefault: speedMeasurementDurationSeconds,
+    captureDurationSeconds,
+    captureDurationSource,
+  };
+}
 const channelMeasurementDurationSeconds = 10;
 const freqMeasurementDurationSeconds = 10;
 const refLevelMeasurementDurationSeconds = 5;
@@ -315,10 +401,13 @@ const state: LabState = {
   speed: {
     referenceHz: defaultSpeedReferenceHz,
     speedContext: '33_33' as SpeedContext,
+    nominalFrequencyHzInput: '',
+    captureDurationSecondsInput: '',
     active: false,
     elapsedSeconds: 0,
     result: null,
     resultSource: null,
+    lastSettings: null,
     bandMeta: null,
     capture: null,
     runs: [],
@@ -942,18 +1031,27 @@ function buildSessionJson(): SessionJson {
           source: r.source,
           speed_context: r.speedContext,
           rpm: r.rpm,
+          nominal_frequency_hz_default: r.nominalFrequencyHzDefault,
           nominal_frequency_hz: r.nominalFrequencyHz,
+          nominal_frequency_source: r.nominalFrequencySource,
+          capture_duration_seconds: r.captureDurationSeconds,
+          capture_duration_source: r.captureDurationSource,
           measured_frequency_hz: r.measuredFrequencyHz,
           speed_error_percent: r.speedErrorPercent,
           wow_flutter_percent: r.wowFlutterPercent,
           band: r.band ? serializeSpeedBandMeta(r.band) : null,
           warnings: r.warnings,
         }));
+        const ls = state.speed.lastSettings;
         const latest = speedResult ? {
           source: state.speed.resultSource ?? 'live_capture',
           speed_context: state.speed.speedContext,
-          rpm: state.speed.speedContext === '45' ? 45 : 33.333,
-          nominal_frequency_hz: nominalFrequencyHz33[state.speed.speedContext],
+          rpm: ls ? ls.rpm : (state.speed.speedContext === '45' ? 45 : 33.333),
+          nominal_frequency_hz_default: ls ? ls.nominalFrequencyHzDefault : nominalFrequencyHz33[state.speed.speedContext],
+          nominal_frequency_hz: ls ? ls.nominalFrequencyHz : nominalFrequencyHz33[state.speed.speedContext],
+          nominal_frequency_source: ls ? ls.nominalFrequencySource : 'fallback_default' as MeasurementParameterSource,
+          capture_duration_seconds: ls ? ls.captureDurationSeconds : speedMeasurementDurationSeconds,
+          capture_duration_source: ls ? ls.captureDurationSource : 'default' as CaptureDurationSource,
           band: serializeSpeedBandMeta(state.speed.bandMeta),
           speed_deviation_percent: speedResult.speedDeviationPercent,
           unweighted_wf_percent: speedResult.unweightedWfPercent,
@@ -1204,10 +1302,17 @@ function buildReportText(): string {
   if (sr || state.speed.runs.length > 0) {
     lines.push('SPEED & WOW·FLUTTER');
     if (sr) {
+      const ls = state.speed.lastSettings;
+      const repNomHz = ls ? ls.nominalFrequencyHz : nominalFrequencyHz33[state.speed.speedContext];
+      const repNomDefault = ls ? ls.nominalFrequencyHzDefault : nominalFrequencyHz33[state.speed.speedContext];
+      const repNomSource = ls ? ls.nominalFrequencySource : 'fallback_default';
+      const repDurSec = ls ? ls.captureDurationSeconds : speedMeasurementDurationSeconds;
+      const repDurSource = ls ? ls.captureDurationSource : 'default';
       lines.push(`  Latest result:`);
       lines.push(`    Source:                ${state.speed.resultSource ?? 'live_capture'}`);
       lines.push(`    Speed context:         ${state.speed.speedContext === '45' ? '45 RPM' : '33⅓ RPM'}`);
-      lines.push(`    Nominal frequency:     ${nominalFrequencyHz33[state.speed.speedContext].toLocaleString('en-US')} Hz`);
+      lines.push(`    Nominal frequency:     ${repNomHz.toLocaleString('en-US')} Hz (default: ${repNomDefault.toLocaleString('en-US')} Hz, source: ${repNomSource})`);
+      lines.push(`    Capture duration:      ${repDurSec.toFixed(1)} s (${repDurSource})`);
       if (state.speed.bandMeta) {
         const sbm = state.speed.bandMeta;
         const freq = sbm.frequencyHz != null ? ` · ${sbm.frequencyHz.toLocaleString('en-US')} Hz` : '';
@@ -1225,7 +1330,8 @@ function buildReportText(): string {
         const measHz = run.measuredFrequencyHz !== null ? `${run.measuredFrequencyHz.toFixed(2)} Hz` : '—';
         const err = run.speedErrorPercent !== null ? `${run.speedErrorPercent.toFixed(3)} %` : '—';
         const wf = run.wowFlutterPercent !== null ? `${run.wowFlutterPercent.toFixed(3)} %` : '—';
-        lines.push(`    [${run.createdAt}] ${rpmLabel} | Nominal: ${run.nominalFrequencyHz} Hz | Measured: ${measHz} | Speed error: ${err} | W&F: ${wf} | ${run.source}`);
+        const nomSrc = run.nominalFrequencySource;
+        lines.push(`    [${run.createdAt}] ${rpmLabel} | Nominal: ${run.nominalFrequencyHz} Hz (default: ${run.nominalFrequencyHzDefault} Hz, source: ${nomSrc}) | Duration: ${run.captureDurationSeconds.toFixed(1)} s (${run.captureDurationSource}) | Measured: ${measHz} | Speed error: ${err} | W&F: ${wf} | ${run.source}`);
       }
     }
     lines.push('');
@@ -1694,12 +1800,29 @@ function renderSpeedPanel(els: Elements): void {
           <span class="mlab-wf-result-value">${renderText(state.speed.bandMeta.label)}${state.speed.bandMeta.frequencyHz != null ? ` &middot; ${state.speed.bandMeta.frequencyHz.toLocaleString('en-US')}&nbsp;Hz` : ''}</span>
         </div>`
       : '';
-    const ctxLabel = ctx === '45' ? '45 RPM' : '33⅓ RPM';
+    const ls = state.speed.lastSettings;
+    const usedNominalHz = ls ? ls.nominalFrequencyHz : nomHz;
+    const usedNominalDefault = ls ? ls.nominalFrequencyHzDefault : nomHz;
+    const usedNominalSource = ls ? ls.nominalFrequencySource : 'fallback_default' as MeasurementParameterSource;
+    const usedDurationSec = ls ? ls.captureDurationSeconds : speedMeasurementDurationSeconds;
+    const usedDurationSource = ls ? ls.captureDurationSource : 'default' as CaptureDurationSource;
+    const usedCtxLabel = ls ? (ls.speedContext === '45' ? '45 RPM' : '33⅓ RPM') : (ctx === '45' ? '45 RPM' : '33⅓ RPM');
+    const nominalSourceLabel = (s: MeasurementParameterSource) =>
+      s === 'test_record_metadata' ? 'Test record metadata'
+      : s === 'speed_context_formula' ? 'Speed context formula'
+      : s === 'user_override' ? 'User override'
+      : 'Fallback default';
+    const nominalNote = usedNominalSource === 'user_override'
+      ? `${usedNominalHz.toLocaleString('en-US')} Hz <span class="mlab-speed-settings-src">(User override; default was ${usedNominalDefault.toLocaleString('en-US')} Hz)</span>`
+      : `${usedNominalHz.toLocaleString('en-US')} Hz <span class="mlab-speed-settings-src">(${nominalSourceLabel(usedNominalSource)})</span>`;
+    const durationNote = usedDurationSource === 'user_override'
+      ? `${usedDurationSec.toFixed(1)} s <span class="mlab-speed-settings-src">(User override)</span>`
+      : `${usedDurationSec.toFixed(1)} s <span class="mlab-speed-settings-src">(Default)</span>`;
     body.innerHTML = `
       ${ctxToggleHtml}
       <div class="mlab-result-source-row">
         <span class="ea-badge ${srcBadgeClass}">${srcBadgeLabel}</span>
-        <span class="mlab-speed-ctx-badge ea-muted">${renderText(ctxLabel)} &middot; nominal ${nomHz.toLocaleString('en-US')}&thinsp;Hz</span>
+        <span class="mlab-speed-ctx-badge ea-muted">${renderText(usedCtxLabel)} &middot; nominal ${usedNominalHz.toLocaleString('en-US')}&thinsp;Hz</span>
       </div>
       <div class="mlab-wf-result">
         ${bandRow}
@@ -1720,6 +1843,17 @@ function renderSpeedPanel(els: Elements): void {
           <span class="ea-badge ${grade.cssClass}">${grade.label}</span>
         </div>
         <p class="mlab-wf-note">${r.sampleCount.toLocaleString('en-US')} cycles analysed &middot; mean ${r.meanFrequencyHz.toFixed(2)}&nbsp;Hz</p>
+      </div>
+      <div class="mlab-speed-settings mlab-speed-settings--result">
+        <div class="mlab-speed-settings-head">Measurement parameters used</div>
+        <div class="mlab-speed-settings-row">
+          <span class="mlab-speed-settings-label ea-muted">Nominal frequency</span>
+          <span class="mlab-speed-settings-value">${nominalNote}</span>
+        </div>
+        <div class="mlab-speed-settings-row">
+          <span class="mlab-speed-settings-label ea-muted">Capture duration</span>
+          <span class="mlab-speed-settings-value">${durationNote}</span>
+        </div>
       </div>
       <p class="mlab-chain-note">These readings measure playback/capture speed stability and are affected by the test record, turntable and capture chain.</p>
       <div class="mlab-session-controls">
@@ -1744,70 +1878,98 @@ function renderSpeedPanel(els: Elements): void {
     });
     return;
   }
+  // Idle — derive settings preview for display
+  const previewBandMeta: SpeedBandMeta | null = (() => {
+    const b = speedBands.find(b => b.frequencyHz === 3150) ?? speedBands[0] ?? null;
+    return b ? { index: b.index, label: b.label, frequencyHz: b.frequencyHz ?? null, levelDb: b.levelDb ?? null } : null;
+  })();
+  const previewSettings = deriveSpeedMeasurementSettings({
+    band: previewBandMeta,
+    speedContext: ctx,
+    nominalFrequencyInput: state.speed.nominalFrequencyHzInput,
+    captureDurationInput: state.speed.captureDurationSecondsInput,
+  });
 
-  // Idle — band-driven setup
-  const preferredBand = speedBands.find(b => b.frequencyHz === state.speed.referenceHz)
-    ?? speedBands.find(b => b.frequencyHz === 3150)
-    ?? speedBands[0];
+  const sourceLabel = (s: MeasurementParameterSource) =>
+    s === 'test_record_metadata' ? 'Test record metadata'
+    : s === 'speed_context_formula' ? `Formula (${ctx === '45' ? '45 / 33.333 × band Hz' : 'band Hz'})`
+    : s === 'user_override' ? 'User override'
+    : 'Fallback default';
 
-  const bandOptions = speedBands.map(b => {
-    const sel = b.index === preferredBand?.index ? ' selected' : '';
-    const freq = b.frequencyHz !== undefined ? ` (${b.frequencyHz.toLocaleString('en-US')} Hz)` : '';
-    const level = b.levelDb !== undefined ? ` · ${b.levelDb} dB` : '';
-    return `<option value="${renderText(b.index)}"${sel}>${renderText(b.label + freq + level)}</option>`;
-  }).join('');
-
-  const bandRow = speedBands.length > 1
-    ? `
-        <tr>
-          <td class="ea-col-status">${statusDot('planned')}</td>
-          <td class="ea-col-label">Speed band
-            <span class="ea-form-table-sublabel">Band from test record</span>
-          </td>
-          <td class="ea-col-value">
-            <select class="ea-input" data-mlab-speed-band aria-label="Speed band">
-              ${bandOptions}
-            </select>
-          </td>
-          <td class="ea-col-meta"><span class="ea-badge">Band</span></td>
-        </tr>`
-    : `
-        <tr>
-          <td class="ea-col-status">${statusDot('done')}</td>
-          <td class="ea-col-label">Speed band</td>
-          <td class="ea-col-value">${preferredBand ? renderText(preferredBand.label) : '—'}${preferredBand?.frequencyHz !== undefined ? `<span class="mlab-formula-reminder"> ${preferredBand.frequencyHz.toLocaleString('en-US')}&nbsp;Hz</span>` : ''}</td>
-          <td class="ea-col-meta"><span class="ea-badge">Band</span></td>
-        </tr>`;
+  const nominalHasOverride = state.speed.nominalFrequencyHzInput.trim() !== '';
+  const durationHasOverride = state.speed.captureDurationSecondsInput.trim() !== '';
 
   const selfTestNote = state.sourceMode === 'self-test'
-    ? `<p class="ea-muted mlab-reflevel-selftest-note">Self-test mode: the 1&thinsp;kHz oscillator is not a 3150&thinsp;Hz reference — results will be marked <strong>self-test&nbsp;/&nbsp;simulated</strong> and are not a valid W&amp;F measurement.</p>`
+    ? '<p class="ea-muted mlab-reflevel-selftest-note">Self-test mode: the 1&thinsp;kHz oscillator is not a 3150&thinsp;Hz reference — results will be marked <strong>self-test&nbsp;/&nbsp;simulated</strong> and are not a valid W&amp;F measurement.</p>'
+    : '';
+
+  const preferredBand = speedBands.find(b => b.frequencyHz === 3150) ?? speedBands[0];
+  const bandDisplayRow = preferredBand
+    ? `<div class="mlab-speed-settings-row">
+        <span class="mlab-speed-settings-label ea-muted">Test record band</span>
+        <span class="mlab-speed-settings-value">${renderText(preferredBand.label)}${preferredBand.frequencyHz !== null && preferredBand.frequencyHz !== undefined ? ` &middot; ${preferredBand.frequencyHz.toLocaleString('en-US')}&thinsp;Hz` : ''} <span class="ea-muted">(provenance)</span></span>
+      </div>`
     : '';
 
   body.innerHTML = `
     ${selfTestNote}
     ${ctxToggleHtml}
-    <table class="ea-form-table" aria-label="Speed and W&F setup">
-      <tbody>
-        ${bandRow}
-        <tr>
-          <td class="ea-col-status">${statusDot('done')}</td>
-          <td class="ea-col-label">Duration</td>
-          <td class="ea-col-value mlab-requested">${speedMeasurementDurationSeconds}&nbsp;s</td>
-          <td class="ea-col-meta"><span class="ea-badge">Fixed</span></td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="mlab-speed-settings">
+      <div class="mlab-speed-settings-head">
+        <strong>Measurement settings</strong>
+        <span class="ea-muted mlab-speed-settings-hint">Defaults derived from selected test record where possible. Override for non-standard test records.</span>
+      </div>
+      ${bandDisplayRow}
+      <div class="mlab-speed-settings-row">
+        <label class="mlab-speed-settings-label" for="mlab-speed-nominal-hz">Nominal analysis frequency</label>
+        <div class="mlab-speed-settings-input-group">
+          <input
+            class="ea-input mlab-speed-settings-input"
+            id="mlab-speed-nominal-hz"
+            type="text"
+            inputmode="decimal"
+            placeholder="${previewSettings.nominalFrequencyHzDefault}"
+            value="${renderText(state.speed.nominalFrequencyHzInput)}"
+            aria-label="Nominal analysis frequency in Hz"
+            data-mlab-speed-nominal-hz>
+          <span class="ea-muted mlab-speed-settings-unit">Hz</span>
+        </div>
+        <span class="ea-muted mlab-speed-settings-src">
+          ${nominalHasOverride
+            ? `User override: ${previewSettings.nominalFrequencyHz.toLocaleString('en-US')} Hz (default: ${previewSettings.nominalFrequencyHzDefault.toLocaleString('en-US')} Hz)`
+            : `${sourceLabel(previewSettings.nominalFrequencySource)}: ${previewSettings.nominalFrequencyHz.toLocaleString('en-US')}&thinsp;Hz`}
+        </span>
+      </div>
+      <div class="mlab-speed-settings-row">
+        <label class="mlab-speed-settings-label" for="mlab-speed-duration">Capture duration</label>
+        <div class="mlab-speed-settings-input-group">
+          <input
+            class="ea-input mlab-speed-settings-input"
+            id="mlab-speed-duration"
+            type="text"
+            inputmode="decimal"
+            placeholder="${previewSettings.captureDurationSecondsDefault}"
+            value="${renderText(state.speed.captureDurationSecondsInput)}"
+            aria-label="Capture duration in seconds"
+            data-mlab-speed-duration>
+          <span class="ea-muted mlab-speed-settings-unit">s</span>
+        </div>
+        <span class="ea-muted mlab-speed-settings-src">
+          ${durationHasOverride
+            ? `User override: ${previewSettings.captureDurationSeconds.toFixed(1)} s (default: ${previewSettings.captureDurationSecondsDefault} s)`
+            : `Default: ${previewSettings.captureDurationSecondsDefault} s`}
+        </span>
+      </div>
+      ${(nominalHasOverride || durationHasOverride) ? `
+      <div class="mlab-speed-settings-row">
+        <button class="ea-button ea-button--ghost mlab-speed-settings-reset" type="button" data-mlab-speed-reset-settings>Reset speed settings to defaults</button>
+      </div>` : ''}
+    </div>
     <div class="mlab-session-controls">
       <button class="ea-button ea-button--primary" type="button" data-mlab-speed-start>Start measurement</button>
     </div>
     ${historyMarkup}
   `;
-  if (speedBands.length > 1) {
-    body.querySelector<HTMLSelectElement>('[data-mlab-speed-band]')?.addEventListener('change', (_event) => {
-      // Band selection only affects metadata/provenance; analyzer reference is always
-      // the speed context nominal (nominalFrequencyHz33[ctx]), set in startSpeedMeasurement.
-    });
-  }
   body.querySelector<HTMLButtonElement>('[data-mlab-speed-start]')?.addEventListener('click', () => {
     startSpeedMeasurement(els);
   });
@@ -1822,8 +1984,20 @@ function renderSpeedPanel(els: Elements): void {
       renderSpeedPanel(els);
     });
   });
+  body.querySelector<HTMLInputElement>('[data-mlab-speed-nominal-hz]')?.addEventListener('input', (e) => {
+    state.speed.nominalFrequencyHzInput = (e.target as HTMLInputElement).value;
+    renderSpeedPanel(els);
+  });
+  body.querySelector<HTMLInputElement>('[data-mlab-speed-duration]')?.addEventListener('input', (e) => {
+    state.speed.captureDurationSecondsInput = (e.target as HTMLInputElement).value;
+    renderSpeedPanel(els);
+  });
+  body.querySelector<HTMLButtonElement>('[data-mlab-speed-reset-settings]')?.addEventListener('click', () => {
+    state.speed.nominalFrequencyHzInput = '';
+    state.speed.captureDurationSecondsInput = '';
+    renderSpeedPanel(els);
+  });
 }
-
 function fmtDb(value: number | null | undefined, digits = 1): string {
   if (value === null || value === undefined || !Number.isFinite(value)) return '—';
   return `${value >= 0 ? '+' : ''}${value.toFixed(digits)} dB`;
@@ -4575,9 +4749,6 @@ function startSpeedMeasurement(els: Elements): void {
   const source = state.preSplitterNode;
   if (!context || !source || state.captureState !== 'live') return;
 
-  const ctx = state.speed.speedContext;
-  const nominalReferenceHz = nominalFrequencyHz33[ctx];
-
   const speedBands = getWowFlutterBands(selectedRecord());
   const band = speedBands.find(b => b.frequencyHz === 3150)
     ?? speedBands[0]
@@ -4588,15 +4759,24 @@ function startSpeedMeasurement(els: Elements): void {
     return;
   }
 
-  // Analysis reference is always the speed context nominal (3150 for 33⅓, 4253 for 45 RPM).
-  // Band metadata records test-record provenance (the 3150 Hz track on the disc).
-  state.speed.referenceHz = nominalReferenceHz;
-  state.speed.bandMeta = {
+  const bandMeta: SpeedBandMeta = {
     index: band.index,
     label: band.label,
     frequencyHz: band.frequencyHz ?? null,
     levelDb: band.levelDb ?? null,
   };
+
+  const settings = deriveSpeedMeasurementSettings({
+    band: bandMeta,
+    speedContext: state.speed.speedContext,
+    nominalFrequencyInput: state.speed.nominalFrequencyHzInput,
+    captureDurationInput: state.speed.captureDurationSecondsInput,
+  });
+
+  // Analysis reference and capture duration come from settings; band is provenance only.
+  state.speed.referenceHz = settings.nominalFrequencyHz;
+  state.speed.bandMeta = bandMeta;
+  state.speed.lastSettings = settings;
   state.speed.resultSource = state.sourceMode === 'self-test' ? 'self_test' : 'live_capture';
 
   stopSpeedMeasurement();
@@ -4608,8 +4788,8 @@ function startSpeedMeasurement(els: Elements): void {
   state.speed.capture = createSpeedFlutterCapture(
     context,
     source,
-    nominalReferenceHz,
-    speedMeasurementDurationSeconds,
+    settings.nominalFrequencyHz,
+    settings.captureDurationSeconds,
     {
       onProgress: (elapsed) => {
         state.speed.elapsedSeconds = elapsed;
@@ -4619,15 +4799,18 @@ function startSpeedMeasurement(els: Elements): void {
         state.speed.active = false;
         state.speed.result = result;
         state.speed.capture = null;
-        const ctx = state.speed.speedContext;
-        const nomHz = nominalFrequencyHz33[ctx];
+        const savedSettings = state.speed.lastSettings!;
         const run: SpeedMeasurementRun = {
           id: crypto.randomUUID(),
           createdAt: new Date().toISOString(),
           source: state.speed.resultSource ?? 'live_capture',
-          speedContext: ctx,
-          rpm: ctx === '45' ? 45 : 33.333,
-          nominalFrequencyHz: nomHz,
+          speedContext: savedSettings.speedContext,
+          rpm: savedSettings.rpm,
+          nominalFrequencyHzDefault: savedSettings.nominalFrequencyHzDefault,
+          nominalFrequencyHz: savedSettings.nominalFrequencyHz,
+          nominalFrequencySource: savedSettings.nominalFrequencySource,
+          captureDurationSeconds: savedSettings.captureDurationSeconds,
+          captureDurationSource: savedSettings.captureDurationSource,
           measuredFrequencyHz: result.meanFrequencyHz,
           speedErrorPercent: result.speedDeviationPercent,
           wowFlutterPercent: result.unweightedWfPercent,
