@@ -22,6 +22,7 @@ import {
 } from '../../../shared/audio-io';
 import { createIriaaFilterNode, type IriaaFilterNode } from '../dsp/iriaaNode';
 import { createSpeedFlutterCapture, type SpeedFlutterCapture, type SpeedFlutterResult } from '../dsp/speedFlutterNode';
+import { createNoiseFloorCapture, type NoiseFloorCapture, type NoiseFloorResult } from '../dsp/noiseFloorNode';
 import { createStereoChannelCapture, type StereoCapture, type ChannelCaptureMetrics } from '../dsp/stereoCaptureNode';
 import { createSweepCapture, type SweepCapture } from '../dsp/sweepCaptureNode';
 import { summariseChannelBalance } from '../engine/crosstalk';
@@ -124,6 +125,48 @@ type SpeedState = {
   bandMeta: SpeedBandMeta | null;
   capture: SpeedFlutterCapture | null;
   runs: SpeedMeasurementRun[];
+};
+
+type NoiseFloorScenarioKind =
+  | 'equipment_off'
+  | 'rig_powered_still'
+  | 'platter_spinning';
+
+type NoiseFloorTurntableSpeed =
+  | '16'
+  | '33_33'
+  | '45'
+  | '78'
+  | 'custom';
+
+type NoiseFloorRun = {
+  readonly id: string;
+  readonly createdAt: string;
+  readonly source: 'live_capture' | 'self_test';
+  readonly scenarioKind: NoiseFloorScenarioKind;
+  readonly speed: NoiseFloorTurntableSpeed | null;
+  readonly rpm: number | null;
+  readonly tonearmPosition: string;
+  readonly captureDurationSeconds: number;
+  readonly leftRmsDbfs: number | null;
+  readonly rightRmsDbfs: number | null;
+  readonly leftPeakDbfs: number | null;
+  readonly rightPeakDbfs: number | null;
+  readonly noiseFloorDbfs: number | null;
+  readonly warnings: readonly string[];
+};
+
+type NoiseFloorState = {
+  scenarioKind: NoiseFloorScenarioKind;
+  speed: NoiseFloorTurntableSpeed;
+  customRpmInput: string;
+  tonearmPositionInput: string;
+  captureDurationSecondsInput: string;
+  active: boolean;
+  elapsedSeconds: number;
+  capture: NoiseFloorCapture | null;
+  latest: NoiseFloorRun | null;
+  runs: NoiseFloorRun[];
 };
 
 type ChannelBandMeta = {
@@ -280,6 +323,7 @@ type LabState = {
   coverageCollapsed: boolean;
   refLevel: RefLevelStateBag;
   vta: VtaStateBag;
+  noiseFloor: NoiseFloorState;
 };
 
 /*
@@ -290,10 +334,11 @@ type LabState = {
  * site below; it has no runtime effect.
  */
 const tokenLayoutGeneratedClassNames =
-  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured mlab-vta-candidate-badge mlab-vta-comparison mlab-vta-comparison-candidate mlab-vta-comparison-meta mlab-vta-comparison-warning mlab-vta-comparison-status mlab-vta-comparison-confidence mlab-vta-confidence-level mlab-vta-confidence-level--insufficient mlab-vta-confidence-level--low mlab-vta-confidence-level--medium mlab-vta-confidence-level--high mlab-vta-confidence-reason mlab-vta-gate mlab-vta-gate-head mlab-vta-gate-summary mlab-vta-gate-status mlab-vta-gate-status--not-ready mlab-vta-gate-status--candidate mlab-vta-gate-status--review mlab-vta-gate-msg mlab-vta-gate-table mlab-vta-gate-row mlab-vta-gate-pass mlab-vta-gate-pass--ok mlab-vta-gate-pass--fail mlab-vta-gate-label mlab-vta-gate-detail mlab-vta-policy mlab-vta-policy-head mlab-vta-policy-status-row mlab-vta-policy-status mlab-vta-policy-status--experimental mlab-vta-policy-status--review-not-supported mlab-vta-policy-reason mlab-vta-policy-req-head mlab-vta-policy-req-list mlab-vta-policy-req mlab-guided-order-panel mlab-guided-order-body mlab-guided-order-intro mlab-guided-order-list mlab-guided-order-item mlab-guided-order-item--first mlab-guided-order-step-head mlab-guided-order-track mlab-guided-order-name mlab-guided-order-first-badge mlab-guided-order-detail mlab-guided-order-workflow mlab-speed-ctx-row mlab-speed-ctx-label mlab-speed-ctx-btn mlab-speed-ctx-btn--active mlab-speed-ctx-note mlab-speed-ctx-badge mlab-speed-history mlab-speed-history-head mlab-speed-history-clear mlab-speed-history-empty mlab-speed-history-scroll mlab-speed-history-table mlab-speed-history-row mlab-speed-history-cell mlab-speed-settings mlab-speed-settings--result mlab-speed-settings-head mlab-speed-settings-hint mlab-speed-settings-row mlab-speed-settings-label mlab-speed-settings-value mlab-speed-settings-input-group mlab-speed-settings-input mlab-speed-settings-unit mlab-speed-settings-src mlab-speed-settings-reset';
+  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured mlab-vta-candidate-badge mlab-vta-comparison mlab-vta-comparison-candidate mlab-vta-comparison-meta mlab-vta-comparison-warning mlab-vta-comparison-status mlab-vta-comparison-confidence mlab-vta-confidence-level mlab-vta-confidence-level--insufficient mlab-vta-confidence-level--low mlab-vta-confidence-level--medium mlab-vta-confidence-level--high mlab-vta-confidence-reason mlab-vta-gate mlab-vta-gate-head mlab-vta-gate-summary mlab-vta-gate-status mlab-vta-gate-status--not-ready mlab-vta-gate-status--candidate mlab-vta-gate-status--review mlab-vta-gate-msg mlab-vta-gate-table mlab-vta-gate-row mlab-vta-gate-pass mlab-vta-gate-pass--ok mlab-vta-gate-pass--fail mlab-vta-gate-label mlab-vta-gate-detail mlab-vta-policy mlab-vta-policy-head mlab-vta-policy-status-row mlab-vta-policy-status mlab-vta-policy-status--experimental mlab-vta-policy-status--review-not-supported mlab-vta-policy-reason mlab-vta-policy-req-head mlab-vta-policy-req-list mlab-vta-policy-req mlab-guided-order-panel mlab-guided-order-body mlab-guided-order-intro mlab-guided-order-list mlab-guided-order-item mlab-guided-order-item--first mlab-guided-order-step-head mlab-guided-order-track mlab-guided-order-name mlab-guided-order-first-badge mlab-guided-order-detail mlab-guided-order-workflow mlab-speed-ctx-row mlab-speed-ctx-label mlab-speed-ctx-btn mlab-speed-ctx-btn--active mlab-speed-ctx-note mlab-speed-ctx-badge mlab-speed-history mlab-speed-history-head mlab-speed-history-clear mlab-speed-history-empty mlab-speed-history-scroll mlab-speed-history-table mlab-speed-history-row mlab-speed-history-cell mlab-speed-settings mlab-speed-settings--result mlab-speed-settings-head mlab-speed-settings-hint mlab-speed-settings-row mlab-speed-settings-label mlab-speed-settings-value mlab-speed-settings-input-group mlab-speed-settings-input mlab-speed-settings-unit mlab-speed-settings-src mlab-speed-settings-reset mlab-nf-intro mlab-nf-guidance mlab-nf-settings mlab-nf-settings-row mlab-nf-settings-label mlab-nf-settings-select mlab-nf-settings-input mlab-nf-settings-input--wide mlab-nf-settings-input-group mlab-nf-settings-unit mlab-nf-settings-src mlab-nf-result mlab-nf-history mlab-nf-history-head mlab-nf-history-clear mlab-nf-history-scroll mlab-nf-history-table mlab-nf-history-row mlab-nf-history-cell';
 void tokenLayoutGeneratedClassNames;
 
 const speedMeasurementDurationSeconds = 30;
+const noiseFloorDefaultDurationSeconds = 10;
 const defaultSpeedReferenceHz = 3150;
 const nominalFrequencyHz33: Record<SpeedContext, number> = { '33_33': 3150, '45': Math.round((45 / 33.333) * 3150) };
 
@@ -480,6 +525,18 @@ const state: LabState = {
     capturingRunId: null,
     captureElapsed: 0,
     capture: null,
+  },
+  noiseFloor: {
+    scenarioKind: 'equipment_off' as NoiseFloorScenarioKind,
+    speed: '33_33' as NoiseFloorTurntableSpeed,
+    customRpmInput: '',
+    tonearmPositionInput: '',
+    captureDurationSecondsInput: '',
+    active: false,
+    elapsedSeconds: 0,
+    capture: null,
+    latest: null,
+    runs: [],
   },
 };
 
@@ -913,6 +970,7 @@ type SessionJson = {
     resonance: object | null;
     reference_level: object | null;
     vta_imd_optimizer: object | null;
+    noise_floor: object | null;
   };
 };
 
@@ -1212,6 +1270,40 @@ function buildSessionJson(): SessionJson {
           ],
         };
       })(),
+        noise_floor: (() => {
+      const nfRuns = state.noiseFloor.runs.map(r => ({
+        created_at: r.createdAt,
+        source: r.source,
+        scenario_kind: r.scenarioKind,
+        speed: r.speed,
+        rpm: r.rpm,
+        tonearm_position: r.tonearmPosition || null,
+        capture_duration_seconds: r.captureDurationSeconds,
+        left_rms_dbfs: r.leftRmsDbfs,
+        right_rms_dbfs: r.rightRmsDbfs,
+        left_peak_dbfs: r.leftPeakDbfs,
+        right_peak_dbfs: r.rightPeakDbfs,
+        noise_floor_dbfs: r.noiseFloorDbfs,
+        warnings: r.warnings,
+      }));
+      const nfLatest = state.noiseFloor.latest ? {
+        created_at: state.noiseFloor.latest.createdAt,
+        source: state.noiseFloor.latest.source,
+        scenario_kind: state.noiseFloor.latest.scenarioKind,
+        speed: state.noiseFloor.latest.speed,
+        rpm: state.noiseFloor.latest.rpm,
+        tonearm_position: state.noiseFloor.latest.tonearmPosition || null,
+        capture_duration_seconds: state.noiseFloor.latest.captureDurationSeconds,
+        left_rms_dbfs: state.noiseFloor.latest.leftRmsDbfs,
+        right_rms_dbfs: state.noiseFloor.latest.rightRmsDbfs,
+        left_peak_dbfs: state.noiseFloor.latest.leftPeakDbfs,
+        right_peak_dbfs: state.noiseFloor.latest.rightPeakDbfs,
+        noise_floor_dbfs: state.noiseFloor.latest.noiseFloorDbfs,
+        warnings: state.noiseFloor.latest.warnings,
+      } : null;
+      if (nfLatest === null && nfRuns.length === 0) return null;
+      return { latest: nfLatest, runs: nfRuns };
+    })(),
     },
   };
 }
@@ -1555,6 +1647,36 @@ function buildReportText(): string {
     lines.push('');
   }
 
+  // Noise floor
+  if (state.noiseFloor.runs.length > 0 || state.noiseFloor.latest !== null) {
+    lines.push('NOISE FLOOR / RIG BASELINE');
+    if (state.noiseFloor.latest) {
+      const nl = state.noiseFloor.latest;
+      lines.push(`  Latest result:`);
+      lines.push(`    Source:           ${nl.source}`);
+      lines.push(`    Scenario:         ${noiseFloorScenarioLabel(nl.scenarioKind)}`);
+      if (nl.rpm !== null) lines.push(`    RPM:              ${nl.rpm.toFixed(nl.rpm === Math.round(nl.rpm) ? 0 : 1)}`);
+      if (nl.tonearmPosition) lines.push(`    Tonearm position: ${nl.tonearmPosition}`);
+      lines.push(`    Duration:         ${nl.captureDurationSeconds.toFixed(1)} s`);
+      lines.push(`    L RMS:            ${nl.leftRmsDbfs !== null ? nl.leftRmsDbfs.toFixed(1) + ' dBFS' : '—'}`);
+      lines.push(`    R RMS:            ${nl.rightRmsDbfs !== null ? nl.rightRmsDbfs.toFixed(1) + ' dBFS' : '—'}`);
+      lines.push(`    L peak:           ${nl.leftPeakDbfs !== null ? nl.leftPeakDbfs.toFixed(1) + ' dBFS' : '—'}`);
+      lines.push(`    R peak:           ${nl.rightPeakDbfs !== null ? nl.rightPeakDbfs.toFixed(1) + ' dBFS' : '—'}`);
+      lines.push(`    Noise floor:      ${nl.noiseFloorDbfs !== null ? nl.noiseFloorDbfs.toFixed(1) + ' dBFS' : '—'}`);
+      if (nl.warnings.length > 0) nl.warnings.forEach(w => lines.push(`    Warning: ${w}`));
+    }
+    if (state.noiseFloor.runs.length > 0) {
+      lines.push(`  Noise floor history (${state.noiseFloor.runs.length} run${state.noiseFloor.runs.length === 1 ? '' : 's'}):`);
+      for (const r of state.noiseFloor.runs) {
+        const rpmPart = r.rpm !== null ? ` | RPM: ${r.rpm.toFixed(r.rpm === Math.round(r.rpm) ? 0 : 1)}` : '';
+        const tpPart = r.tonearmPosition ? ` | Tonearm: ${r.tonearmPosition}` : '';
+        const nfPart = r.noiseFloorDbfs !== null ? `${r.noiseFloorDbfs.toFixed(1)} dBFS` : '—';
+        lines.push(`    [${r.createdAt}] ${noiseFloorScenarioLabel(r.scenarioKind)}${rpmPart}${tpPart} | Duration: ${r.captureDurationSeconds.toFixed(1)} s | L RMS: ${r.leftRmsDbfs !== null ? r.leftRmsDbfs.toFixed(1) + ' dBFS' : '—'} | R RMS: ${r.rightRmsDbfs !== null ? r.rightRmsDbfs.toFixed(1) + ' dBFS' : '—'} | Noise floor: ${nfPart} | ${r.source}`);
+      }
+    }
+    lines.push('');
+  }
+
   return lines.join('\n');
 }
 
@@ -1589,6 +1711,20 @@ function actionBarMarkup(): string {
   `;
 }
 
+function noiseFloorPanelMarkup(): string {
+  return `
+    <section id="mlab-noisefloor-panel" class="ea-panel" aria-labelledby="mlab-noisefloor-title">
+      <div class="ea-panel-header">
+        <span class="ea-panel-header-id">10</span>
+        <span id="mlab-noisefloor-title">Noise floor / rig baseline</span>
+      </div>
+      <div class="ea-panel-body" data-mlab-noisefloor-body>
+        <p class="ea-muted">Connect a source to begin a noise floor measurement.</p>
+      </div>
+    </section>
+  `;
+}
+
 export function renderMeasurementLabPage(): string {
   return `
     <main class="ea-tool-shell mlab-shell">
@@ -1607,6 +1743,7 @@ export function renderMeasurementLabPage(): string {
             ${resonancePanelMarkup()}
             ${refLevelPanelMarkup()}
             ${advancedAnalyzersPanelMarkup()}
+            ${noiseFloorPanelMarkup()}
           </div>
           ${visualizationMarkup()}
         </div>
@@ -1655,6 +1792,7 @@ function elements(root: ParentNode) {
     waveformR: root.querySelector<HTMLCanvasElement>('[data-mlab-waveform="R"]'),
     refLevelBody: root.querySelector<HTMLElement>('[data-mlab-reflevel-body]'),
     advancedBody: root.querySelector<HTMLElement>('[data-mlab-advanced-body]'),
+    noiseFloorBody: root.querySelector<HTMLElement>('[data-mlab-noisefloor-body]'),
   };
 }
 
@@ -5039,6 +5177,7 @@ async function connectMeasurementLab(els: Elements): Promise<void> {
   renderFreqPanel(els);
   renderThdPanel(els);
   renderResonancePanel(els);
+  renderNoiseFloorPanel(els);
   renderRefLevelPanel(els);
 }
 
@@ -5058,6 +5197,7 @@ async function disconnectMeasurementLab(els: Elements): Promise<void> {
   renderResonancePanel(els);
   renderRefLevelPanel(els);
   renderAdvancedPanel(els);
+  renderNoiseFloorPanel(els);
 }
 
 async function refreshDeviceList(els: Elements): Promise<void> {
@@ -5075,6 +5215,330 @@ async function refreshDeviceList(els: Elements): Promise<void> {
       throw error;
     }
   }
+}
+
+function noiseFloorScenarioLabel(kind: NoiseFloorScenarioKind): string {
+  switch (kind) {
+    case 'equipment_off': return 'Equipment noise floor — turntable off';
+    case 'rig_powered_still': return 'Rig noise floor — powered, platter still, tonearm parked';
+    case 'platter_spinning': return 'Platter spinning — tonearm up';
+  }
+}
+
+function noiseFloorScenarioGuidance(kind: NoiseFloorScenarioKind): string {
+  switch (kind) {
+    case 'equipment_off':
+      return 'Turntable off. All measurement electronics connected. Use this as electronics / capture baseline.';
+    case 'rig_powered_still':
+      return 'Turntable powered, platter still, tonearm parked. Use this to capture powered rig baseline.';
+    case 'platter_spinning':
+      return 'Platter spinning at selected speed, tonearm up. Use this to identify motor / platter / field-related noise changes.';
+  }
+}
+
+function noiseFloorSpeedRpm(speed: NoiseFloorTurntableSpeed, customInput: string): number | null {
+  const map: Record<Exclude<NoiseFloorTurntableSpeed, 'custom'>, number> = {
+    '16': 16,
+    '33_33': 33.333,
+    '45': 45,
+    '78': 78,
+  };
+  if (speed === 'custom') {
+    const v = parsePositiveFloat(customInput);
+    return v !== null ? v : null;
+  }
+  return map[speed];
+}
+
+function noiseFloorSpeedLabel(speed: NoiseFloorTurntableSpeed): string {
+  const labels: Record<NoiseFloorTurntableSpeed, string> = {
+    '16': '16 RPM',
+    '33_33': '33⅓ RPM',
+    '45': '45 RPM',
+    '78': '78 RPM',
+    'custom': 'Custom',
+  };
+  return labels[speed];
+}
+
+function noiseFloorRunHistoryMarkup(runs: readonly NoiseFloorRun[]): string {
+  if (runs.length === 0) return '';
+  const rows = [...runs].reverse().map(r => {
+    const scenarioLabel = noiseFloorScenarioLabel(r.scenarioKind);
+    const rpmCell = r.rpm !== null ? `${r.rpm.toFixed(r.rpm === Math.round(r.rpm) ? 0 : 1)} RPM` : '—';
+    const lRms = r.leftRmsDbfs !== null ? `${r.leftRmsDbfs.toFixed(1)} dBFS` : '—';
+    const rRms = r.rightRmsDbfs !== null ? `${r.rightRmsDbfs.toFixed(1)} dBFS` : '—';
+    const nf = r.noiseFloorDbfs !== null ? `${r.noiseFloorDbfs.toFixed(1)} dBFS` : '—';
+    const srcLabel = r.source === 'self_test' ? 'Self-test' : 'Live';
+    const time = r.createdAt.slice(11, 19);
+    return `<tr class="mlab-nf-history-row">
+      <td class="mlab-nf-history-cell">${time}</td>
+      <td class="mlab-nf-history-cell">${renderText(scenarioLabel)}</td>
+      <td class="mlab-nf-history-cell">${rpmCell}</td>
+      <td class="mlab-nf-history-cell">${lRms}</td>
+      <td class="mlab-nf-history-cell">${rRms}</td>
+      <td class="mlab-nf-history-cell">${nf}</td>
+      <td class="mlab-nf-history-cell">${srcLabel}</td>
+    </tr>`;
+  }).join('');
+  return `
+    <div class="mlab-nf-history-scroll">
+      <table class="mlab-nf-history-table" aria-label="Noise floor run history">
+        <thead>
+          <tr>
+            <th>Time</th><th>Scenario</th><th>RPM</th>
+            <th>L RMS</th><th>R RMS</th><th>Noise floor</th><th>Source</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function stopNoiseFloorCapture(): void {
+  if (state.noiseFloor.capture) {
+    state.noiseFloor.capture.stop();
+    state.noiseFloor.capture = null;
+  }
+  state.noiseFloor.active = false;
+  state.noiseFloor.elapsedSeconds = 0;
+}
+
+function startNoiseFloorCapture(els: Elements): void {
+  const context = state.audioHandle?.context;
+  const source = state.preSplitterNode;
+  if (!context || !source || state.captureState !== 'live') return;
+
+  const durInput = state.noiseFloor.captureDurationSecondsInput;
+  const dur = (() => {
+    const v = parsePositiveFloat(durInput);
+    return (v !== null && Number.isFinite(v) && v > 0) ? v : noiseFloorDefaultDurationSeconds;
+  })();
+
+  const rpm = noiseFloorSpeedRpm(state.noiseFloor.speed, state.noiseFloor.customRpmInput);
+  const scenarioKind = state.noiseFloor.scenarioKind;
+  const speed = scenarioKind === 'platter_spinning' ? state.noiseFloor.speed : null;
+  const tonearmPosition = state.noiseFloor.tonearmPositionInput.trim();
+  const captureSource: 'live_capture' | 'self_test' = state.sourceMode === 'self-test' ? 'self_test' : 'live_capture';
+
+  stopNoiseFloorCapture();
+  state.noiseFloor.active = true;
+  state.noiseFloor.elapsedSeconds = 0;
+  renderNoiseFloorPanel(els);
+
+  state.noiseFloor.capture = createNoiseFloorCapture(
+    context,
+    source,
+    dur,
+    {
+      onProgress: (elapsed) => {
+        state.noiseFloor.elapsedSeconds = elapsed;
+        renderNoiseFloorPanel(els);
+      },
+      onDone: (result) => {
+        state.noiseFloor.active = false;
+        state.noiseFloor.capture = null;
+        const run: NoiseFloorRun = {
+          id: crypto.randomUUID(),
+          createdAt: new Date().toISOString(),
+          source: captureSource,
+          scenarioKind,
+          speed,
+          rpm: speed !== null ? (rpm ?? null) : null,
+          tonearmPosition,
+          captureDurationSeconds: dur,
+          leftRmsDbfs: result.leftRmsDbfs,
+          rightRmsDbfs: result.rightRmsDbfs,
+          leftPeakDbfs: result.leftPeakDbfs,
+          rightPeakDbfs: result.rightPeakDbfs,
+          noiseFloorDbfs: result.noiseFloorDbfs,
+          warnings: result.warnings,
+        };
+        state.noiseFloor.latest = run;
+        state.noiseFloor.runs = [...state.noiseFloor.runs, run];
+        renderNoiseFloorPanel(els);
+        appendLog(`Noise floor complete — ${noiseFloorScenarioLabel(scenarioKind)}: ${result.noiseFloorDbfs !== null ? result.noiseFloorDbfs.toFixed(1) + ' dBFS' : 'n/a'}`);
+      },
+    },
+  );
+}
+
+function renderNoiseFloorPanel(els: Elements): void {
+  const body = els.noiseFloorBody;
+  if (!body) return;
+
+  const nf = state.noiseFloor;
+  const scenario = nf.scenarioKind;
+  const activeDur = (() => {
+    const v = parsePositiveFloat(nf.captureDurationSecondsInput);
+    return (v !== null && Number.isFinite(v) && v > 0) ? v : noiseFloorDefaultDurationSeconds;
+  })();
+
+  if (state.captureState !== 'live') {
+    body.innerHTML = '<p class="ea-muted">Connect a source to begin a noise floor measurement.</p>';
+    return;
+  }
+
+  if (nf.active) {
+    const pct = Math.min(100, (nf.elapsedSeconds / activeDur) * 100);
+    const remaining = Math.max(0, activeDur - nf.elapsedSeconds);
+    body.innerHTML = `
+      <p class="ea-muted mlab-nf-guidance">${renderText(noiseFloorScenarioLabel(scenario))}</p>
+      <p class="ea-muted">Recording noise floor for ${activeDur.toFixed(1)}&thinsp;s&hellip;</p>
+      <div class="mlab-progress-track" role="progressbar" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100" aria-label="Recording progress">
+        <div class="mlab-progress-fill" style="width:${pct.toFixed(1)}%"></div>
+      </div>
+      <p class="mlab-progress-label">${remaining.toFixed(1)}&nbsp;s remaining</p>
+      <div class="mlab-session-controls">
+        <button class="ea-button ea-button--ghost" type="button" data-mlab-nf-cancel>Cancel</button>
+      </div>
+    `;
+    body.querySelector<HTMLButtonElement>('[data-mlab-nf-cancel]')?.addEventListener('click', () => {
+      stopNoiseFloorCapture();
+      renderNoiseFloorPanel(els);
+    });
+    return;
+  }
+
+  const selfTestNote = state.sourceMode === 'self-test'
+    ? '<p class="ea-muted mlab-reflevel-selftest-note">Self-test mode: results will be marked <strong>self-test / simulated</strong>.</p>'
+    : '';
+
+  const isPlatter = scenario === 'platter_spinning';
+  const speedOptions: NoiseFloorTurntableSpeed[] = ['16', '33_33', '45', '78', 'custom'];
+  const speedSelectHtml = speedOptions.map(s =>
+    `<option value="${s}"${nf.speed === s ? ' selected' : ''}>${noiseFloorSpeedLabel(s)}</option>`
+  ).join('');
+  const customRpmRow = (nf.speed === 'custom' && isPlatter) ? `
+    <div class="mlab-nf-settings-row">
+      <label class="mlab-nf-settings-label ea-muted" for="mlab-nf-custom-rpm">Custom RPM</label>
+      <div class="mlab-nf-settings-input-group">
+        <input id="mlab-nf-custom-rpm" type="text" inputmode="decimal"
+          class="ea-input mlab-nf-settings-input"
+          placeholder="e.g. 16.67"
+          value="${renderText(nf.customRpmInput)}"
+          data-mlab-nf-custom-rpm>
+        <span class="ea-muted mlab-nf-settings-unit">RPM</span>
+      </div>
+    </div>` : '';
+
+  const latestResult = nf.latest;
+  const resultHtml = latestResult ? (() => {
+    const srcBadgeClass = latestResult.source === 'self_test' ? 'ea-badge--setup' : 'ea-badge--manufacturer';
+    const srcBadgeLabel = latestResult.source === 'self_test' ? 'Self-test / Simulated' : 'Live capture';
+    const lRms = latestResult.leftRmsDbfs !== null ? `${latestResult.leftRmsDbfs.toFixed(1)} dBFS` : '—';
+    const rRms = latestResult.rightRmsDbfs !== null ? `${latestResult.rightRmsDbfs.toFixed(1)} dBFS` : '—';
+    const lPk = latestResult.leftPeakDbfs !== null ? `${latestResult.leftPeakDbfs.toFixed(1)} dBFS` : '—';
+    const rPk = latestResult.rightPeakDbfs !== null ? `${latestResult.rightPeakDbfs.toFixed(1)} dBFS` : '—';
+    const nfDb = latestResult.noiseFloorDbfs !== null ? `${latestResult.noiseFloorDbfs.toFixed(1)} dBFS` : '—';
+    const rpmRow = latestResult.rpm !== null ? `<div class="mlab-wf-result-row"><span class="mlab-wf-result-label">Turntable speed</span><span class="mlab-wf-result-value">${latestResult.rpm.toFixed(latestResult.rpm === Math.round(latestResult.rpm) ? 0 : 1)} RPM</span></div>` : '';
+    const tpRow = latestResult.tonearmPosition ? `<div class="mlab-wf-result-row"><span class="mlab-wf-result-label">Tonearm position</span><span class="mlab-wf-result-value">${renderText(latestResult.tonearmPosition)}</span></div>` : '';
+    return `
+      <div class="mlab-nf-result">
+        <div class="mlab-result-source-row">
+          <span class="ea-badge ${srcBadgeClass}">${srcBadgeLabel}</span>
+          <span class="ea-muted">${renderText(noiseFloorScenarioLabel(latestResult.scenarioKind))}</span>
+        </div>
+        <div class="mlab-wf-result">
+          ${rpmRow}
+          ${tpRow}
+          <div class="mlab-wf-result-row"><span class="mlab-wf-result-label">L RMS</span><span class="mlab-wf-result-value">${lRms}</span></div>
+          <div class="mlab-wf-result-row"><span class="mlab-wf-result-label">R RMS</span><span class="mlab-wf-result-value">${rRms}</span></div>
+          <div class="mlab-wf-result-row"><span class="mlab-wf-result-label">L peak</span><span class="mlab-wf-result-value">${lPk}</span></div>
+          <div class="mlab-wf-result-row"><span class="mlab-wf-result-label">R peak</span><span class="mlab-wf-result-value">${rPk}</span></div>
+          <div class="mlab-wf-result-row mlab-wf-result-row--grade"><span class="mlab-wf-result-label">Noise floor</span><span class="mlab-wf-result-value">${nfDb}</span></div>
+          <p class="mlab-wf-note">Duration: ${latestResult.captureDurationSeconds.toFixed(1)} s</p>
+        </div>
+      </div>`;
+  })() : '';
+
+  const historyHtml = nf.runs.length > 0 ? `
+    <div class="mlab-nf-history">
+      <div class="mlab-nf-history-head">
+        <strong>Noise floor history</strong>
+        <button class="ea-button ea-button--ghost mlab-nf-history-clear" type="button" data-mlab-nf-clear-history>Clear noise floor history</button>
+      </div>
+      ${noiseFloorRunHistoryMarkup(nf.runs)}
+    </div>` : '';
+
+  const durDefault = noiseFloorDefaultDurationSeconds;
+  const durParsed = parsePositiveFloat(nf.captureDurationSecondsInput);
+  const durEffective = (durParsed !== null && Number.isFinite(durParsed) && durParsed > 0) ? durParsed : durDefault;
+  const durSrc = durParsed !== null ? 'User override' : `Default (${durDefault} s)`;
+
+  body.innerHTML = `
+    <p class="ea-muted mlab-nf-intro">Noise floor measurements do not use a test record. They capture the connected playback / capture chain in a selected physical state.</p>
+    ${selfTestNote}
+    <div class="mlab-nf-settings">
+      <div class="mlab-nf-settings-row">
+        <label class="mlab-nf-settings-label ea-muted" for="mlab-nf-scenario">Scenario</label>
+        <select id="mlab-nf-scenario" class="ea-input mlab-nf-settings-select" data-mlab-nf-scenario>
+          <option value="equipment_off"${scenario === 'equipment_off' ? ' selected' : ''}>Equipment noise floor — turntable off</option>
+          <option value="rig_powered_still"${scenario === 'rig_powered_still' ? ' selected' : ''}>Rig noise floor — powered, platter still, tonearm parked</option>
+          <option value="platter_spinning"${scenario === 'platter_spinning' ? ' selected' : ''}>Platter spinning — tonearm up</option>
+        </select>
+      </div>
+      <p class="ea-muted mlab-nf-guidance">${renderText(noiseFloorScenarioGuidance(scenario))}</p>
+      ${isPlatter ? `
+      <div class="mlab-nf-settings-row">
+        <label class="mlab-nf-settings-label ea-muted" for="mlab-nf-speed">Turntable speed</label>
+        <select id="mlab-nf-speed" class="ea-input mlab-nf-settings-select" data-mlab-nf-speed>${speedSelectHtml}</select>
+      </div>
+      ${customRpmRow}` : ''}
+      <div class="mlab-nf-settings-row">
+        <label class="mlab-nf-settings-label ea-muted" for="mlab-nf-tonearm">Tonearm position / note</label>
+        <input id="mlab-nf-tonearm" type="text" class="ea-input mlab-nf-settings-input mlab-nf-settings-input--wide"
+          placeholder="e.g. parked, over outer groove"
+          value="${renderText(nf.tonearmPositionInput)}"
+          data-mlab-nf-tonearm>
+      </div>
+      <div class="mlab-nf-settings-row">
+        <label class="mlab-nf-settings-label ea-muted" for="mlab-nf-duration">Capture duration</label>
+        <div class="mlab-nf-settings-input-group">
+          <input id="mlab-nf-duration" type="text" inputmode="decimal"
+            class="ea-input mlab-nf-settings-input"
+            placeholder="${durDefault}"
+            value="${renderText(nf.captureDurationSecondsInput)}"
+            data-mlab-nf-duration>
+          <span class="ea-muted mlab-nf-settings-unit">s</span>
+          <span class="mlab-nf-settings-src ea-muted">${durSrc} &rarr; ${durEffective.toFixed(1)} s</span>
+        </div>
+      </div>
+    </div>
+    ${resultHtml}
+    <div class="mlab-session-controls">
+      <button class="ea-button ea-button--primary" type="button" data-mlab-nf-start>Start noise floor capture</button>
+    </div>
+    ${historyHtml}
+  `;
+
+  body.querySelector<HTMLSelectElement>('[data-mlab-nf-scenario]')?.addEventListener('change', (e) => {
+    state.noiseFloor.scenarioKind = (e.target as HTMLSelectElement).value as NoiseFloorScenarioKind;
+    renderNoiseFloorPanel(els);
+  });
+  body.querySelector<HTMLSelectElement>('[data-mlab-nf-speed]')?.addEventListener('change', (e) => {
+    state.noiseFloor.speed = (e.target as HTMLSelectElement).value as NoiseFloorTurntableSpeed;
+    renderNoiseFloorPanel(els);
+  });
+  body.querySelector<HTMLInputElement>('[data-mlab-nf-custom-rpm]')?.addEventListener('input', (e) => {
+    state.noiseFloor.customRpmInput = (e.target as HTMLInputElement).value;
+  });
+  body.querySelector<HTMLInputElement>('[data-mlab-nf-tonearm]')?.addEventListener('input', (e) => {
+    state.noiseFloor.tonearmPositionInput = (e.target as HTMLInputElement).value;
+  });
+  body.querySelector<HTMLInputElement>('[data-mlab-nf-duration]')?.addEventListener('input', (e) => {
+    state.noiseFloor.captureDurationSecondsInput = (e.target as HTMLInputElement).value;
+    renderNoiseFloorPanel(els);
+  });
+  body.querySelector<HTMLButtonElement>('[data-mlab-nf-start]')?.addEventListener('click', () => {
+    startNoiseFloorCapture(els);
+  });
+  body.querySelector<HTMLButtonElement>('[data-mlab-nf-clear-history]')?.addEventListener('click', () => {
+    state.noiseFloor.runs = [];
+    state.noiseFloor.latest = null;
+    renderNoiseFloorPanel(els);
+  });
 }
 
 export function enableMeasurementLabInteractions(): void {
@@ -5096,6 +5560,7 @@ export function enableMeasurementLabInteractions(): void {
   renderResonancePanel(els);
   renderRefLevelPanel(els);
   renderAdvancedPanel(els);
+  renderNoiseFloorPanel(els);
   renderLogPanel(els);
   clearMeterDom(els);
 
@@ -5119,6 +5584,7 @@ export function enableMeasurementLabInteractions(): void {
     renderResonancePanel(els);
     renderRefLevelPanel(els);
     renderAdvancedPanel(els);
+    renderNoiseFloorPanel(els);
   }).catch((err: unknown) => {
     state.testRecordLoadFailed = true;
     state.selectedTestRecordMissing = null;

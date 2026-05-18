@@ -109,6 +109,7 @@ async function runChecks() {
   copySource('src/modules/measurement-lab/engine/referenceLevel.ts');
   copySource('src/modules/measurement-lab/engine/referenceCalibrationSet.ts');
   copySource('src/modules/measurement-lab/engine/channelIdentity.ts');
+  copySource('src/modules/measurement-lab/engine/noiseFloor.ts');
   copySource('src/shared/audio-io/levelMetrics.ts');
   compileTempSources();
 
@@ -138,6 +139,9 @@ async function runChecks() {
   );
   const channelIdentityModule = await import(
     pathToFileURL(join(tempRoot, 'dist/modules/measurement-lab/engine/channelIdentity.js')).href
+  );
+  const noiseFloorModule = await import(
+    pathToFileURL(join(tempRoot, 'dist/modules/measurement-lab/engine/noiseFloor.js')).href
   );
   const levelMetricsModule = await import(
     pathToFileURL(join(tempRoot, 'dist/shared/audio-io/levelMetrics.js')).href
@@ -673,6 +677,76 @@ async function runChecks() {
     throw new Error('channel identity: expected self-test warning for self_test source');
   }
   console.log('- channel identity: self_test source preserved + self-test warning: PASS');
+
+
+  // Noise floor engine tests
+  const { analyzeNoiseFloor } = noiseFloorModule;
+
+  // 1. Silence (all zeros) -> noiseFloorDbfs is null (below floor)
+  {
+    const silence = new Float32Array(4410);
+    const result = analyzeNoiseFloor(silence, silence);
+    if (result.noiseFloorDbfs !== null) {
+      throw new Error(`noise floor: expected null for silence, got ${result.noiseFloorDbfs}`);
+    }
+    console.log('- noise floor: silence -> null noiseFloorDbfs: PASS');
+  }
+
+  // 2. Known amplitude -> expected RMS dBFS
+  {
+    // Sine wave at amplitude 0.1 -> RMS = 0.1 / sqrt(2) -> ~-23.0 dBFS
+    const SR = 44100; const dur = 1;
+    const freq = 1000;
+    const left = new Float32Array(SR * dur);
+    const right = new Float32Array(SR * dur);
+    for (let i = 0; i < left.length; i++) {
+      left[i] = 0.1 * Math.sin(2 * Math.PI * freq * i / SR);
+      right[i] = 0.08 * Math.sin(2 * Math.PI * freq * i / SR);
+    }
+    const result = analyzeNoiseFloor(left, right);
+    const expectedL = 20 * Math.log10(0.1 / Math.sqrt(2));
+    const expectedR = 20 * Math.log10(0.08 / Math.sqrt(2));
+    if (result.leftRmsDbfs === null || Math.abs(result.leftRmsDbfs - expectedL) > 0.5) {
+      throw new Error(`noise floor: L RMS expected ~${expectedL.toFixed(1)}, got ${result.leftRmsDbfs}`);
+    }
+    if (result.rightRmsDbfs === null || Math.abs(result.rightRmsDbfs - expectedR) > 0.5) {
+      throw new Error(`noise floor: R RMS expected ~${expectedR.toFixed(1)}, got ${result.rightRmsDbfs}`);
+    }
+    // noiseFloorDbfs should be max of L/R RMS
+    const expectedNf = Math.max(result.leftRmsDbfs, result.rightRmsDbfs);
+    if (Math.abs(result.noiseFloorDbfs - expectedNf) > 0.01) {
+      throw new Error(`noise floor: noiseFloorDbfs should be max(L,R)=${expectedNf.toFixed(2)}, got ${result.noiseFloorDbfs}`);
+    }
+    console.log('- noise floor: known amplitude -> correct RMS dBFS and max aggregation: PASS');
+  }
+
+  // 3. Peak values correct
+  {
+    const left = new Float32Array([0.5, -0.8, 0.3]);
+    const right = new Float32Array([0.6, -0.4, 0.1]);
+    const result = analyzeNoiseFloor(left, right);
+    const expectedLPeak = 20 * Math.log10(0.8);
+    const expectedRPeak = 20 * Math.log10(0.6);
+    if (result.leftPeakDbfs === null || Math.abs(result.leftPeakDbfs - expectedLPeak) > 0.1) {
+      throw new Error(`noise floor: L peak expected ${expectedLPeak.toFixed(2)}, got ${result.leftPeakDbfs}`);
+    }
+    if (result.rightPeakDbfs === null || Math.abs(result.rightPeakDbfs - expectedRPeak) > 0.1) {
+      throw new Error(`noise floor: R peak expected ${expectedRPeak.toFixed(2)}, got ${result.rightPeakDbfs}`);
+    }
+    console.log('- noise floor: peak values correct: PASS');
+  }
+
+  // 4. Empty samples -> null, no crash
+  {
+    const result = analyzeNoiseFloor(new Float32Array(0), new Float32Array(0));
+    if (result.noiseFloorDbfs !== null) {
+      throw new Error('noise floor: empty arrays should produce null noiseFloorDbfs');
+    }
+    if (result.warnings.length === 0) {
+      throw new Error('noise floor: empty arrays should produce a warning');
+    }
+    console.log('- noise floor: empty arrays -> null + warning (no crash): PASS');
+  }
 
   console.log('PASS measurement lab engine checks');
 }
@@ -2664,3 +2738,85 @@ function checkS5H3ActiveDurationBinding() {
 }
 
 checkS5H3ActiveDurationBinding();
+
+function checkS5H4NoiseFloor() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const enginePath = join(repoRoot, 'src/modules/measurement-lab/engine/noiseFloor.ts');
+  const dspPath = join(repoRoot, 'src/modules/measurement-lab/dsp/noiseFloorNode.ts');
+  const cssSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/measurementLab.css');
+  for (const p of [renderSrcPath, enginePath, dspPath, cssSrcPath]) {
+    if (!existsSync(p)) { console.error(`S5H.4: missing file: ${p}`); process.exitCode = 1; return; }
+  }
+  const uiSrc = readFileSync(renderSrcPath, 'utf8');
+  const engSrc = readFileSync(enginePath, 'utf8');
+  const cssSrc = readFileSync(cssSrcPath, 'utf8');
+
+  const reScenarioKind = new RegExp("type NoiseFloorScenarioKind");
+  const reRunType = new RegExp("type NoiseFloorRun\\s*=\\s*\\{");
+  const reStateType = new RegExp("type NoiseFloorState\\s*=\\s*\\{");
+  const reEqOff = /equipment_off/;
+  const reRigStill = /rig_powered_still/;
+  const rePlatter = /platter_spinning/;
+  const reSpeed16 = /'16'/;
+  const reSpeed33 = /'33_33'/;
+  const reSpeed45 = /'45'/;
+  const reSpeed78 = /'78'/;
+  const reCustom = /'custom'/;
+  const reAnalyzeFn = /function analyzeNoiseFloor/;
+  const reStartBtn = /Start noise floor capture/;
+  const reClearBtn = /Clear noise floor history/;
+  const reExportKey = /noise_floor\s*:/;
+  const reScenarioKey = /scenario_kind/;
+  const reNfDbfs = /noise_floor_dbfs/;
+  const reReportSection = /NOISE FLOOR \/ RIG BASELINE/;
+  const reNoTestRecord = /do not use a test record/;
+  const reVtaPlanned = /status\s*:\s*'planned'\s*as\s*const/;
+  const reNoiseFloorState = /noiseFloor\s*:/;
+  const reNoiseFloorBody = /noiseFloorBody/;
+  const rePanelMarkup = /noiseFloorPanelMarkup/;
+  const reCaptureDurUsed = new RegExp('createNoiseFloorCapture');
+
+  const checks = [
+    ['NoiseFloorScenarioKind type declared', reScenarioKind.test(uiSrc)],
+    ['NoiseFloorRun type declared', reRunType.test(uiSrc)],
+    ['NoiseFloorState type declared', reStateType.test(uiSrc)],
+    ["scenario 'equipment_off'", reEqOff.test(uiSrc)],
+    ["scenario 'rig_powered_still'", reRigStill.test(uiSrc)],
+    ["scenario 'platter_spinning'", rePlatter.test(uiSrc)],
+    ["speed '16'", reSpeed16.test(uiSrc)],
+    ["speed '33_33'", reSpeed33.test(uiSrc)],
+    ["speed '45'", reSpeed45.test(uiSrc)],
+    ["speed '78'", reSpeed78.test(uiSrc)],
+    ["speed 'custom'", reCustom.test(uiSrc)],
+    ['analyzeNoiseFloor in engine', reAnalyzeFn.test(engSrc)],
+    ['createNoiseFloorCapture called in UI', reCaptureDurUsed.test(uiSrc)],
+    ['Start noise floor capture button', reStartBtn.test(uiSrc)],
+    ['Clear noise floor history button', reClearBtn.test(uiSrc)],
+    ['noise_floor key in JSON export', reExportKey.test(uiSrc)],
+    ['scenario_kind in export', reScenarioKey.test(uiSrc)],
+    ['noise_floor_dbfs in export', reNfDbfs.test(uiSrc)],
+    ['NOISE FLOOR / RIG BASELINE in text report', reReportSection.test(uiSrc)],
+    ['noise floor does not require test record copy', reNoTestRecord.test(uiSrc)],
+    ['noiseFloor in state', reNoiseFloorState.test(uiSrc)],
+    ['noiseFloorBody in elements()', reNoiseFloorBody.test(uiSrc)],
+    ['noiseFloorPanelMarkup function exists', rePanelMarkup.test(uiSrc)],
+    ['CSS mlab-nf-settings present', cssSrc.includes('.mlab-nf-settings')],
+    ['CSS mlab-nf-history-table present', cssSrc.includes('.mlab-nf-history-table')],
+    ['VTA workflow still planned', reVtaPlanned.test(uiSrc)],
+  ];
+
+  let allPass = true;
+  for (const [label, ok] of checks) {
+    if (!ok) {
+      console.error(`S5H.4 static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S5H.4 static source check (Noise Floor / Rig Baseline measurement): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS5H4NoiseFloor();

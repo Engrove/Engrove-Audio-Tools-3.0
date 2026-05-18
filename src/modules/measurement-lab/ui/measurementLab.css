@@ -1440,3 +1440,126 @@ button.mlab-coverage-badge--available:focus-visible {
   margin-top: var(--ea-space-2);
   font-size: var(--ea-text-sm);
 }
+
+/* S5H.4 — Noise Floor / Rig Baseline panel */
+.mlab-nf-intro {
+  margin-bottom: var(--ea-space-3);
+  font-size: var(--ea-text-sm);
+}
+
+.mlab-nf-guidance {
+  font-size: var(--ea-text-sm);
+  margin-bottom: var(--ea-space-3);
+  font-style: italic;
+}
+
+.mlab-nf-settings {
+  border: 1px solid var(--ea-border-low);
+  border-radius: var(--ea-radius-sm);
+  padding: var(--ea-space-3);
+  background: var(--ea-bg-panel-alt);
+  margin-bottom: var(--ea-space-4);
+}
+
+.mlab-nf-settings-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ea-space-3);
+  margin-bottom: var(--ea-space-2);
+  flex-wrap: wrap;
+}
+
+.mlab-nf-settings-label {
+  min-width: 140px;
+  font-size: var(--ea-text-sm);
+  flex-shrink: 0;
+}
+
+.mlab-nf-settings-select {
+  flex: 1;
+  font-size: var(--ea-text-sm);
+  min-width: 0;
+}
+
+.mlab-nf-settings-input {
+  width: 7ch;
+  padding: 2px 6px;
+  border: 1px solid var(--ea-border-soft);
+  border-radius: var(--ea-radius-sm);
+  background: var(--ea-bg-input, #fff);
+  color: var(--ea-text-body);
+  font-size: var(--ea-text-sm);
+  font-family: var(--ea-font-mono, monospace);
+}
+
+.mlab-nf-settings-input--wide {
+  width: 20ch;
+}
+
+.mlab-nf-settings-input-group {
+  display: flex;
+  align-items: center;
+  gap: var(--ea-space-2);
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.mlab-nf-settings-unit {
+  font-size: var(--ea-text-sm);
+  color: var(--ea-text-low);
+}
+
+.mlab-nf-settings-src {
+  font-size: var(--ea-text-sm);
+  color: var(--ea-text-low);
+}
+
+.mlab-nf-result {
+  margin-bottom: var(--ea-space-4);
+}
+
+.mlab-nf-history {
+  margin-top: var(--ea-space-5);
+  border-top: 1px solid var(--ea-border-low);
+  padding-top: var(--ea-space-3);
+}
+
+.mlab-nf-history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--ea-space-2);
+  flex-wrap: wrap;
+  gap: var(--ea-space-2);
+}
+
+.mlab-nf-history-clear {
+  font-size: var(--ea-text-sm);
+}
+
+.mlab-nf-history-scroll {
+  overflow-x: auto;
+}
+
+.mlab-nf-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--ea-text-sm);
+}
+
+.mlab-nf-history-table th {
+  text-align: left;
+  padding: var(--ea-space-1) var(--ea-space-2);
+  border-bottom: 1px solid var(--ea-border-low);
+  color: var(--ea-text-low);
+  white-space: nowrap;
+}
+
+.mlab-nf-history-row:nth-child(even) {
+  background: var(--ea-bg-panel-alt);
+}
+
+.mlab-nf-history-cell {
+  padding: var(--ea-space-1) var(--ea-space-2);
+  white-space: nowrap;
+}
