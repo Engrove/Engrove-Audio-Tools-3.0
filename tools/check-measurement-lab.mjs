@@ -3860,3 +3860,130 @@ function checkS7AWorkbenchShell() {
 }
 
 checkS7AWorkbenchShell();
+
+function checkS7A1WorkbenchLayout() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const cssSrcPath    = join(repoRoot, 'src/modules/measurement-lab/ui/measurementLab.css');
+
+  for (const p of [renderSrcPath, cssSrcPath]) {
+    if (!existsSync(p)) {
+      console.error(`S7A.1 static check FAIL: required file not found: ${p}`);
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const uiSrc  = readFileSync(renderSrcPath, 'utf8');
+  const cssSrc = readFileSync(cssSrcPath, 'utf8');
+
+  const checks = [
+    // 1. WORKBENCH_TOOLS constant defined
+    ['WORKBENCH_TOOLS constant defined', /const WORKBENCH_TOOLS/.test(uiSrc)],
+    // 2. workbenchHomePanelMarkup function defined
+    ['workbenchHomePanelMarkup function defined', /function workbenchHomePanelMarkup/.test(uiSrc)],
+    // 3. contextOverlayMarkup function defined
+    ['contextOverlayMarkup function defined', /function contextOverlayMarkup/.test(uiSrc)],
+    // 4. logModalMarkup function defined
+    ['logModalMarkup function defined', /function logModalMarkup/.test(uiSrc)],
+    // 5. activateTool function defined
+    ['activateTool function defined', /function activateTool/.test(uiSrc)],
+    // 6. Context overlay in renderMeasurementLabPage
+    ['contextOverlayMarkup() called in renderMeasurementLabPage', /contextOverlayMarkup\(\)/.test(uiSrc)],
+    // 7. Log modal in renderMeasurementLabPage
+    ['logModalMarkup() called in renderMeasurementLabPage', /logModalMarkup\(\)/.test(uiSrc)],
+    // 8. Workbench home panel in renderMeasurementLabPage
+    ['workbenchHomePanelMarkup() called in renderMeasurementLabPage', /workbenchHomePanelMarkup\(\)/.test(uiSrc)],
+    // 9. No diagRailMarkup() call in renderMeasurementLabPage (right column removed)
+    ['diagRailMarkup() NOT called in renderMeasurementLabPage',
+      (() => {
+        const fnStart = uiSrc.indexOf('export function renderMeasurementLabPage');
+        const fnEnd = uiSrc.indexOf('\nexport function ', fnStart + 10);
+        const body = fnEnd > 0 ? uiSrc.slice(fnStart, fnEnd) : uiSrc.slice(fnStart, fnStart + 2000);
+        return !body.includes('diagRailMarkup()');
+      })()],
+    // 10. Workbench footer with Open log button
+    ['mlab-workbench-footer in renderMeasurementLabPage', /mlab-workbench-footer/.test(uiSrc)],
+    // 11. Open log button exists in footer
+    ['data-mlab-open-log button in markup', /data-mlab-open-log/.test(uiSrc)],
+    // 12. Log modal has data-mlab-log-body
+    ['data-mlab-log-body in log modal markup', /logModalMarkup[\s\S]{0,1000}data-mlab-log-body/.test(uiSrc)],
+    // 13. Log modal has log-reset button
+    ['data-mlab-log-reset in log modal markup', /logModalMarkup[\s\S]{0,1000}data-mlab-log-reset/.test(uiSrc)],
+    // 14. Log modal has log-export button
+    ['data-mlab-log-export in log modal markup', /logModalMarkup[\s\S]{0,1000}data-mlab-log-export/.test(uiSrc)],
+    // 15. Compact mini meters in ribbon markup
+    ['mlab-ribbon-meters in sessionRibbonMarkup', /sessionRibbonMarkup[\s\S]{0,1500}mlab-ribbon-meters/.test(uiSrc)],
+    // 16. Mini meter fill elements in ribbon
+    ['data-mlab-ribbon-mini-l-fill in ribbon', /data-mlab-ribbon-mini-l-fill/.test(uiSrc)],
+    // 17. CSS: 2-column grid (268px)
+    ['CSS: 2-column grid with 268px rail', /grid-template-columns\s*:\s*268px/.test(cssSrc)],
+    // 18. CSS: workbench-center defined
+    ['CSS: .mlab-workbench-center defined', /\.mlab-workbench-center/.test(cssSrc)],
+    // 19. CSS: tool-panel--active display:block
+    ['CSS: mlab-tool-panel--active display block', /mlab-tool-panel--active[\s\S]{0,100}display\s*:\s*block/.test(cssSrc)],
+    // 20. CSS: context overlay defined
+    ['CSS: .mlab-context-overlay defined', /\.mlab-context-overlay/.test(cssSrc)],
+    // 21. CSS: log modal defined
+    ['CSS: .mlab-log-modal defined', /\.mlab-log-modal/.test(cssSrc)],
+    // 22. CSS: workbench footer defined
+    ['CSS: .mlab-workbench-footer defined', /\.mlab-workbench-footer/.test(cssSrc)],
+    // 23. CSS: ribbon mini meters defined
+    ['CSS: .mlab-ribbon-meters defined', /\.mlab-ribbon-meters/.test(cssSrc)],
+    // 24. elements() has activeTitle selector
+    ['elements() has activeTitle selector', /activeTitle\s*:.*data-mlab-active-title/.test(uiSrc)],
+    // 25. elements() has contextOverlay selector
+    ['elements() has contextOverlay selector', /contextOverlay\s*:.*data-mlab-context-overlay/.test(uiSrc)],
+    // 26. elements() has logModal selector
+    ['elements() has logModal selector', /logModal\s*:.*data-mlab-log-modal/.test(uiSrc)],
+    // 27. elements() has ribbonMiniLFill selector
+    ['elements() has ribbonMiniLFill selector', /ribbonMiniLFill/.test(uiSrc)],
+    // 28. workbench_home in WORKBENCH_TOOLS
+    ['workbench_home in WORKBENCH_TOOLS', /id:\s*'workbench_home'/.test(uiSrc)],
+    // 29. audio_source in WORKBENCH_TOOLS
+    ['audio_source in WORKBENCH_TOOLS', /id:\s*'audio_source'/.test(uiSrc)],
+    // 30. NoIntersectionObserver in enableMeasurementLabInteractions
+    ['No IntersectionObserver in enableMeasurementLabInteractions',
+      (() => {
+        const fnStart = uiSrc.indexOf('export function enableMeasurementLabInteractions');
+        const fnEnd = uiSrc.indexOf('\nexport function ', fnStart + 10);
+        const body = fnEnd > 0 ? uiSrc.slice(fnStart, fnEnd) : uiSrc.slice(fnStart, fnStart + 20000);
+        return !body.includes('IntersectionObserver');
+      })()],
+    // 31. activateTool called with workbench_home on load
+    ['activateTool called with workbench_home on load',
+      /activateTool\s*\(\s*'workbench_home'/.test(uiSrc)],
+    // 32. Open web report still present
+    ['Open web report still present', /data-mlab-web-report/.test(uiSrc)],
+    // 33. Export JSON still present
+    ['Export JSON still present', /data-mlab-export(?!-report)/.test(uiSrc)],
+    // 34. Reset still present
+    ['Reset still present', /data-mlab-reset/.test(uiSrc)],
+    // 35. S6 regression: vertical_resonance supported check
+    ['S6 regression: vertical_resonance in WORKBENCH_TOOLS', /vertical_resonance/.test(uiSrc)],
+    // 36. S5J regression: webReportBtn still wired
+    ['S5J regression: webReportBtn still wired', /webReportBtn/.test(uiSrc)],
+    // 37. S5R regression: AzimuthStepRun still present
+    ['S5R regression: AzimuthStepRun still present', /AzimuthStepRun/.test(uiSrc)],
+    // 38. THD panel has correct tool-panel attribute
+    ['thd panel data-mlab-tool-panel is thd_imd', /data-mlab-tool-panel="thd_imd"/.test(uiSrc)],
+    // 39. Audio source panel has tool-panel attribute
+    ['audio source panel has data-mlab-tool-panel', /data-mlab-tool-panel="audio_source"/.test(uiSrc)],
+    // 40. Noise floor panel has tool-panel attribute
+    ['noise floor panel has data-mlab-tool-panel', /data-mlab-tool-panel="noise_floor"/.test(uiSrc)],
+  ];
+
+  let allPass = true;
+  for (const [label, ok] of checks) {
+    if (!ok) {
+      console.error(`S7A.1 static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S7A.1 static source check (Control-Room Workbench Layout): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS7A1WorkbenchLayout();

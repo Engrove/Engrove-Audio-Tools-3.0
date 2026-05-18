@@ -55,6 +55,32 @@ const WORKFLOW_PANEL_TARGETS: Readonly<Record<string, string>> = {
   vertical_resonance: 'mlab-resonance-panel',
 };
 
+type WorkbenchTool = {
+  readonly id: string;
+  readonly label: string;
+  readonly panelId: string | null;
+  readonly group: string;
+  readonly workflowId: string | null;
+  readonly description: string;
+};
+
+const WORKBENCH_TOOLS: readonly WorkbenchTool[] = [
+  { id: 'workbench_home', label: 'Workbench Home', panelId: 'mlab-home-panel', group: 'Home / session', workflowId: null, description: 'Session overview and recommended next step.' },
+  { id: 'audio_source', label: 'Audio Source', panelId: 'mlab-source-panel', group: 'Setup / baseline', workflowId: null, description: 'Connect ADC, choose live/self-test and verify input scope.' },
+  { id: 'reference_level', label: 'Reference Level Calibration', panelId: 'mlab-reflevel-panel', group: 'Setup / baseline', workflowId: 'reference_level', description: 'Calibrate ADC input against standard groove level.' },
+  { id: 'channel_identity', label: 'Channel Identity', panelId: 'mlab-channel-panel', group: 'Channel / geometry', workflowId: 'channel_identity', description: 'Verify L/R routing and detect reversed connections.' },
+  { id: 'azimuth_crosstalk', label: 'Azimuth & Crosstalk', panelId: 'mlab-channel-panel', group: 'Channel / geometry', workflowId: 'azimuth_crosstalk', description: 'Measure channel separation and azimuth alignment.' },
+  { id: 'wow_flutter', label: 'Speed & Wow / Flutter', panelId: 'mlab-speed-panel', group: 'Speed / response', workflowId: 'wow_flutter', description: '33⅓/45 RPM diagnostics, weighted W&F and run comparison.' },
+  { id: 'frequency_response', label: 'Frequency Response', panelId: 'mlab-freq-panel', group: 'Speed / response', workflowId: 'frequency_response', description: 'Plot the cartridge response curve from a frequency sweep.' },
+  { id: 'thd_imd', label: 'THD / IMD Detail', panelId: 'mlab-thd-panel', group: 'Distortion / resonance', workflowId: null, description: 'Harmonic breakdown and distortion detail.' },
+  { id: 'vertical_resonance', label: 'Vertical Resonance', panelId: 'mlab-resonance-panel', group: 'Distortion / resonance', workflowId: 'vertical_resonance', description: 'Detect vertical resonance peak and Q factor.' },
+  { id: 'noise_floor', label: 'Noise Floor / Rig Baseline', panelId: 'mlab-noisefloor-panel', group: 'Distortion / resonance', workflowId: null, description: 'Measure rig noise floor and baseline.' },
+  { id: 'vta_imd_optimizer', label: 'VTA / IMD Optimizer', panelId: 'mlab-advanced-panel', group: 'Experimental / planned', workflowId: 'vta_imd_optimizer', description: 'Experimental VTA/IMD optimizer — no supported recommendation.' },
+  { id: 'anti_skate_tracking_stress', label: 'Anti-skate / Tracking Stress', panelId: null, group: 'Experimental / planned', workflowId: 'anti_skate_tracking_stress', description: 'Planned workflow — not available in this release.' },
+  { id: 'pink_noise_spectral', label: 'Pink Noise / Spectral Balance', panelId: null, group: 'Experimental / planned', workflowId: 'pink_noise_spectral', description: 'Planned workflow — not available in this release.' },
+  { id: 'rumble_isolation', label: 'Rumble & Noise Isolation', panelId: null, group: 'Experimental / planned', workflowId: 'rumble_isolation', description: 'Planned workflow — not available in this release.' },
+];
+
 type SourceMode = 'live' | 'self-test';
 type CaptureState = 'idle' | 'connecting' | 'live' | 'error';
 
@@ -414,7 +440,7 @@ type LabState = {
  * site below; it has no runtime effect.
  */
 const tokenLayoutGeneratedClassNames =
-  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured mlab-vta-candidate-badge mlab-vta-comparison mlab-vta-comparison-candidate mlab-vta-comparison-meta mlab-vta-comparison-warning mlab-vta-comparison-status mlab-vta-comparison-confidence mlab-vta-confidence-level mlab-vta-confidence-level--insufficient mlab-vta-confidence-level--low mlab-vta-confidence-level--medium mlab-vta-confidence-level--high mlab-vta-confidence-reason mlab-vta-gate mlab-vta-gate-head mlab-vta-gate-summary mlab-vta-gate-status mlab-vta-gate-status--not-ready mlab-vta-gate-status--candidate mlab-vta-gate-status--review mlab-vta-gate-msg mlab-vta-gate-table mlab-vta-gate-row mlab-vta-gate-pass mlab-vta-gate-pass--ok mlab-vta-gate-pass--fail mlab-vta-gate-label mlab-vta-gate-detail mlab-vta-policy mlab-vta-policy-head mlab-vta-policy-status-row mlab-vta-policy-status mlab-vta-policy-status--experimental mlab-vta-policy-status--review-not-supported mlab-vta-policy-reason mlab-vta-policy-req-head mlab-vta-policy-req-list mlab-vta-policy-req mlab-guided-order-panel mlab-guided-order-body mlab-guided-order-intro mlab-guided-order-list mlab-guided-order-item mlab-guided-order-item--first mlab-guided-order-step-head mlab-guided-order-track mlab-guided-order-name mlab-guided-order-first-badge mlab-guided-order-detail mlab-guided-order-workflow mlab-speed-ctx-row mlab-speed-ctx-label mlab-speed-ctx-btn mlab-speed-ctx-btn--active mlab-speed-ctx-note mlab-speed-ctx-badge mlab-speed-history mlab-speed-history-head mlab-speed-history-clear mlab-speed-history-empty mlab-speed-history-scroll mlab-speed-history-table mlab-speed-history-row mlab-speed-history-cell mlab-speed-settings mlab-speed-settings--result mlab-speed-settings-head mlab-speed-settings-hint mlab-speed-settings-row mlab-speed-settings-label mlab-speed-settings-value mlab-speed-settings-input-group mlab-speed-settings-input mlab-speed-settings-unit mlab-speed-settings-src mlab-speed-settings-reset mlab-nf-intro mlab-nf-guidance mlab-nf-settings mlab-nf-settings-row mlab-nf-settings-label mlab-nf-settings-select mlab-nf-settings-input mlab-nf-settings-input--wide mlab-nf-settings-input-group mlab-nf-settings-unit mlab-nf-settings-src mlab-nf-result mlab-nf-history mlab-nf-history-head mlab-nf-history-clear mlab-nf-history-scroll mlab-nf-history-table mlab-nf-history-row mlab-nf-history-cell mlab-chain-readiness mlab-chain-readiness--ready mlab-chain-readiness--warning mlab-chain-readiness--blocked mlab-chain-readiness--not-checked mlab-chain-readiness-row mlab-chain-readiness-key mlab-chain-readiness-val mlab-chain-readiness-warning mlab-chain-readiness-note mlab-run-quality mlab-run-quality--ok mlab-run-quality--warning mlab-run-quality--invalid mlab-run-quality-label mlab-run-quality-warnings mlab-session-ribbon mlab-ribbon-group mlab-ribbon-group--active mlab-ribbon-label mlab-ribbon-value mlab-ribbon-sep mlab-ribbon-sep--flex mlab-ribbon-active-tool mlab-workflow-rail mlab-rail-head mlab-rail-items mlab-rail-loading mlab-rail-item mlab-rail-item--available mlab-rail-item--planned mlab-rail-item--partial mlab-rail-item--unavailable mlab-rail-item--active mlab-rail-item-label mlab-rail-item-status mlab-diag-rail mlab-diag-signal-panel mlab-diag-signal-body mlab-diag-signal-status mlab-diag-signal-status--ready mlab-diag-signal-status--blocked mlab-diag-signal-status--warning mlab-diag-signal-status--not_checked mlab-diag-signal-row mlab-diag-signal-key mlab-diag-signal-val mlab-diag-signal-clip';
+  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured mlab-vta-candidate-badge mlab-vta-comparison mlab-vta-comparison-candidate mlab-vta-comparison-meta mlab-vta-comparison-warning mlab-vta-comparison-status mlab-vta-comparison-confidence mlab-vta-confidence-level mlab-vta-confidence-level--insufficient mlab-vta-confidence-level--low mlab-vta-confidence-level--medium mlab-vta-confidence-level--high mlab-vta-confidence-reason mlab-vta-gate mlab-vta-gate-head mlab-vta-gate-summary mlab-vta-gate-status mlab-vta-gate-status--not-ready mlab-vta-gate-status--candidate mlab-vta-gate-status--review mlab-vta-gate-msg mlab-vta-gate-table mlab-vta-gate-row mlab-vta-gate-pass mlab-vta-gate-pass--ok mlab-vta-gate-pass--fail mlab-vta-gate-label mlab-vta-gate-detail mlab-vta-policy mlab-vta-policy-head mlab-vta-policy-status-row mlab-vta-policy-status mlab-vta-policy-status--experimental mlab-vta-policy-status--review-not-supported mlab-vta-policy-reason mlab-vta-policy-req-head mlab-vta-policy-req-list mlab-vta-policy-req mlab-guided-order-panel mlab-guided-order-body mlab-guided-order-intro mlab-guided-order-list mlab-guided-order-item mlab-guided-order-item--first mlab-guided-order-step-head mlab-guided-order-track mlab-guided-order-name mlab-guided-order-first-badge mlab-guided-order-detail mlab-guided-order-workflow mlab-speed-ctx-row mlab-speed-ctx-label mlab-speed-ctx-btn mlab-speed-ctx-btn--active mlab-speed-ctx-note mlab-speed-ctx-badge mlab-speed-history mlab-speed-history-head mlab-speed-history-clear mlab-speed-history-empty mlab-speed-history-scroll mlab-speed-history-table mlab-speed-history-row mlab-speed-history-cell mlab-speed-settings mlab-speed-settings--result mlab-speed-settings-head mlab-speed-settings-hint mlab-speed-settings-row mlab-speed-settings-label mlab-speed-settings-value mlab-speed-settings-input-group mlab-speed-settings-input mlab-speed-settings-unit mlab-speed-settings-src mlab-speed-settings-reset mlab-nf-intro mlab-nf-guidance mlab-nf-settings mlab-nf-settings-row mlab-nf-settings-label mlab-nf-settings-select mlab-nf-settings-input mlab-nf-settings-input--wide mlab-nf-settings-input-group mlab-nf-settings-unit mlab-nf-settings-src mlab-nf-result mlab-nf-history mlab-nf-history-head mlab-nf-history-clear mlab-nf-history-scroll mlab-nf-history-table mlab-nf-history-row mlab-nf-history-cell mlab-chain-readiness mlab-chain-readiness--ready mlab-chain-readiness--warning mlab-chain-readiness--blocked mlab-chain-readiness--not-checked mlab-chain-readiness-row mlab-chain-readiness-key mlab-chain-readiness-val mlab-chain-readiness-warning mlab-chain-readiness-note mlab-run-quality mlab-run-quality--ok mlab-run-quality--warning mlab-run-quality--invalid mlab-run-quality-label mlab-run-quality-warnings mlab-session-ribbon mlab-ribbon-group mlab-ribbon-group--active mlab-ribbon-label mlab-ribbon-value mlab-ribbon-sep mlab-ribbon-sep--flex mlab-ribbon-active-tool mlab-workflow-rail mlab-rail-head mlab-rail-items mlab-rail-loading mlab-rail-item mlab-rail-item--available mlab-rail-item--planned mlab-rail-item--partial mlab-rail-item--unavailable mlab-rail-item--active mlab-rail-item-label mlab-rail-item-status mlab-diag-rail mlab-diag-signal-panel mlab-diag-signal-body mlab-diag-signal-status mlab-diag-signal-status--ready mlab-diag-signal-status--blocked mlab-diag-signal-status--warning mlab-diag-signal-status--not_checked mlab-diag-signal-row mlab-diag-signal-key mlab-diag-signal-val mlab-diag-signal-clip mlab-workbench-center mlab-center-head mlab-center-title mlab-center-title-pre mlab-center-title-h mlab-center-actions mlab-center-body mlab-center-status-pill mlab-tool-panel--active mlab-context-overlay mlab-context-overlay--open mlab-context-head mlab-context-body mlab-context-foot mlab-log-modal mlab-log-modal--open mlab-log-modal-dialog mlab-log-modal-head mlab-log-modal-body mlab-log-modal-foot mlab-workbench-footer mlab-footer-status mlab-footer-actions mlab-ribbon-meters mlab-ribbon-mini-meter mlab-ribbon-mini-label mlab-ribbon-mini-bar-wrap mlab-ribbon-mini-fill mlab-ribbon-mini-db mlab-rail-group-head mlab-rail-item-tooltip mlab-rail-item-tooltip-name mlab-rail-item-tooltip-status mlab-home-panel mlab-home-prereqs';
 void tokenLayoutGeneratedClassNames;
 
 const speedMeasurementDurationSeconds = 30;
@@ -702,7 +728,23 @@ function sessionRibbonMarkup(): string {
       <span class="mlab-ribbon-sep mlab-ribbon-sep--flex" aria-hidden="true"></span>
       <div class="mlab-ribbon-group mlab-ribbon-group--active">
         <span class="mlab-ribbon-label">Active</span>
-        <span class="mlab-ribbon-value mlab-ribbon-active-tool" data-mlab-ribbon-active-tool>—</span>
+        <span class="mlab-ribbon-value mlab-ribbon-active-tool" data-mlab-ribbon-active-tool>Workbench Home</span>
+      </div>
+      <div class="mlab-ribbon-meters" aria-hidden="true">
+        <div class="mlab-ribbon-mini-meter">
+          <span class="mlab-ribbon-mini-label">L</span>
+          <div class="mlab-ribbon-mini-bar-wrap" role="presentation">
+            <div class="mlab-ribbon-mini-fill" data-mlab-ribbon-mini-l-fill style="--p:0%"></div>
+          </div>
+          <span class="mlab-ribbon-mini-db" data-mlab-ribbon-mini-l-db>—</span>
+        </div>
+        <div class="mlab-ribbon-mini-meter">
+          <span class="mlab-ribbon-mini-label">R</span>
+          <div class="mlab-ribbon-mini-bar-wrap" role="presentation">
+            <div class="mlab-ribbon-mini-fill" data-mlab-ribbon-mini-r-fill style="--p:0%"></div>
+          </div>
+          <span class="mlab-ribbon-mini-db" data-mlab-ribbon-mini-r-db>—</span>
+        </div>
       </div>
     </div>
   `;
@@ -716,6 +758,93 @@ function workflowRailMarkup(): string {
         <p class="mlab-rail-loading ea-muted">Loading…</p>
       </div>
     </nav>
+  `;
+}
+
+function workbenchHomePanelMarkup(): string {
+  return `
+    <div id="mlab-home-panel" data-mlab-tool-panel="workbench_home">
+      <section class="ea-panel" aria-labelledby="mlab-home-status-title">
+        <div class="ea-panel-header">
+          <span class="ea-panel-header-id" aria-hidden="true">&#9776;</span>
+          <span id="mlab-home-status-title">Session overview</span>
+        </div>
+        <div class="ea-panel-body">
+          <div class="mlab-home-prereqs" data-mlab-home-prereqs>
+            <p class="ea-muted">Select a test record and connect a source to begin. Use the workflow rail on the left to navigate to a measurement tool.</p>
+          </div>
+        </div>
+      </section>
+      ${guidedMeasurementOrderMarkup()}
+    </div>
+  `;
+}
+
+function contextOverlayMarkup(): string {
+  return `
+    <div class="mlab-context-overlay" data-mlab-context-overlay>
+      <div class="mlab-context-head">
+        <span>Session context</span>
+        <button class="ea-button ea-button--ghost" type="button" data-mlab-context-close>Close</button>
+      </div>
+      <div class="mlab-context-body">
+        <div>
+          ${coveragePanelMarkup()}
+          ${chainReadinessPanelMarkup()}
+        </div>
+        <div>
+          <div class="ea-panel mlab-diag-signal-panel">
+            <div class="ea-panel-header">
+              <span class="ea-panel-header-id" aria-hidden="true"></span>
+              <span>Signal health</span>
+            </div>
+            <div class="ea-panel-body mlab-diag-signal-body" data-mlab-diag-signal-body>
+              <p class="ea-muted">Connect a source to see signal health.</p>
+            </div>
+          </div>
+          <aside class="ea-panel mlab-viz-panel" aria-labelledby="mlab-ctx-viz-title">
+            <div class="ea-panel-header">
+              <span class="ea-panel-header-id" aria-hidden="true">M</span>
+              <span id="mlab-ctx-viz-title">Level meter</span>
+            </div>
+            <div class="ea-panel-body mlab-viz-body">
+              <div class="mlab-meter-grid" data-mlab-meter-grid>
+                ${meterChannelMarkup('L', 'L channel')}
+                ${meterChannelMarkup('R', 'R channel')}
+              </div>
+              <p class="ea-muted mlab-meter-help">Peak bar tracks maximum instantaneous sample magnitude; held line shows the most recent peak, decaying at ${peakHoldDecayDbPerSecond}&nbsp;dB/s. Anything at 0&nbsp;dBFS clips.</p>
+            </div>
+          </aside>
+        </div>
+      </div>
+      <div class="mlab-context-foot">
+        <button class="ea-button ea-button--ghost" type="button" data-mlab-open-log>Open activity log</button>
+        <button class="ea-button ea-button--ghost" type="button" data-mlab-context-close>Back to active tool</button>
+      </div>
+    </div>
+  `;
+}
+
+function logModalMarkup(): string {
+  return `
+    <div class="mlab-log-modal" data-mlab-log-modal role="dialog" aria-modal="true" aria-label="Activity log">
+      <div class="mlab-log-modal-dialog">
+        <div class="mlab-log-modal-head">
+          <span>Activity log</span>
+          <button class="ea-button ea-button--ghost" type="button" data-mlab-log-modal-close>Close</button>
+        </div>
+        <div class="mlab-log-modal-body">
+          <div class="mlab-log-body" data-mlab-log-body>
+            <span class="mlab-log-empty">No activity yet.</span>
+          </div>
+        </div>
+        <div class="mlab-log-modal-foot">
+          <button class="ea-button ea-button--ghost" type="button" data-mlab-log-reset>Clear</button>
+          <button class="ea-button ea-button--ghost" type="button" data-mlab-log-export>Export log</button>
+          <button class="ea-button ea-button--ghost" type="button" data-mlab-log-modal-close>Done</button>
+        </div>
+      </div>
+    </div>
   `;
 }
 
@@ -742,7 +871,7 @@ function coveragePanelMarkup(): string {
 
 function audioSourcePanelMarkup(): string {
   return `
-    <section class="ea-panel" aria-labelledby="mlab-source-title">
+    <section id="mlab-source-panel" data-mlab-tool-panel="audio_source" class="ea-panel" aria-labelledby="mlab-source-title">
       <div class="ea-panel-header">
         <span class="ea-panel-header-id">01</span>
         <span id="mlab-source-title">Audio source</span>
@@ -950,7 +1079,7 @@ function freqPanelMarkup(): string {
 
 function thdPanelMarkup(): string {
   return `
-    <section id="mlab-thd-panel" data-mlab-tool-panel="vta_imd_optimizer" class="ea-panel" aria-labelledby="mlab-thd-title">
+    <section id="mlab-thd-panel" data-mlab-tool-panel="thd_imd" class="ea-panel" aria-labelledby="mlab-thd-title">
       <div class="ea-panel-header">
         <span class="ea-panel-header-id">06</span>
         <span id="mlab-thd-title">THD &amp; IMD</span>
@@ -2226,7 +2355,7 @@ function chainReadinessPanelMarkup(): string {
 
 function noiseFloorPanelMarkup(): string {
   return `
-    <section id="mlab-noisefloor-panel" class="ea-panel" aria-labelledby="mlab-noisefloor-title">
+    <section id="mlab-noisefloor-panel" data-mlab-tool-panel="noise_floor" class="ea-panel" aria-labelledby="mlab-noisefloor-title">
       <div class="ea-panel-header">
         <span class="ea-panel-header-id">10</span>
         <span id="mlab-noisefloor-title">Noise floor / rig baseline</span>
@@ -2243,28 +2372,53 @@ export function renderMeasurementLabPage(): string {
     <main class="ea-tool-shell mlab-shell">
       ${renderToolTopbar('measurement')}
       ${renderContextBar()}
-      <section class="ea-workbench mlab-workbench" aria-label="Measurement lab workbench">
+      <section class="mlab-workbench" aria-label="Measurement lab workbench">
         ${sessionRibbonMarkup()}
         <div class="mlab-workbench-grid">
           ${workflowRailMarkup()}
-          <div class="mlab-workbench-main">
-            ${audioSourcePanelMarkup()}
-            ${chainReadinessPanelMarkup()}
-            ${coveragePanelMarkup()}
-            ${guidedMeasurementOrderMarkup()}
-            ${speedPanelMarkup()}
-            ${channelPanelMarkup()}
-            ${freqPanelMarkup()}
-            ${thdPanelMarkup()}
-            ${resonancePanelMarkup()}
-            ${refLevelPanelMarkup()}
-            ${advancedAnalyzersPanelMarkup()}
-            ${noiseFloorPanelMarkup()}
+          <div class="mlab-workbench-center">
+            <header class="mlab-center-head">
+              <div class="mlab-center-title">
+                <div class="mlab-center-title-pre">Active measurement</div>
+                <h2 class="mlab-center-title-h" data-mlab-active-title>Workbench Home</h2>
+              </div>
+              <div class="mlab-center-actions">
+                <span class="ea-badge mlab-center-status-pill" data-mlab-center-status aria-live="polite"></span>
+                <button class="ea-button ea-button--ghost" type="button" data-mlab-context-open>Context</button>
+              </div>
+            </header>
+            <div class="mlab-center-body">
+              ${workbenchHomePanelMarkup()}
+              ${audioSourcePanelMarkup()}
+              ${speedPanelMarkup()}
+              ${channelPanelMarkup()}
+              ${freqPanelMarkup()}
+              ${thdPanelMarkup()}
+              ${resonancePanelMarkup()}
+              ${refLevelPanelMarkup()}
+              ${advancedAnalyzersPanelMarkup()}
+              ${noiseFloorPanelMarkup()}
+              ${contextOverlayMarkup()}
+            </div>
           </div>
-          ${diagRailMarkup()}
         </div>
+        <footer class="mlab-workbench-footer">
+          <div class="mlab-footer-status">
+            <span class="ea-actionbar__status" data-mlab-action-status>
+              ${statusDot('planned')}
+              <span data-mlab-action-status-text>Audio context not started.</span>
+            </span>
+          </div>
+          <div class="mlab-footer-actions">
+            <button class="ea-button ea-button--ghost" type="button" data-mlab-open-log>Open log</button>
+            <button class="ea-button ea-button--ghost" type="button" data-mlab-web-report>Open web report</button>
+            <button class="ea-button ea-button--ghost" type="button" data-mlab-export-report>Export report</button>
+            <button class="ea-button ea-button--ghost" type="button" data-mlab-export>Export JSON</button>
+            <button class="ea-button ea-button--ghost" type="button" data-mlab-reset>Reset</button>
+          </div>
+        </footer>
       </section>
-      ${actionBarMarkup()}
+      ${logModalMarkup()}
     </main>
   `;
 }
@@ -2317,6 +2471,15 @@ function elements(root: ParentNode) {
     ribbonActiveTool: root.querySelector<HTMLElement>('[data-mlab-ribbon-active-tool]'),
     railItems: root.querySelector<HTMLElement>('[data-mlab-rail-items]'),
     diagSignalBody: root.querySelector<HTMLElement>('[data-mlab-diag-signal-body]'),
+    activeTitle: root.querySelector<HTMLElement>('[data-mlab-active-title]'),
+    centerStatus: root.querySelector<HTMLElement>('[data-mlab-center-status]'),
+    contextOverlay: root.querySelector<HTMLElement>('[data-mlab-context-overlay]'),
+    contextOpenBtn: root.querySelector<HTMLButtonElement>('[data-mlab-context-open]'),
+    logModal: root.querySelector<HTMLElement>('[data-mlab-log-modal]'),
+    ribbonMiniLFill: root.querySelector<HTMLElement>('[data-mlab-ribbon-mini-l-fill]'),
+    ribbonMiniRFill: root.querySelector<HTMLElement>('[data-mlab-ribbon-mini-r-fill]'),
+    ribbonMiniLDb: root.querySelector<HTMLElement>('[data-mlab-ribbon-mini-l-db]'),
+    ribbonMiniRDb: root.querySelector<HTMLElement>('[data-mlab-ribbon-mini-r-db]'),
   };
 }
 
@@ -3917,9 +4080,15 @@ function renderRefLevelPanel(els: Elements): void {
 function highlightTargetPanel(panelId: string): void {
   const panel = document.getElementById(panelId);
   if (!panel) return;
-  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // Activate the tool panel that contains this element
+  const toolPanelEl = panel.closest<HTMLElement>('[data-mlab-tool-panel]') ?? panel;
+  if (toolPanelEl.dataset.mlabToolPanel) {
+    const toolId = toolPanelEl.dataset.mlabToolPanel;
+    const els = elements(document);
+    activateTool(toolId, els);
+  }
   panel.classList.remove('mlab-panel--target-highlight');
-  void panel.offsetHeight; // restart animation if same panel targeted twice
+  void panel.offsetHeight;
   panel.classList.add('mlab-panel--target-highlight');
   setTimeout(() => panel.classList.remove('mlab-panel--target-highlight'), 1600);
 }
@@ -5577,6 +5746,11 @@ function clearMeterDom(els: Elements): void {
   for (const canvas of [els.waveformL, els.waveformR]) {
     if (canvas) canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height);
   }
+  // Clear ribbon mini meters
+  if (els.ribbonMiniLFill) els.ribbonMiniLFill.style.setProperty('--p', '0%');
+  if (els.ribbonMiniRFill) els.ribbonMiniRFill.style.setProperty('--p', '0%');
+  if (els.ribbonMiniLDb) els.ribbonMiniLDb.textContent = '—';
+  if (els.ribbonMiniRDb) els.ribbonMiniRDb.textContent = '—';
 }
 
 function levelPercentFromDb(db: number): number {
@@ -5615,6 +5789,17 @@ function renderChannelLevel(els: Elements, channel: ChannelKey): void {
     const isClipped = level.clipped;
     clip.textContent = isClipped ? 'clipping' : 'no clip';
     clip.classList.toggle('mlab-meter-clip--active', isClipped);
+  }
+
+  // Update ribbon mini meters
+  const pct = `${levelPercentFromDb(level.peakDbFs)}%`;
+  const dbText = !Number.isFinite(level.peakDbFs) || level.peakDbFs <= -90 ? '—' : `${level.peakDbFs.toFixed(0)}`;
+  if (channel === 'L') {
+    if (els.ribbonMiniLFill) els.ribbonMiniLFill.style.setProperty('--p', pct);
+    if (els.ribbonMiniLDb) els.ribbonMiniLDb.textContent = dbText;
+  } else {
+    if (els.ribbonMiniRFill) els.ribbonMiniRFill.style.setProperty('--p', pct);
+    if (els.ribbonMiniRDb) els.ribbonMiniRDb.textContent = dbText;
   }
 }
 
@@ -7336,42 +7521,53 @@ function renderWorkflowRail(els: Elements): void {
   const coverageList = record ? computeAllWorkflowCoverage(record) : [];
   const coverageMap = new Map(coverageList.map(c => [c.workflowId, c]));
 
-  const items = MEASUREMENT_WORKFLOWS.map(wf => {
-    const cov = coverageMap.get(wf.id);
-    const avail = cov?.availability ?? (record ? 'unavailable' : 'planned');
-    const panelTarget = WORKFLOW_PANEL_TARGETS[wf.id];
-    const isActive = state.activeWorkflowId === wf.id;
-    const availLabel = avail === 'available' ? 'Available'
-      : avail === 'planned' ? 'Planned'
-      : avail === 'partial' ? 'Partial'
-      : 'Not available';
-    const itemClass = `mlab-rail-item mlab-rail-item--${avail}${isActive ? ' mlab-rail-item--active' : ''}`;
+  let currentGroup = '';
+  const items = WORKBENCH_TOOLS.map(tool => {
+    const groupHead = tool.group !== currentGroup
+      ? (() => { currentGroup = tool.group; return `<div class="mlab-rail-group-head">${renderText(tool.group)}</div>`; })()
+      : '';
 
-    if (panelTarget && avail !== 'unavailable') {
-      return `<a class="${itemClass}" href="#${renderText(panelTarget)}" data-mlab-rail-item="${renderText(wf.id)}">
-        <span class="mlab-rail-item-label">${renderText(wf.label)}</span>
-        <span class="mlab-rail-item-status">${renderText(availLabel)}</span>
-      </a>`;
+    let avail: string;
+    let availCss: string;
+    if (!tool.panelId) {
+      const wfEntry = MEASUREMENT_WORKFLOWS.find(w => w.id === tool.workflowId);
+      const isPlanned = wfEntry?.implementationStatus === 'planned';
+      avail = isPlanned ? 'Planned' : 'Not available';
+      availCss = 'unavailable';
+    } else if (tool.workflowId) {
+      const cov = coverageMap.get(tool.workflowId);
+      const a = cov?.availability ?? (record ? 'unavailable' : 'planned');
+      avail = a === 'available' ? 'Available' : a === 'planned' ? 'Planned' : a === 'partial' ? 'Partial' : 'Not available';
+      availCss = a;
+    } else {
+      avail = 'Available';
+      availCss = 'available';
     }
-    return `<div class="${itemClass}">
-      <span class="mlab-rail-item-label">${renderText(wf.label)}</span>
-      <span class="mlab-rail-item-status">${renderText(availLabel)}</span>
+
+    const isActive = state.activeWorkflowId === tool.id;
+    const itemClass = `mlab-rail-item mlab-rail-item--${availCss}${isActive ? ' mlab-rail-item--active' : ''}`;
+    const tooltip = `<span class="mlab-rail-item-tooltip"><span class="mlab-rail-item-tooltip-name">${renderText(tool.label)}</span>${renderText(tool.description)}<span class="mlab-rail-item-tooltip-status">${renderText(avail)}</span></span>`;
+
+    if (tool.panelId) {
+      return `${groupHead}<button class="${itemClass}" type="button" data-mlab-rail-item="${renderText(tool.id)}">
+        <span class="mlab-rail-item-label">${renderText(tool.label)}</span>
+        <span class="mlab-rail-item-status">${renderText(avail)}</span>
+        ${tooltip}
+      </button>`;
+    }
+    return `${groupHead}<div class="${itemClass}">
+      <span class="mlab-rail-item-label">${renderText(tool.label)}</span>
+      <span class="mlab-rail-item-status">${renderText(avail)}</span>
+      ${tooltip}
     </div>`;
   }).join('');
 
   els.railItems.innerHTML = items;
 
-  els.railItems.querySelectorAll<HTMLAnchorElement>('[data-mlab-rail-item]').forEach(link => {
-    link.addEventListener('click', (e) => {
-      e.preventDefault();
-      const wfId = link.dataset.mlabRailItem ?? '';
-      const panelId = WORKFLOW_PANEL_TARGETS[wfId];
-      if (panelId) {
-        document.getElementById(panelId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        state.activeWorkflowId = wfId;
-        updateActiveRailItem(els, wfId);
-        renderSessionRibbon(els);
-      }
+  els.railItems.querySelectorAll<HTMLButtonElement>('[data-mlab-rail-item]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const toolId = btn.dataset.mlabRailItem ?? '';
+      activateTool(toolId, els);
     });
   });
 }
@@ -7381,6 +7577,45 @@ function updateActiveRailItem(els: Elements, wfId: string | null): void {
   els.railItems.querySelectorAll<HTMLElement>('[data-mlab-rail-item]').forEach(item => {
     item.classList.toggle('mlab-rail-item--active', item.dataset.mlabRailItem === wfId);
   });
+}
+
+function activateTool(toolId: string, els: Elements): void {
+  const tool = WORKBENCH_TOOLS.find(t => t.id === toolId);
+  if (!tool || !tool.panelId) return;
+
+  // Hide all tool panels, show target
+  document.querySelectorAll<HTMLElement>('[data-mlab-tool-panel]').forEach(p => {
+    p.classList.toggle('mlab-tool-panel--active', p.id === tool.panelId);
+  });
+
+  // Close context overlay if open
+  const overlay = els.contextOverlay;
+  if (overlay) overlay.classList.remove('mlab-context-overlay--open');
+
+  state.activeWorkflowId = toolId;
+
+  if (els.activeTitle) els.activeTitle.textContent = tool.label;
+
+  // Update status pill
+  if (els.centerStatus) {
+    const record = selectedRecord();
+    if (tool.workflowId && record) {
+      const coverageList = computeAllWorkflowCoverage(record);
+      const cov = coverageList.find(c => c.workflowId === tool.workflowId);
+      const avail = cov?.availability ?? 'unavailable';
+      const label = avail === 'available' ? 'Available' : avail === 'planned' ? 'Planned' : avail === 'partial' ? 'Partial' : 'Not available';
+      els.centerStatus.textContent = label;
+      els.centerStatus.dataset.avail = avail;
+    } else if (!tool.workflowId) {
+      els.centerStatus.textContent = 'Available';
+      els.centerStatus.dataset.avail = 'available';
+    } else {
+      els.centerStatus.textContent = '';
+    }
+  }
+
+  updateActiveRailItem(els, toolId);
+  renderSessionRibbon(els);
 }
 
 function renderDiagSignalPanel(els: Elements): void {
@@ -7530,6 +7765,8 @@ export function enableMeasurementLabInteractions(): void {
   renderDiagSignalPanel(els);
   renderLogPanel(els);
   clearMeterDom(els);
+  // Activate home panel on initial load
+  activateTool('workbench_home', els);
 
   void refreshDeviceList(els);
 
@@ -7696,30 +7933,43 @@ export function enableMeasurementLabInteractions(): void {
     toggleTheme();
   });
 
-  // Active tool tracking via IntersectionObserver
-  const workbenchEl = document.querySelector<HTMLElement>('.mlab-workbench');
-  if (workbenchEl && typeof IntersectionObserver !== 'undefined') {
-    const toolPanels = document.querySelectorAll<HTMLElement>('[data-mlab-tool-panel]');
-    if (toolPanels.length > 0) {
-      const activeObs = new IntersectionObserver(
-        (entries) => {
-          let bestRatio = 0;
-          let bestId: string | null = null;
-          for (const entry of entries) {
-            if (entry.isIntersecting && entry.intersectionRatio > bestRatio) {
-              bestRatio = entry.intersectionRatio;
-              bestId = (entry.target as HTMLElement).dataset.mlabToolPanel ?? null;
-            }
-          }
-          if (bestId !== null && bestId !== state.activeWorkflowId) {
-            state.activeWorkflowId = bestId;
-            updateActiveRailItem(els, bestId);
-            renderSessionRibbon(els);
-          }
-        },
-        { root: workbenchEl, threshold: [0, 0.1, 0.25, 0.5] },
-      );
-      toolPanels.forEach(p => activeObs.observe(p));
+  // Context overlay open/close
+  els.contextOpenBtn?.addEventListener('click', () => {
+    if (els.contextOverlay) {
+      els.contextOverlay.classList.add('mlab-context-overlay--open');
+      renderChainReadinessPanel(els);
+      renderDiagSignalPanel(els);
     }
-  }
+  });
+  document.querySelectorAll<HTMLButtonElement>('[data-mlab-context-close]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      els.contextOverlay?.classList.remove('mlab-context-overlay--open');
+    });
+  });
+
+  // Log modal open/close
+  document.querySelectorAll<HTMLButtonElement>('[data-mlab-open-log]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (els.logModal) {
+        els.logModal.classList.add('mlab-log-modal--open');
+        renderLogPanel(els);
+      }
+    });
+  });
+  document.querySelectorAll<HTMLButtonElement>('[data-mlab-log-modal-close]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      els.logModal?.classList.remove('mlab-log-modal--open');
+    });
+  });
+  els.logModal?.addEventListener('click', (e) => {
+    if (e.target === els.logModal) els.logModal?.classList.remove('mlab-log-modal--open');
+  });
+
+  // Keyboard: Escape closes any open overlay
+  document.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      els.contextOverlay?.classList.remove('mlab-context-overlay--open');
+      els.logModal?.classList.remove('mlab-log-modal--open');
+    }
+  });
 }
