@@ -1820,3 +1820,57 @@ button.mlab-coverage-badge--available:focus-visible {
   color: var(--ea-text-low);
   margin: 3px 0 0;
 }
+
+/* ── S5Q: Harmonic breakdown / distortion detail ─────────────── */
+.mlab-thd-harmonic-breakdown {
+  margin: var(--ea-space-3) 0 var(--ea-space-2);
+  padding: var(--ea-space-2) var(--ea-space-3);
+  border-left: 3px solid var(--ea-border-mid, #3a3a3a);
+  border-radius: 0 4px 4px 0;
+  background: var(--ea-surface-raised, rgba(255,255,255,0.03));
+  font-size: var(--ea-text-sm);
+}
+
+.mlab-thd-harmonic-breakdown--report {
+  margin: var(--ea-space-2) 0;
+}
+
+.mlab-thd-harmonic-head {
+  font-weight: 600;
+  color: var(--ea-text-high);
+  margin-bottom: var(--ea-space-1);
+}
+
+.mlab-thd-harmonic-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: var(--ea-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.mlab-thd-harmonic-table th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--ea-text-mid);
+  padding: 2px var(--ea-space-2) 2px 0;
+  border-bottom: 1px solid var(--ea-border-subtle, rgba(255,255,255,0.08));
+}
+
+.mlab-thd-harmonic-table td {
+  padding: 2px var(--ea-space-2) 2px 0;
+  color: var(--ea-text-high);
+}
+
+.mlab-thd-harmonic-order { min-width: 3rem; }
+.mlab-thd-harmonic-freq  { min-width: 6rem; color: var(--ea-text-mid); }
+.mlab-thd-harmonic-val   { font-weight: 500; }
+
+.mlab-thd-diagnostic-note {
+  font-size: var(--ea-text-xs, 0.75rem);
+  color: var(--ea-text-low);
+  margin: var(--ea-space-1) 0 0;
+}
+
+.mlab-thd-chain-note {
+  margin-top: var(--ea-space-2);
+}

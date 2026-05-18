@@ -181,3 +181,30 @@ export function analyseIMD(
     sampleCount: Math.max(0, samples.length - settleN),
   };
 }
+
+// ── S5Q: Distortion diagnostic metadata ──────────────────────────────────────
+
+export type ThdDistortionMeta = {
+  readonly measurementNote: string;
+  readonly harmonicInterpretationNote: string;
+  readonly imdMeasurementNote: string;
+  readonly imdSidebandDetailStatus: 'not_available';
+  readonly imdSidebandDetailNote: string;
+  readonly chainNote: string;
+};
+
+export function buildThdDistortionMeta(): ThdDistortionMeta {
+  return {
+    measurementNote:
+      'THD is computed as √(Σ harmonic power) / √(fundamental power) × 100 %. Each harmonic bin uses a 3-bin Hann-windowed power sum centred on the expected bin. Fundamental and harmonics are measured from the averaged power spectrum over 50 %-overlap blocks.',
+    harmonicInterpretationNote:
+      '2nd-order harmonic (even-order) produces an octave above the fundamental. 3rd-order (odd-order) produces a 5th+octave above and is generally considered less musical. Higher-order harmonics indicate increasing non-linearity. All levels are relative to the fundamental (dBc).',
+    imdMeasurementNote:
+      'SMPTE IMD is computed as √(Σ sideband power) / √(f2 power) × 100 %. Sidebands at f2 ± n×f1 (n = 1..5) are summed. f1 is the low-frequency tone (typically 60 Hz), f2 is the high-frequency tone (typically 4–7 kHz).',
+    imdSidebandDetailStatus: 'not_available',
+    imdSidebandDetailNote:
+      'Individual sideband levels (f2 ± n×f1) are not exposed by the current analyzer — only the total power-sum IMD % is returned. Per-sideband breakdown requires engine extension to return individual sideband powers.',
+    chainNote:
+      'All distortion measurements are of the full playback/capture chain: test record, cartridge, tonearm, phono stage and audio interface. They are not cartridge-only distortion figures.',
+  };
+}

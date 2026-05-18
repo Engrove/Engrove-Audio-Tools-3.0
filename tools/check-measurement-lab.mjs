@@ -3470,3 +3470,79 @@ function checkS5PResonanceFoundation() {
 }
 
 checkS5PResonanceFoundation();
+
+function checkS5QHarmonicBreakdown() {
+  const renderSrcPath  = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const thdEnginePath  = join(repoRoot, 'src/modules/measurement-lab/engine/thd.ts');
+  const cssSrcPath     = join(repoRoot, 'src/modules/measurement-lab/ui/measurementLab.css');
+
+  for (const p of [renderSrcPath, thdEnginePath, cssSrcPath]) {
+    if (!existsSync(p)) {
+      console.error(`S5Q static check FAIL: required file not found: ${p}`);
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const uiSrc  = readFileSync(renderSrcPath, 'utf8');
+  const engSrc = readFileSync(thdEnginePath, 'utf8');
+  const cssSrc = readFileSync(cssSrcPath, 'utf8');
+
+  const checks = [
+    // 1. ThdDistortionMeta type in thd.ts
+    ['ThdDistortionMeta type in thd.ts', /ThdDistortionMeta/.test(engSrc)],
+    // 2. buildThdDistortionMeta function in thd.ts
+    ['buildThdDistortionMeta in thd.ts', /function buildThdDistortionMeta/.test(engSrc)],
+    // 3. imdSidebandDetailStatus not_available in engine
+    ['imdSidebandDetailStatus not_available in engine', /imdSidebandDetailStatus.*not_available|not_available.*imdSidebandDetailStatus/.test(engSrc)],
+    // 4. chainNote present in engine
+    ['chainNote present in engine', /chainNote/.test(engSrc)],
+    // 5. harmonicInterpretationNote present in engine
+    ['harmonicInterpretationNote present', /harmonicInterpretationNote/.test(engSrc)],
+    // 6. runQuality field added to ThdStateBag
+    ['runQuality field in ThdStateBag', /runQuality\s*:\s*MeasurementRunQuality\s*\|\s*null/.test(uiSrc)],
+    // 7. runQuality derived in startThdCapture
+    ['thd runQuality derived in startThdCapture', /state\.thd\.runQuality\s*=\s*deriveMeasurementRunQuality/.test(uiSrc)],
+    // 8. harmonic_detail in JSON export (not just harmonics_dbc)
+    ['harmonic_detail in JSON export', /harmonic_detail\s*:/.test(uiSrc)],
+    // 9. harmonic detail includes order and frequency_hz
+    ['harmonic detail has order and frequency_hz', /order\s*:\s*i \+ 2/.test(uiSrc) && /frequency_hz\s*:/.test(uiSrc)],
+    // 10. sideband_detail_status in IMD JSON export
+    ['sideband_detail_status in IMD JSON export', /sideband_detail_status/.test(uiSrc)],
+    // 11. THD run_quality in JSON export
+    ['run_quality in THD JSON export', /run_quality\s*:\s*runQualityExport/.test(uiSrc)],
+    // 12. diagnostic_notes in THD JSON export
+    ['diagnostic_notes in THD JSON export', /diagnostic_notes\s*:\s*\{/.test(uiSrc)],
+    // 13. mlab-thd-harmonic-table CSS class
+    ['mlab-thd-harmonic-table CSS class present', /\.mlab-thd-harmonic-table/.test(cssSrc)],
+    // 14. mlab-thd-harmonic-breakdown CSS class
+    ['mlab-thd-harmonic-breakdown CSS class present', /\.mlab-thd-harmonic-breakdown/.test(cssSrc)],
+    // 15. harmonic table rows in renderThdPanel
+    ['harmonic table rows in renderThdPanel', /mlab-thd-harmonic-order/.test(uiSrc)],
+    // 16. sideband detail not available note in UI
+    ['IMD sideband not-available note in UI', /Not available.*imdSidebandDetailNote|imdSidebandDetailNote.*Not available/.test(uiSrc)],
+    // 17. buildThdSection has no-data placeholder
+    ['buildThdSection has no-data placeholder', /wrPlaceholder.*THD.*IMD/.test(uiSrc)],
+    // 18. resonance foundation still present (S5P regression)
+    ['ResonanceDiagnosticMeta still present (S5P regression)', /ResonanceDiagnosticMeta/.test(uiSrc)],
+    // 19. freq deviation still present (S5O regression)
+    ['freq deviation still present (S5O regression)', /computeFreqDeviationSummary/.test(uiSrc)],
+    // 20. input_scope still present (S5M regression)
+    ['input_scope still present (S5M regression)', /input_scope/.test(uiSrc)],
+  ];
+
+  let allPass = true;
+  for (const [label, ok] of checks) {
+    if (!ok) {
+      console.error(`S5Q static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S5Q static source check (Harmonic Breakdown / Distortion Detail): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS5QHarmonicBreakdown();

@@ -31,7 +31,7 @@ import { createSweepCapture, type SweepCapture } from '../dsp/sweepCaptureNode';
 import { summariseChannelBalance } from '../engine/crosstalk';
 import { computeFrequencyResponse, computeFreqDeviationSummary, type FreqResponseResult, type FreqDeviationSummary } from '../engine/freqResponse';
 import { computeRiaaMagnitudeDb } from '../engine/iriaaFilter';
-import { analyseTHD, analyseIMD, type ThdResult, type ImdResult } from '../engine/thd';
+import { analyseTHD, analyseIMD, buildThdDistortionMeta, type ThdResult, type ImdResult, type ThdDistortionMeta } from '../engine/thd';
 import { analyseResonance, buildResonanceDiagnosticMeta, type ResonanceResult, type ResonanceSweepType, type ResonanceDiagnosticMeta } from '../engine/resonance';
 import { analyzeReferenceLevel, type ReferenceLevelResult } from '../engine/referenceLevel';
 import {
@@ -234,6 +234,7 @@ type ThdStateBag = {
   elapsedSeconds: number;
   result: ThdResult | ImdResult | null;
   resultSource: 'live_capture' | 'self_test' | null;
+  runQuality: MeasurementRunQuality | null;
   bandMeta: ThdBandMeta | null;
   selectedBandIndex: string | null;
   capture: SweepCapture | null;
@@ -497,6 +498,7 @@ const state: LabState = {
     elapsedSeconds: 0,
     result: null,
     resultSource: null,
+    runQuality: null,
     bandMeta: null,
     selectedBandIndex: null,
     capture: null,
@@ -1106,10 +1108,50 @@ function buildSessionJson(): SessionJson {
     if (!r) return null;
     const source = state.thd.resultSource ?? 'live_capture';
     const band = serializeThdBandMeta(state.thd.bandMeta);
+    const rq = state.thd.runQuality;
+    const runQualityExport = rq
+      ? { status: rq.status, clipping: rq.clipping, low_signal: rq.lowSignal, channel_imbalance_db: rq.channelImbalanceDb, warnings: Array.from(rq.warnings) }
+      : null;
+    const diagMeta = buildThdDistortionMeta();
     if (isThdResult(r)) {
-      return { type: 'thd', source, band, fundamental_hz: r.fundamentalHz, thd_percent: r.thdPercent, harmonics_dbc: r.harmonics };
+      const harmonicDetail = r.harmonics.map((dbc, i) => ({
+        order: i + 2,
+        frequency_hz: (i + 2) * r.fundamentalHz,
+        level_dbc: dbc,
+      }));
+      return {
+        type: 'thd',
+        source,
+        band,
+        fundamental_hz: r.fundamentalHz,
+        thd_percent: r.thdPercent,
+        harmonics_dbc: r.harmonics,
+        harmonic_detail: harmonicDetail,
+        sample_count: r.sampleCount,
+        run_quality: runQualityExport,
+        diagnostic_notes: {
+          measurement_note: diagMeta.measurementNote,
+          harmonic_interpretation_note: diagMeta.harmonicInterpretationNote,
+          chain_note: diagMeta.chainNote,
+        },
+      };
     }
-    return { type: 'imd', source, band, f1_hz: r.f1Hz, f2_hz: r.f2Hz, imd_percent: r.imdPercent };
+    return {
+      type: 'imd',
+      source,
+      band,
+      f1_hz: r.f1Hz,
+      f2_hz: r.f2Hz,
+      imd_percent: r.imdPercent,
+      sideband_detail_status: diagMeta.imdSidebandDetailStatus,
+      sideband_detail_note: diagMeta.imdSidebandDetailNote,
+      sample_count: r.sampleCount,
+      run_quality: runQualityExport,
+      diagnostic_notes: {
+        measurement_note: diagMeta.imdMeasurementNote,
+        chain_note: diagMeta.chainNote,
+      },
+    };
   })();
 
   const resResult = state.resonance.result;
@@ -1722,6 +1764,7 @@ function buildReportText(): string {
 
   // THD / IMD
   const tr = state.thd.result;
+  const distMeta = buildThdDistortionMeta();
   if (tr) {
     if (isThdResult(tr)) {
       lines.push('THD');
@@ -1733,20 +1776,41 @@ function buildReportText(): string {
       }
       lines.push(`  Fundamental:           ${tr.fundamentalHz} Hz`);
       lines.push(`  THD:                   ${tr.thdPercent.toFixed(3)} %`);
-      const hdbs = tr.harmonics.map((h, i) => `${i + 2}nd: ${h.toFixed(1)} dBc`).join(', ');
-      if (hdbs) lines.push(`  Harmonics:             ${hdbs}`);
+      if (state.thd.runQuality) {
+        lines.push(`  Run quality:           ${state.thd.runQuality.status}`);
+        for (const w of state.thd.runQuality.warnings) lines.push(`  Warning:               ${w}`);
+      }
+      if (tr.harmonics.length > 0) {
+        lines.push('  --- Harmonic breakdown ---');
+        const ordSuffix = (n: number) => n === 2 ? 'nd' : n === 3 ? 'rd' : 'th';
+        for (let i = 0; i < tr.harmonics.length; i++) {
+          const order = i + 2;
+          const freq = order * tr.fundamentalHz;
+          lines.push(`  ${order}${ordSuffix(order)} harmonic (${freq.toLocaleString('en-US')} Hz):  ${tr.harmonics[i].toFixed(1)} dBc`);
+        }
+      }
+      lines.push(`  (${distMeta.harmonicInterpretationNote})`);
     } else {
       lines.push('SMPTE IMD');
       lines.push(`  Source:                ${state.thd.resultSource ?? 'live_capture'}`);
       if (state.thd.bandMeta) {
         const tbm = state.thd.bandMeta;
-        const tf = tbm.frequencyHz != null ? ` · ${tbm.frequencyHz.toLocaleString('en-US')} Hz` : '';
-        lines.push(`  Band:                  ${tbm.label}${tf}`);
+        lines.push(`  Band:                  ${tbm.label}`);
       }
       lines.push(`  f1 (LF):               ${tr.f1Hz} Hz`);
       lines.push(`  f2 (HF):               ${tr.f2Hz} Hz`);
       lines.push(`  IMD:                   ${tr.imdPercent.toFixed(3)} %`);
+      if (state.thd.runQuality) {
+        lines.push(`  Run quality:           ${state.thd.runQuality.status}`);
+        for (const w of state.thd.runQuality.warnings) lines.push(`  Warning:               ${w}`);
+      }
+      lines.push(`  Sideband detail:       not available — ${distMeta.imdSidebandDetailNote}`);
     }
+    lines.push(`  (${distMeta.chainNote})`);
+    lines.push('');
+  } else {
+    lines.push('THD / IMD');
+    lines.push('  Not captured in this session.');
     lines.push('');
   }
 
@@ -3109,6 +3173,14 @@ function startThdCapture(els: Elements): void {
       } else {
         state.thd.result = analyseIMD(samples, context.sampleRate, state.thd.imdF1Hz, state.thd.imdF2Hz);
       }
+      state.thd.runQuality = deriveMeasurementRunQuality({
+        leftRmsDbfs: state.channelLevels.L.rmsDbFs,
+        rightRmsDbfs: state.channelLevels.R.rmsDbFs,
+        leftPeakDbfs: state.channelLevels.L.peakDbFs,
+        rightPeakDbfs: state.channelLevels.R.peakDbFs,
+        source: state.thd.resultSource ?? 'live_capture',
+        measurementKind: 'test_tone',
+      });
       const thdDone = state.thd.result;
       if (isThdResult(thdDone)) {
         appendLog(`THD complete — ${thdDone.thdPercent.toFixed(3)} %`);
@@ -3808,39 +3880,73 @@ function renderThdPanel(els: Elements): void {
 
   if (state.thd.result !== null) {
     const r = state.thd.result;
+    const distMetaPanel = buildThdDistortionMeta();
+    const sourceBadge = state.thd.resultSource === 'self_test'
+      ? '<span class="ea-badge ea-badge--setup">Self-test / Simulated</span>'
+      : '<span class="ea-badge ea-badge--manufacturer">Live capture</span>';
+    const rq = state.thd.runQuality;
+    const rqHtml = rq ? `
+        <div class="mlab-wf-result-row">
+          <span class="mlab-wf-result-label">Run quality</span>
+          <span class="mlab-wf-result-value">${renderText(rq.status)}${rq.warnings.length ? ' — ' + Array.from(rq.warnings).map(renderText).join('; ') : ''}</span>
+        </div>` : '';
     let resultHtml: string;
     if (isThdResult(r)) {
-      const h2 = r.harmonics[0] !== undefined ? r.harmonics[0].toFixed(1) : '—';
-      const h3 = r.harmonics[1] !== undefined ? r.harmonics[1].toFixed(1) : '—';
+      const ordSuffix = (n: number) => n === 2 ? 'nd' : n === 3 ? 'rd' : 'th';
+      const harmonicRows = r.harmonics.map((dbc, i) => {
+        const order = i + 2;
+        const freq = order * r.fundamentalHz;
+        return `<tr>
+          <td class="mlab-thd-harmonic-order">${order}${ordSuffix(order)}</td>
+          <td class="mlab-thd-harmonic-freq">${freq.toLocaleString('en-US')}&nbsp;Hz</td>
+          <td class="mlab-thd-harmonic-val">${dbc.toFixed(1)}&nbsp;dBc</td>
+        </tr>`;
+      }).join('');
       resultHtml = `
         <div class="mlab-wf-result">
+          <div class="mlab-wf-result-row">
+            <span class="mlab-wf-result-label">Source</span>
+            <span class="mlab-wf-result-value">${sourceBadge}</span>
+          </div>
           <div class="mlab-wf-result-row">
             <span class="mlab-wf-result-label">THD</span>
             <span class="mlab-wf-result-value">${r.thdPercent.toFixed(3)}&nbsp;%</span>
           </div>
-          <div class="mlab-wf-result-row">
-            <span class="mlab-wf-result-label">2nd harmonic</span>
-            <span class="mlab-wf-result-value">${h2}&nbsp;dBc</span>
-          </div>
-          <div class="mlab-wf-result-row">
-            <span class="mlab-wf-result-label">3rd harmonic</span>
-            <span class="mlab-wf-result-value">${h3}&nbsp;dBc</span>
-          </div>
-          <p class="mlab-wf-note">Fundamental ${r.fundamentalHz.toLocaleString('en-US')}&nbsp;Hz &middot; ${r.harmonics.length} harmonics analysed</p>
+          ${rqHtml}
+          <p class="mlab-wf-note">Fundamental ${r.fundamentalHz.toLocaleString('en-US')}&nbsp;Hz &middot; ${r.harmonics.length} harmonic${r.harmonics.length !== 1 ? 's' : ''} analysed</p>
         </div>
+        ${harmonicRows.length ? `
+        <div class="mlab-thd-harmonic-breakdown">
+          <div class="mlab-thd-harmonic-head">Harmonic breakdown</div>
+          <table class="mlab-thd-harmonic-table" aria-label="Harmonic breakdown">
+            <thead><tr><th>Order</th><th>Frequency</th><th>Level</th></tr></thead>
+            <tbody>${harmonicRows}</tbody>
+          </table>
+          <p class="mlab-thd-diagnostic-note">${renderText(distMetaPanel.harmonicInterpretationNote)}</p>
+        </div>` : ''}
       `;
     } else {
       resultHtml = `
         <div class="mlab-wf-result">
           <div class="mlab-wf-result-row">
+            <span class="mlab-wf-result-label">Source</span>
+            <span class="mlab-wf-result-value">${sourceBadge}</span>
+          </div>
+          <div class="mlab-wf-result-row">
             <span class="mlab-wf-result-label">SMPTE IMD</span>
             <span class="mlab-wf-result-value">${r.imdPercent.toFixed(3)}&nbsp;%</span>
           </div>
+          ${rqHtml}
           <p class="mlab-wf-note">f1 ${r.f1Hz}&nbsp;Hz &middot; f2 ${r.f2Hz.toLocaleString('en-US')}&nbsp;Hz</p>
+        </div>
+        <div class="mlab-thd-harmonic-breakdown">
+          <div class="mlab-thd-harmonic-head">Sideband detail</div>
+          <p class="mlab-thd-diagnostic-note"><strong>Not available</strong> — ${renderText(distMetaPanel.imdSidebandDetailNote)}</p>
         </div>
       `;
     }
     body.innerHTML = `${resultHtml}
+      <p class="mlab-thd-diagnostic-note mlab-thd-chain-note">${renderText(distMetaPanel.chainNote)}</p>
       <div class="mlab-session-controls">
         <button class="ea-button ea-button--primary" type="button" data-mlab-thd-start>Measure again</button>
       </div>
@@ -6570,38 +6676,87 @@ function buildFreqSection(): WebReportSection {
 function buildThdSection(): WebReportSection {
   const tr = state.thd.result;
   if (!tr) {
-    return { id: 'thd', title: 'THD / IMD', html: wrEmpty() };
+    return {
+      id: 'thd',
+      title: 'THD / IMD',
+      html: wrEmpty() + wrPlaceholder('No THD / IMD measurement captured in this session.'),
+    };
   }
 
+  const diagMeta = buildThdDistortionMeta();
+  const rq = state.thd.runQuality;
+  const sourceBadge = state.thd.resultSource === 'self_test'
+    ? wrBadge('Self-test / Simulated', 'warn')
+    : wrBadge('Live capture', 'ok');
+
   const pairs: [string, string][] = [
-    ['Source', renderText(state.thd.resultSource ?? 'live_capture')],
+    ['Source', sourceBadge],
   ];
   if (state.thd.bandMeta) {
     const tbm = state.thd.bandMeta;
     const tf = tbm.frequencyHz != null ? ` · ${tbm.frequencyHz.toLocaleString('en-US')} Hz` : '';
     pairs.push(['Band', renderText(tbm.label) + renderText(tf)]);
   }
+  if (rq) {
+    pairs.push(['Run quality', renderText(rq.status)]);
+    if (rq.warnings.length > 0) {
+      pairs.push(['Warnings', Array.from(rq.warnings).map(renderText).join('; ')]);
+    }
+  }
 
+  let detailHtml = '';
   if (isThdResult(tr)) {
     pairs.push(
       ['Type', 'THD'],
-      ['Fundamental', `${tr.fundamentalHz} Hz`],
+      ['Fundamental', `${tr.fundamentalHz.toLocaleString('en-US')} Hz`],
       ['THD', `${tr.thdPercent.toFixed(3)} %`],
+      ['Harmonics analysed', String(tr.harmonics.length)],
+      ['Sample count', tr.sampleCount.toLocaleString()],
     );
     if (tr.harmonics.length > 0) {
-      const hdbs = tr.harmonics.map((h, i) => `${i + 2}nd: ${h.toFixed(1)} dBc`).join(', ');
-      pairs.push(['Harmonics', hdbs]);
+      const ordSuffix = (n: number) => n === 2 ? 'nd' : n === 3 ? 'rd' : 'th';
+      const rows = tr.harmonics.map((dbc, i) => {
+        const order = i + 2;
+        return `<tr>
+          <td>${order}${ordSuffix(order)}</td>
+          <td>${(order * tr.fundamentalHz).toLocaleString('en-US')} Hz</td>
+          <td>${dbc.toFixed(1)} dBc</td>
+        </tr>`;
+      }).join('');
+      detailHtml = `
+        <div class="mlab-thd-harmonic-breakdown mlab-thd-harmonic-breakdown--report">
+          <div class="mlab-thd-harmonic-head">Harmonic breakdown (dBc relative to fundamental)</div>
+          <table class="mlab-thd-harmonic-table" aria-label="Harmonic breakdown">
+            <thead><tr><th>Order</th><th>Frequency</th><th>Level</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <p class="mlab-thd-diagnostic-note">${renderText(diagMeta.harmonicInterpretationNote)}</p>
+        </div>`;
     }
   } else {
     pairs.push(
       ['Type', 'SMPTE IMD'],
       ['f1 (LF)', `${tr.f1Hz} Hz`],
-      ['f2 (HF)', `${tr.f2Hz} Hz`],
+      ['f2 (HF)', `${tr.f2Hz.toLocaleString('en-US')} Hz`],
       ['IMD', `${tr.imdPercent.toFixed(3)} %`],
+      ['Sample count', tr.sampleCount.toLocaleString()],
+      ['Sideband detail', 'Not available'],
     );
+    detailHtml = `
+      <div class="mlab-thd-harmonic-breakdown mlab-thd-harmonic-breakdown--report">
+        <div class="mlab-thd-harmonic-head">Sideband detail</div>
+        <p class="mlab-thd-diagnostic-note"><strong>Not available</strong> — ${renderText(diagMeta.imdSidebandDetailNote)}</p>
+        <p class="mlab-thd-diagnostic-note">${renderText(diagMeta.imdMeasurementNote)}</p>
+      </div>`;
   }
 
-  return { id: 'thd', title: 'THD / IMD', html: wrKVs(pairs) };
+  const chainNoteHtml = `<p class="mlab-thd-diagnostic-note" style="margin-top:var(--ea-space-2)">${renderText(diagMeta.chainNote)}</p>`;
+
+  return {
+    id: 'thd',
+    title: 'THD / IMD',
+    html: wrKVs(pairs) + detailHtml + chainNoteHtml,
+  };
 }
 
 // ── S5P: Resonance web report section ────────────────────────────────────────
