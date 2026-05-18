@@ -2439,6 +2439,66 @@ function checkS5HGuidedOrderAndSpeed() {
 
 checkS5HGuidedOrderAndSpeed();
 
+function checkS5H1SpeedReferenceBinding() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  if (!existsSync(renderSrcPath)) {
+    console.error('S5H.1 static check: source file not found');
+    process.exitCode = 1;
+    return;
+  }
+  const src = readFileSync(renderSrcPath, 'utf8');
+
+  const startFnIdx = src.indexOf('function startSpeedMeasurement(');
+  const startFnSrc = startFnIdx >= 0 ? src.slice(startFnIdx, startFnIdx + 1500) : '';
+
+  const checks = [
+    // 1. nominalReferenceHz defined inside startSpeedMeasurement
+    ['nominalReferenceHz defined in startSpeedMeasurement',
+      /function startSpeedMeasurement[\s\S]{0,400}nominalReferenceHz/],
+    // 2. createSpeedFlutterCapture receives nominalReferenceHz (not state.speed.referenceHz directly)
+    ['createSpeedFlutterCapture uses nominalReferenceHz',
+      /createSpeedFlutterCapture[\s\S]{0,200}nominalReferenceHz/],
+    // 3. state.speed.referenceHz = band.frequencyHz no longer present in startSpeedMeasurement
+    ['No state.speed.referenceHz = band.frequencyHz in startSpeedMeasurement', (() => {
+      return !/state\.speed\.referenceHz\s*=\s*band\.frequencyHz/.test(startFnSrc);
+    })()],
+    // 4. nominalFrequencyHz33 map used in startSpeedMeasurement
+    ['nominalFrequencyHz33 used in startSpeedMeasurement',
+      /function startSpeedMeasurement[\s\S]{0,400}nominalFrequencyHz33/],
+    // 5. nominalFrequencyHz33 map has '45' entry (4253 literal or computed from 45/33.333*3150)
+    ['nominalFrequencyHz33 map has 45 RPM entry',
+      /nominalFrequencyHz33[\s\S]{0,200}'45'\s*:[\s\S]{0,100}(?:4253|45\s*\/\s*33\.?3)/],
+    // 6. nominal_frequency_hz in speed export (export uses context nominal)
+    ['nominal_frequency_hz in speed export',
+      /nominal_frequency_hz/],
+    // 7. Speed run history still present
+    ['Speed run history still present',
+      /Clear speed run history/],
+    // 8. VTA workflow still planned
+    ['VTA workflow still planned',
+      /status\s*:\s*'planned'\s*as\s*const/],
+    // 9. Analysis reference follows speed context note in UI
+    ['Analysis reference follows RPM context note in UI',
+      /analysis reference follows the selected RPM context/],
+  ];
+
+  let allPass = true;
+  for (const [label, result] of checks) {
+    const ok = typeof result === 'boolean' ? result : result.test(src);
+    if (!ok) {
+      console.error(`S5H.1 static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S5H.1 static source check (45 RPM Speed Reference Binding & History Accuracy): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS5H1SpeedReferenceBinding();
+
 try {
   await runChecks();
 } catch (error) {

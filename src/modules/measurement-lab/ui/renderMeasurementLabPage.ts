@@ -1644,7 +1644,11 @@ function renderSpeedPanel(els: Elements): void {
       <button class="ea-button ea-button--ghost mlab-speed-ctx-btn${ctx === '33_33' ? ' mlab-speed-ctx-btn--active' : ''}" type="button" data-mlab-speed-ctx="33_33">33&frac13;&thinsp;RPM</button>
       <button class="ea-button ea-button--ghost mlab-speed-ctx-btn${ctx === '45' ? ' mlab-speed-ctx-btn--active' : ''}" type="button" data-mlab-speed-ctx="45">45&thinsp;RPM</button>
     </div>
-    ${ctx === '45' ? `<p class="ea-muted mlab-speed-ctx-note">At 45&thinsp;RPM, the 3150&thinsp;Hz track should read approximately 4,253&thinsp;Hz. Nominal: ${nomHz.toLocaleString('en-US')}&thinsp;Hz.</p>` : ''}
+    <p class="ea-muted mlab-speed-ctx-note">
+      Selected band is the 3150&thinsp;Hz test track; analysis reference follows the selected RPM context
+      (${ctx === '45' ? `45&thinsp;RPM &rarr; nominal ${nomHz.toLocaleString('en-US')}&thinsp;Hz` : `33&frac13;&thinsp;RPM &rarr; nominal ${nomHz.toLocaleString('en-US')}&thinsp;Hz`}).
+      ${ctx === '45' ? 'At 45&thinsp;RPM, the 3150&thinsp;Hz track should read approximately 4,253&thinsp;Hz.' : ''}
+    </p>
   `;
 
   if (state.speed.active) {
@@ -1799,12 +1803,9 @@ function renderSpeedPanel(els: Elements): void {
     ${historyMarkup}
   `;
   if (speedBands.length > 1) {
-    body.querySelector<HTMLSelectElement>('[data-mlab-speed-band]')?.addEventListener('change', (event) => {
-      const val = (event.currentTarget as HTMLSelectElement).value;
-      const selected = speedBands.find(b => b.index === val);
-      if (selected?.frequencyHz !== undefined && selected.frequencyHz !== null) {
-        state.speed.referenceHz = selected.frequencyHz;
-      }
+    body.querySelector<HTMLSelectElement>('[data-mlab-speed-band]')?.addEventListener('change', (_event) => {
+      // Band selection only affects metadata/provenance; analyzer reference is always
+      // the speed context nominal (nominalFrequencyHz33[ctx]), set in startSpeedMeasurement.
     });
   }
   body.querySelector<HTMLButtonElement>('[data-mlab-speed-start]')?.addEventListener('click', () => {
@@ -4574,9 +4575,11 @@ function startSpeedMeasurement(els: Elements): void {
   const source = state.preSplitterNode;
   if (!context || !source || state.captureState !== 'live') return;
 
+  const ctx = state.speed.speedContext;
+  const nominalReferenceHz = nominalFrequencyHz33[ctx];
+
   const speedBands = getWowFlutterBands(selectedRecord());
-  const band = speedBands.find(b => b.frequencyHz === state.speed.referenceHz)
-    ?? speedBands.find(b => b.frequencyHz === 3150)
+  const band = speedBands.find(b => b.frequencyHz === 3150)
     ?? speedBands[0]
     ?? null;
 
@@ -4585,9 +4588,9 @@ function startSpeedMeasurement(els: Elements): void {
     return;
   }
 
-  if (band.frequencyHz !== undefined && band.frequencyHz !== null) {
-    state.speed.referenceHz = band.frequencyHz;
-  }
+  // Analysis reference is always the speed context nominal (3150 for 33⅓, 4253 for 45 RPM).
+  // Band metadata records test-record provenance (the 3150 Hz track on the disc).
+  state.speed.referenceHz = nominalReferenceHz;
   state.speed.bandMeta = {
     index: band.index,
     label: band.label,
@@ -4605,7 +4608,7 @@ function startSpeedMeasurement(els: Elements): void {
   state.speed.capture = createSpeedFlutterCapture(
     context,
     source,
-    state.speed.referenceHz,
+    nominalReferenceHz,
     speedMeasurementDurationSeconds,
     {
       onProgress: (elapsed) => {
