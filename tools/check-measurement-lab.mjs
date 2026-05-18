@@ -1461,9 +1461,9 @@ function checkS5AAdvancedAnalyzers() {
     // 7b. f2 metadata rendered from band.f2Hz
     ['VTA metadata: f2Hz rendered', /function renderAdvancedPanel[\s\S]{0,2500}band\.f2Hz/],
     // 7c. ratio rendered from band.ratio
-    ['VTA metadata: ratio rendered', /function renderAdvancedPanel[\s\S]{0,2500}band\.ratio/],
+    ['VTA metadata: ratio rendered', /function renderAdvancedPanel[\s\S]{0,2700}band\.ratio/],
     // 7d. standard rendered from band.standard
-    ['VTA metadata: standard rendered', /function renderAdvancedPanel[\s\S]{0,2650}band\.standard/],
+    ['VTA metadata: standard rendered', /function renderAdvancedPanel[\s\S]{0,2800}band\.standard/],
     // 8. Empty-state run table message (S5B updated wording)
     ['VTA run table empty-state message',
       /No VTA IMD run markers added yet|No VTA IMD runs captured yet/],
@@ -1553,7 +1553,7 @@ function checkS5BVtaRunModel() {
     // 15. imd_percent: r.imdPercent in VTA export (S5C: real value or null per run)
     ['imd_percent uses run value in VTA export', /imd_percent\s*:\s*r\.imdPercent/],
     // 16. warnings array in VTA export
-    ['warnings array in VTA export', /vta_imd_optimizer[\s\S]{0,2600}warnings\s*:\s*\[/],
+    ['warnings array in VTA export', /vta_imd_optimizer[\s\S]{0,3500}warnings\s*:\s*\[/],
     // 17. VTA workflow remains planned (not supported)
     ['VTA still planned in measurementWorkflows (not supported)',
       !/vta_imd_optimizer[\s\S]{0,200}implementationStatus\s*:\s*'supported'/.test(workflowsSrc)],
@@ -1646,7 +1646,7 @@ function checkS5CVtaCapture() {
     // 14. data-mlab-vta-measure button wiring present
     ['data-mlab-vta-measure button wiring', /data-mlab-vta-measure/],
     // 15. warnings array in VTA export still present
-    ['warnings array in VTA export', /vta_imd_optimizer[\s\S]{0,2600}warnings\s*:\s*\[/],
+    ['warnings array in VTA export', /vta_imd_optimizer[\s\S]{0,3500}warnings\s*:\s*\[/],
   ];
 
   let allPass = true;
@@ -2287,6 +2287,77 @@ function checkS5F1UsableBand() {
 }
 
 checkS5F1UsableBand();
+
+function checkS5GVtaStatusPolicy() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  if (!existsSync(renderSrcPath)) {
+    console.error('S5G static check: source file not found');
+    process.exitCode = 1;
+    return;
+  }
+  const src = readFileSync(renderSrcPath, 'utf8');
+
+  const checks = [
+    // 1. VtaWorkflowPolicyStatus type defined with both literals
+    ['VtaWorkflowPolicyStatus type defined',
+      /type VtaWorkflowPolicyStatus\s*=\s*'planned_experimental'\s*\|\s*'ready_for_review_not_supported'/],
+    // 2. VtaWorkflowStatusPolicy type defined with workflowStatus: 'planned'
+    ['VtaWorkflowStatusPolicy type with workflowStatus planned',
+      /type VtaWorkflowStatusPolicy[\s\S]{0,400}workflowStatus\s*:\s*'planned'/],
+    // 3. deriveVtaWorkflowStatusPolicy function defined
+    ['deriveVtaWorkflowStatusPolicy helper defined',
+      /function deriveVtaWorkflowStatusPolicy\s*\(/],
+    // 4. ready_for_review_not_supported status value produced
+    ['ready_for_review_not_supported status value in helper',
+      /function deriveVtaWorkflowStatusPolicy[\s\S]{0,600}ready_for_review_not_supported/],
+    // 5. planned_experimental status value produced
+    ['planned_experimental status value in helper',
+      /function deriveVtaWorkflowStatusPolicy[\s\S]{0,1000}planned_experimental/],
+    // 6. workflowStatus: 'planned' literal in helper (not 'supported')
+    ['workflowStatus is always planned in helper',
+      /function deriveVtaWorkflowStatusPolicy[\s\S]{0,1000}workflowStatus\s*:\s*'planned'/],
+    // 7. requiredBeforeSupported list in helper
+    ['requiredBeforeSupported list in helper',
+      /function deriveVtaWorkflowStatusPolicy[\s\S]{0,300}requiredBeforeSupported/],
+    // 8. workflow_status_policy key in JSON export
+    ['workflow_status_policy key in JSON export',
+      /workflow_status_policy\s*:/],
+    // 9. workflow_status key present in export (snake_case)
+    ['workflow_status key in export',
+      /workflow_status\s*:\s*wsp\.workflowStatus/],
+    // 10. required_before_supported key in export
+    ['required_before_supported key in export',
+      /required_before_supported\s*:\s*wsp\.requiredBeforeSupported/],
+    // 11. UI policy section present (mlab-vta-policy class)
+    ['mlab-vta-policy UI section rendered',
+      /mlab-vta-policy/],
+    // 12. UI shows "Workflow status policy" label
+    ['Workflow status policy label in UI',
+      /Workflow status policy/],
+    // 13. No 'supported' as workflowStatus value anywhere
+    ['No workflowStatus supported value',
+      !/workflowStatus\s*:\s*'supported'/.test(src)],
+    // 14. VTA top-level status still planned as const
+    ['VTA top-level status still planned as const',
+      /status\s*:\s*'planned'\s*as\s*const/],
+  ];
+
+  let allPass = true;
+  for (const [label, result] of checks) {
+    const ok = typeof result === 'boolean' ? result : result.test(src);
+    if (!ok) {
+      console.error(`S5G static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S5G static source check (VTA Workflow Status Policy): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS5GVtaStatusPolicy();
 
 try {
   await runChecks();

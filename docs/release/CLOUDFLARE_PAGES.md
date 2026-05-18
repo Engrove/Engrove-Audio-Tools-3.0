@@ -142,3 +142,17 @@ After Cloudflare deploy, verify at `https://test-record-coverage.pages.dev/measu
 43. JSON export contains a `supported_gate` key with `status`, `passed_count`, `total_count`, `criteria`, `warnings`.
 44. Export `vta_imd_optimizer.status` is still `"planned"`.
 45. No `best_setting`, `bestSetting`, `recommended_height`, or `optimal_height` fields in export.
+
+## S5G VTA workflow status policy (S5G)
+
+46. **Workflow status policy** section is visible in the VTA panel below the Supported readiness gate.
+47. Policy shows **Planned / experimental** when gate is not `ready_for_supported_review`.
+48. Policy shows **Ready for review — not yet supported** when gate is `ready_for_supported_review`.
+49. Policy section displays the reason text explaining why VTA remains Planned.
+50. Policy section shows the **Required before a supported lift** list with at least 5 items.
+51. JSON export `vta_imd_optimizer.workflow_status_policy` key is present with `status`, `workflow_status`, `reason`, `required_before_supported`.
+52. Export `workflow_status_policy.workflow_status` is `"planned"` (never `"supported"`).
+53. Export `workflow_status_policy.status` is either `"planned_experimental"` or `"ready_for_review_not_supported"`.
+54. Text report includes **Workflow status policy:** line and **Required before a supported lift:** list.
+55. Export `vta_imd_optimizer.status` remains `"planned"` regardless of policy status.
+56. No `workflowStatus: "supported"` value anywhere in export or source.

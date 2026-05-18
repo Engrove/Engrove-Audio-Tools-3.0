@@ -1157,6 +1157,55 @@ button.mlab-coverage-badge--available:focus-visible {
   padding: 3px 0;
 }
 
+.mlab-vta-policy {
+  margin-top: var(--ea-space-4);
+  padding: var(--ea-space-3) var(--ea-space-4);
+  border-left: 2px solid var(--ea-border-low);
+  background: var(--ea-surface-raised);
+}
+
+.mlab-vta-policy-head {
+  margin-bottom: var(--ea-space-2);
+}
+
+.mlab-vta-policy-status-row {
+  margin-bottom: var(--ea-space-2);
+  font-size: var(--ea-text-sm);
+}
+
+.mlab-vta-policy-status {
+  font-weight: 600;
+}
+
+.mlab-vta-policy-status--experimental {
+  color: var(--ea-text-low);
+}
+
+.mlab-vta-policy-status--review-not-supported {
+  color: var(--ea-text-high);
+}
+
+.mlab-vta-policy-reason {
+  margin-bottom: var(--ea-space-2);
+  font-size: var(--ea-text-sm);
+}
+
+.mlab-vta-policy-req-head {
+  margin-bottom: var(--ea-space-1);
+  font-size: var(--ea-text-sm);
+}
+
+.mlab-vta-policy-req-list {
+  margin: 0 0 0 var(--ea-space-4);
+  padding: 0;
+  font-size: var(--ea-text-sm);
+}
+
+.mlab-vta-policy-req {
+  margin-bottom: var(--ea-space-1);
+  color: var(--ea-text-low);
+}
+
 @media (max-width: 1180px) {
   .mlab-workbench-grid {
     grid-template-columns: 1fr;

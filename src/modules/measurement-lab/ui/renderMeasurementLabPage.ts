@@ -245,7 +245,7 @@ type LabState = {
  * site below; it has no runtime effect.
  */
 const tokenLayoutGeneratedClassNames =
-  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured mlab-vta-candidate-badge mlab-vta-comparison mlab-vta-comparison-candidate mlab-vta-comparison-meta mlab-vta-comparison-warning mlab-vta-comparison-status mlab-vta-comparison-confidence mlab-vta-confidence-level mlab-vta-confidence-level--insufficient mlab-vta-confidence-level--low mlab-vta-confidence-level--medium mlab-vta-confidence-level--high mlab-vta-confidence-reason mlab-vta-gate mlab-vta-gate-head mlab-vta-gate-summary mlab-vta-gate-status mlab-vta-gate-status--not-ready mlab-vta-gate-status--candidate mlab-vta-gate-status--review mlab-vta-gate-msg mlab-vta-gate-table mlab-vta-gate-row mlab-vta-gate-pass mlab-vta-gate-pass--ok mlab-vta-gate-pass--fail mlab-vta-gate-label mlab-vta-gate-detail';
+  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured mlab-vta-candidate-badge mlab-vta-comparison mlab-vta-comparison-candidate mlab-vta-comparison-meta mlab-vta-comparison-warning mlab-vta-comparison-status mlab-vta-comparison-confidence mlab-vta-confidence-level mlab-vta-confidence-level--insufficient mlab-vta-confidence-level--low mlab-vta-confidence-level--medium mlab-vta-confidence-level--high mlab-vta-confidence-reason mlab-vta-gate mlab-vta-gate-head mlab-vta-gate-summary mlab-vta-gate-status mlab-vta-gate-status--not-ready mlab-vta-gate-status--candidate mlab-vta-gate-status--review mlab-vta-gate-msg mlab-vta-gate-table mlab-vta-gate-row mlab-vta-gate-pass mlab-vta-gate-pass--ok mlab-vta-gate-pass--fail mlab-vta-gate-label mlab-vta-gate-detail mlab-vta-policy mlab-vta-policy-head mlab-vta-policy-status-row mlab-vta-policy-status mlab-vta-policy-status--experimental mlab-vta-policy-status--review-not-supported mlab-vta-policy-reason mlab-vta-policy-req-head mlab-vta-policy-req-list mlab-vta-policy-req';
 void tokenLayoutGeneratedClassNames;
 
 const speedMeasurementDurationSeconds = 30;
@@ -978,6 +978,26 @@ function buildSessionJson(): SessionJson {
               warnings: sg.warnings,
             };
           })(),
+          workflow_status_policy: (() => {
+            const record = selectedRecord();
+            const vtaBands = getVtaImdBands(record);
+            const cmp = deriveVtaImdComparison(state.vta.runs);
+            const vtaBandForPolicy = vtaBands[0] ?? null;
+            const sg = deriveVtaSupportedGate({
+              runs: state.vta.runs,
+              comparison: cmp,
+              hasUsableVtaBand: hasUsableVtaImdBand(vtaBandForPolicy),
+              hasVtaBandAtAll: vtaBands.length > 0,
+              capturingRunId: state.vta.capturingRunId,
+            });
+            const wsp = deriveVtaWorkflowStatusPolicy(sg);
+            return {
+              status: wsp.status,
+              workflow_status: wsp.workflowStatus,
+              reason: wsp.reason,
+              required_before_supported: wsp.requiredBeforeSupported,
+            };
+          })(),
           warnings: [
             'VTA IMD capture gateway preview. Results are experimental and have not been validated.',
             'Full VTA optimizer validation and final recommendation flow are not implemented yet.',
@@ -1284,6 +1304,16 @@ function buildReportText(): string {
       lines.push(`    [${c.passed ? 'PASS' : 'FAIL'}] ${c.label}: ${c.detail}`);
     });
     lines.push('  Gate does not change VTA workflow status — remains Planned until formally reviewed.');
+    // Workflow status policy
+    const vtaPolicy = deriveVtaWorkflowStatusPolicy(vtaGate);
+    const policyLabel = vtaPolicy.status === 'ready_for_review_not_supported'
+      ? 'Ready for review — not yet supported'
+      : 'Planned / experimental';
+    lines.push(`  Workflow status policy: ${policyLabel}`);
+    lines.push(`  Workflow status: ${vtaPolicy.workflowStatus}`);
+    lines.push(`  Policy reason: ${vtaPolicy.reason}`);
+    lines.push('  Required before a supported lift:');
+    vtaPolicy.requiredBeforeSupported.forEach(r => lines.push(`    - ${r}`));
     lines.push('');
   }
 
@@ -3349,6 +3379,15 @@ type VtaSupportedGate = {
   readonly warnings: readonly string[];
 };
 
+type VtaWorkflowPolicyStatus = 'planned_experimental' | 'ready_for_review_not_supported';
+
+type VtaWorkflowStatusPolicy = {
+  readonly status: VtaWorkflowPolicyStatus;
+  readonly workflowStatus: 'planned';
+  readonly reason: string;
+  readonly requiredBeforeSupported: readonly string[];
+};
+
 function hasUsableVtaImdBand(band: TestBand | null): boolean {
   return band !== null
     && typeof band.f1Hz === 'number'
@@ -3453,6 +3492,30 @@ function deriveVtaSupportedGate(args: {
     passedCount,
     totalCount,
     warnings: ['Supported review gate does not change VTA workflow status — remains Planned until formally reviewed.'],
+  };
+}
+
+function deriveVtaWorkflowStatusPolicy(gate: VtaSupportedGate): VtaWorkflowStatusPolicy {
+  const requiredBeforeSupported: readonly string[] = [
+    'Validated repeatability across multiple real hardware captures.',
+    'Manual deploy sanity check with real phono hardware and test record.',
+    'Confidence and report review by project decision-maker.',
+    'No unresolved capture lifecycle issues.',
+    'Explicit project decision to lift workflow status from planned to supported.',
+  ];
+  if (gate.status === 'ready_for_supported_review') {
+    return {
+      status: 'ready_for_review_not_supported',
+      workflowStatus: 'planned',
+      reason: 'Readiness gate passed, but workflow remains Planned until reviewed and validated.',
+      requiredBeforeSupported,
+    };
+  }
+  return {
+    status: 'planned_experimental',
+    workflowStatus: 'planned',
+    reason: 'VTA IMD optimizer remains experimental while measurement confidence and validation are still being reviewed.',
+    requiredBeforeSupported,
   };
 }
 
@@ -3562,6 +3625,7 @@ function renderAdvancedPanel(els: Elements): void {
     hasVtaBandAtAll: hasVtaBand,
     capturingRunId: state.vta.capturingRunId,
   });
+  const policy = deriveVtaWorkflowStatusPolicy(gate);
   const vtaOpts = {
     canCapture,
     capturingRunId: state.vta.capturingRunId,
@@ -3789,6 +3853,31 @@ function renderAdvancedPanel(els: Elements): void {
                 <table class="mlab-vta-gate-table" aria-label="Supported readiness criteria">
                   <tbody>${criteriaHtml}</tbody>
                 </table>
+              </div>
+            `;
+          })()}
+
+          ${(() => {
+            const policyStatusLabel = policy.status === 'ready_for_review_not_supported'
+              ? 'Ready for review — not yet supported'
+              : 'Planned / experimental';
+            const policyStatusClass = policy.status === 'ready_for_review_not_supported'
+              ? 'mlab-vta-policy-status--review-not-supported'
+              : 'mlab-vta-policy-status--experimental';
+            const reqHtml = policy.requiredBeforeSupported.map(r =>
+              `<li class="mlab-vta-policy-req">${renderText(r)}</li>`
+            ).join('');
+            return `
+              <div class="mlab-vta-policy">
+                <div class="mlab-vta-policy-head">
+                  <strong>Workflow status policy</strong>
+                </div>
+                <div class="mlab-vta-policy-status-row">
+                  Workflow: <span class="mlab-vta-policy-status ${policyStatusClass}">${policyStatusLabel}</span>
+                </div>
+                <p class="mlab-vta-policy-reason ea-muted">${renderText(policy.reason)}</p>
+                <p class="mlab-vta-policy-req-head ea-muted"><strong>Required before a supported lift:</strong></p>
+                <ul class="mlab-vta-policy-req-list">${reqHtml}</ul>
               </div>
             `;
           })()}
