@@ -324,7 +324,7 @@ function helpContent(): string {
           <tr><td>/geometry-lab</td><td>Tonearm Geometry Lab</td><td>Active</td></tr>
           <tr><td>/vta-sra-lab</td><td>VTA &amp; SRA Lab</td><td>Active</td></tr>
           <tr><td>/measurement-lab</td><td>Measurement Lab</td><td>Active</td></tr>
-          <tr><td>Data Explorer</td><td>Dataset exploration</td><td>Coming soon / disabled</td></tr>
+          <tr><td>Data Explorer</td><td>Dataset exploration</td><td>Not available in this release</td></tr>
         </tbody>
       </table>
       <p>The app also supports hash-based equivalents for the active tool routes. In-page help links remain normal anchor links inside this modal.</p>

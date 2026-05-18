@@ -3620,3 +3620,99 @@ function checkS5RAzimuthStepFoundation() {
 }
 
 checkS5RAzimuthStepFoundation();
+
+function checkS6SupportedStatusReview() {
+  const workflowsPath  = join(repoRoot, 'src/modules/measurement-lab/data/measurementWorkflows.ts');
+  const helpModalPath  = join(repoRoot, 'src/shared/ui/helpModal.ts');
+  const headersPath    = join(repoRoot, 'public/_headers');
+  const renderSrcPath  = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+
+  for (const p of [workflowsPath, helpModalPath, headersPath, renderSrcPath]) {
+    if (!existsSync(p)) {
+      console.error(`S6 static check FAIL: required file not found: ${p}`);
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const workflowsSrc = readFileSync(workflowsPath, 'utf8');
+  const helpSrc      = readFileSync(helpModalPath, 'utf8');
+  const headersSrc   = readFileSync(headersPath, 'utf8');
+  const uiSrc        = readFileSync(renderSrcPath, 'utf8');
+
+  const checks = [
+    // 1. vertical_resonance promoted to supported
+    ['vertical_resonance implementationStatus supported',
+      /vertical_resonance[\s\S]{0,200}implementationStatus\s*:\s*'supported'/.test(workflowsSrc)],
+    // 2. VTA still planned (not supported)
+    ['VTA still planned (not supported)',
+      !/vta_imd_optimizer[\s\S]{0,200}implementationStatus\s*:\s*'supported'/.test(workflowsSrc)],
+    // 3. anti_skate_tracking_stress not promoted
+    ['anti_skate_tracking_stress remains planned',
+      !/anti_skate_tracking_stress[\s\S]{0,200}implementationStatus\s*:\s*'supported'/.test(workflowsSrc)],
+    // 4. rumble_isolation not promoted
+    ['rumble_isolation remains planned',
+      !/rumble_isolation[\s\S]{0,200}implementationStatus\s*:\s*'supported'/.test(workflowsSrc)],
+    // 5. pink_noise_spectral not promoted
+    ['pink_noise_spectral remains planned',
+      !/pink_noise_spectral[\s\S]{0,200}implementationStatus\s*:\s*'supported'/.test(workflowsSrc)],
+    // 6. helpModal no longer contains "Coming soon"
+    ['helpModal does not contain "Coming soon"',
+      !helpSrc.includes('Coming soon')],
+    // 7. connect-src includes scripts.simpleanalyticscdn.com
+    ['connect-src includes scripts.simpleanalyticscdn.com',
+      /connect-src[^\n]*https:\/\/scripts\.simpleanalyticscdn\.com/.test(headersSrc)],
+    // 8. script-src still includes scripts.simpleanalyticscdn.com
+    ['script-src still includes scripts.simpleanalyticscdn.com',
+      /script-src[^\n]*https:\/\/scripts\.simpleanalyticscdn\.com/.test(headersSrc)],
+    // 9. queue.simpleanalyticscdn.com still in connect-src
+    ['queue.simpleanalyticscdn.com still in connect-src',
+      /connect-src[^\n]*https:\/\/queue\.simpleanalyticscdn\.com/.test(headersSrc)],
+    // 10. Cloudflare still in connect-src
+    ['cloudflareinsights.com still in connect-src',
+      /connect-src[^\n]*cloudflareinsights\.com/.test(headersSrc)],
+    // 11. clarity.ms still in connect-src
+    ['clarity.ms still in connect-src',
+      /connect-src[^\n]*clarity\.ms/.test(headersSrc)],
+    // 12. CSP does not use wildcard * in script-src
+    ['script-src does not use *',
+      !/script-src[^\n]*\s\*\s|\s\*$|\s\*;/.test(headersSrc)],
+    // 13. No "best/recommended/optimal" VTA/azimuth claim in UI source
+    ['No best/recommended/optimal VTA claim',
+      !/\b(best|recommended|optimal)\s+VTA|\bVTA\s+(best|recommended|optimal)/i.test(uiSrc)],
+    // 14. S5R azimuth step workflow still present (regression)
+    ['S5R azimuth step workflow still present', /AzimuthStepRun/.test(uiSrc)],
+    // 15. S5R azimuth comparison no recommendation claim
+    ['azimuth comparison has no recommendation claim',
+      !/No azimuth setting is recommended/.test(uiSrc)
+        ? /lower crosstalk|no azimuth/i.test(uiSrc)
+        : true],
+    // 16. S5Q harmonic breakdown still present (regression)
+    ['S5Q harmonic breakdown still present', /buildThdDistortionMeta/.test(uiSrc)],
+    // 17. S5P resonance diagnostics still present (regression)
+    ['S5P resonance diagnostics still present', /buildResonanceDiagnosticMeta/.test(uiSrc)],
+    // 18. S5O freq deviation still present (regression)
+    ['S5O freq deviation still present', /computeFreqDeviationSummary/.test(uiSrc)],
+    // 19. wow_flutter and channel_identity still supported (regression)
+    ['wow_flutter still supported',
+      /wow_flutter[\s\S]{0,200}implementationStatus\s*:\s*'supported'/.test(workflowsSrc)],
+    // 20. frequency_response still supported (regression)
+    ['frequency_response still supported',
+      /frequency_response[\s\S]{0,200}implementationStatus\s*:\s*'supported'/.test(workflowsSrc)],
+  ];
+
+  let allPass = true;
+  for (const [label, ok] of checks) {
+    if (!ok) {
+      console.error(`S6 static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S6 static source check (Supported-Status Review & Release-Gate Cleanup): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS6SupportedStatusReview();

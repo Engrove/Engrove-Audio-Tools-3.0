@@ -124,7 +124,7 @@ export const MEASUREMENT_WORKFLOWS: readonly MeasurementWorkflow[] = [
     description: 'Detect vertical resonance peaks from a descending vertical modulation sweep.',
     requiredAnalyzerModule: 'vertical_resonance',
     fallbackPurposes: ['vertical_modulation'],
-    implementationStatus: 'planned',
+    implementationStatus: 'supported',
     unavailableReason: 'No vertical resonance sweep on selected test record.',
   },
   {
