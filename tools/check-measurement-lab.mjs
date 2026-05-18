@@ -3318,3 +3318,79 @@ function checkS5NSpeedDiagnostics() {
 }
 
 checkS5NSpeedDiagnostics();
+
+function checkS5OFreqResponseDeviation() {
+  const renderSrcPath   = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const freqEnginePath  = join(repoRoot, 'src/modules/measurement-lab/engine/freqResponse.ts');
+  const cssSrcPath      = join(repoRoot, 'src/modules/measurement-lab/ui/measurementLab.css');
+
+  for (const p of [renderSrcPath, freqEnginePath, cssSrcPath]) {
+    if (!existsSync(p)) {
+      console.error(`S5O static check FAIL: required file not found: ${p}`);
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const uiSrc     = readFileSync(renderSrcPath, 'utf8');
+  const engineSrc = readFileSync(freqEnginePath, 'utf8');
+  const cssSrc    = readFileSync(cssSrcPath, 'utf8');
+
+  const checks = [
+    // 1. FreqDeviationSummary type in freqResponse.ts
+    ['FreqDeviationSummary type in freqResponse.ts', /FreqDeviationSummary/.test(engineSrc)],
+    // 2. computeFreqDeviationSummary function in freqResponse.ts
+    ['computeFreqDeviationSummary in freqResponse.ts', /function computeFreqDeviationSummary/.test(engineSrc)],
+    // 3. FreqBandSummary type in freqResponse.ts
+    ['FreqBandSummary type in freqResponse.ts', /FreqBandSummary/.test(engineSrc)],
+    // 4. empty result returns null
+    ['computeFreqDeviationSummary returns null for empty result', /frequenciesHz\.length === 0.*return null/.test(engineSrc.replace(/\n/g, ' '))],
+    // 5. deviation fields: minDb, maxDb, peakToPeakDb
+    ['deviation has minDb maxDb peakToPeakDb fields', /minDb.*maxDb.*peakToPeakDb/s.test(engineSrc)],
+    // 6. rmsDeviationDb field present
+    ['deviation has rmsDeviationDb field', /rmsDeviationDb/.test(engineSrc)],
+    // 7. bandSummaries array present
+    ['deviation has bandSummaries array', /bandSummaries/.test(engineSrc)],
+    // 8. referenceNote mentions 1 kHz
+    ['referenceNote mentions 1 kHz reference', /1 kHz.*0 dB reference|0 dB.*1 kHz/.test(engineSrc)],
+    // 9. iriaaApplied field in FreqDeviationSummary
+    ['iriaaApplied field in FreqDeviationSummary', /iriaaApplied/.test(engineSrc)],
+    // 10. computeFreqDeviationSummary imported in render file
+    ['computeFreqDeviationSummary imported in render file', /computeFreqDeviationSummary/.test(uiSrc)],
+    // 11. deviation field in JSON export for frequency_response
+    ['deviation field in JSON export', /deviation\s*:/.test(uiSrc)],
+    // 12. deviation summary in text report
+    ['Deviation summary in text report (iRIAA applied line)', /iRIAA applied:/.test(uiSrc)],
+    // 13. mlab-freq-deviation CSS class present
+    ['mlab-freq-deviation CSS class present', /\.mlab-freq-deviation/.test(cssSrc)],
+    // 14. deviation block in renderFreqPanel (mlab-freq-deviation-head)
+    ['mlab-freq-deviation-head markup in render file', /mlab-freq-deviation-head/.test(uiSrc)],
+    // 15. deviation block in buildFreqSection web report
+    ['deviation HTML in buildFreqSection', /deviationHtml/.test(uiSrc)],
+    // 16. iRIAA provenance badge in renderFreqPanel
+    ['iRIAA provenance badge in renderFreqPanel', /iRIAA applied.*ea-badge|ea-badge.*iRIAA applied/.test(uiSrc)],
+    // 17. buildFreqResponseSvg still present (S5K regression)
+    ['buildFreqResponseSvg still present (S5K regression)', /buildFreqResponseSvg/.test(uiSrc)],
+    // 18. input_scope still present (S5M regression)
+    ['input_scope still present (S5M regression)', /input_scope/.test(uiSrc)],
+    // 19. speed_diagnostics still present (S5N regression)
+    ['speed_diagnostics still present (S5N regression)', /speed_diagnostics/.test(uiSrc)],
+    // 20. session_metadata still present (S5L regression)
+    ['session_metadata still present (S5L regression)', /session_metadata/.test(uiSrc)],
+  ];
+
+  let allPass = true;
+  for (const [label, ok] of checks) {
+    if (!ok) {
+      console.error(`S5O static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S5O static source check (Frequency Response Deviation & Reporting): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS5OFreqResponseDeviation();

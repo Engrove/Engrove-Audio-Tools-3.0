@@ -170,3 +170,90 @@ export function computeFrequencyResponse(
 
   return { frequenciesHz, magnitudesDb, fftSize, sampleRateHz, blockCount };
 }
+
+// ── S5O: Frequency-response deviation summary ─────────────────────────────────
+
+export type FreqBandSummary = {
+  readonly label: string;
+  readonly freqStartHz: number;
+  readonly freqEndHz: number;
+  readonly meanDb: number | null;
+  readonly pointCount: number;
+};
+
+export type FreqDeviationSummary = {
+  readonly referenceNote: string;
+  readonly iriaaApplied: boolean;
+  readonly rangeStartHz: number;
+  readonly rangeEndHz: number;
+  readonly pointCount: number;
+  readonly minDb: number;
+  readonly maxDb: number;
+  readonly peakToPeakDb: number;
+  readonly rmsDeviationDb: number;
+  readonly minFrequencyHz: number;
+  readonly maxFrequencyHz: number;
+  readonly bandSummaries: readonly FreqBandSummary[];
+};
+
+const BAND_DEFS: readonly { label: string; lo: number; hi: number }[] = [
+  { label: 'Bass (20–300 Hz)',      lo: 20,   hi: 300 },
+  { label: 'Midrange (300–3000 Hz)', lo: 300,  hi: 3000 },
+  { label: 'Treble (3–20 kHz)',     lo: 3000, hi: 20000 },
+];
+
+/*
+ * Compute deviation summary from a FreqResponseResult.
+ * magnitudesDb values are already normalised to 0 dB at 1 kHz, so each
+ * value directly represents deviation from the 1 kHz reference level.
+ * Returns null when the result contains no data points.
+ */
+export function computeFreqDeviationSummary(
+  result: FreqResponseResult,
+  iriaaApplied: boolean,
+): FreqDeviationSummary | null {
+  const { frequenciesHz, magnitudesDb } = result;
+  if (frequenciesHz.length === 0) return null;
+
+  let minDb = Infinity;
+  let maxDb = -Infinity;
+  let minFreqHz = frequenciesHz[0];
+  let maxFreqHz = frequenciesHz[0];
+  let sumSq = 0;
+
+  for (let i = 0; i < frequenciesHz.length; i++) {
+    const db = magnitudesDb[i];
+    sumSq += db * db;
+    if (db < minDb) { minDb = db; minFreqHz = frequenciesHz[i]; }
+    if (db > maxDb) { maxDb = db; maxFreqHz = frequenciesHz[i]; }
+  }
+
+  const rmsDeviationDb = Math.sqrt(sumSq / frequenciesHz.length);
+
+  const bandSummaries: FreqBandSummary[] = BAND_DEFS.map(({ label, lo, hi }) => {
+    let sum = 0;
+    let count = 0;
+    for (let i = 0; i < frequenciesHz.length; i++) {
+      if (frequenciesHz[i] >= lo && frequenciesHz[i] <= hi) {
+        sum += magnitudesDb[i];
+        count++;
+      }
+    }
+    return { label, freqStartHz: lo, freqEndHz: hi, meanDb: count > 0 ? sum / count : null, pointCount: count };
+  });
+
+  return {
+    referenceNote: 'Deviation relative to 1 kHz (0 dB reference). Measures full playback/capture chain; not cartridge-only.',
+    iriaaApplied,
+    rangeStartHz: frequenciesHz[0],
+    rangeEndHz: frequenciesHz[frequenciesHz.length - 1],
+    pointCount: frequenciesHz.length,
+    minDb,
+    maxDb,
+    peakToPeakDb: maxDb - minDb,
+    rmsDeviationDb,
+    minFrequencyHz: minFreqHz,
+    maxFrequencyHz: maxFreqHz,
+    bandSummaries,
+  };
+}

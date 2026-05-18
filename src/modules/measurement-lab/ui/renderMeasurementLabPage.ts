@@ -29,7 +29,7 @@ import { deriveMeasurementRunQuality, deriveMeasurementChainReadiness, buildInpu
 import { createStereoChannelCapture, type StereoCapture, type ChannelCaptureMetrics } from '../dsp/stereoCaptureNode';
 import { createSweepCapture, type SweepCapture } from '../dsp/sweepCaptureNode';
 import { summariseChannelBalance } from '../engine/crosstalk';
-import { computeFrequencyResponse, type FreqResponseResult } from '../engine/freqResponse';
+import { computeFrequencyResponse, computeFreqDeviationSummary, type FreqResponseResult, type FreqDeviationSummary } from '../engine/freqResponse';
 import { computeRiaaMagnitudeDb } from '../engine/iriaaFilter';
 import { analyseTHD, analyseIMD, type ThdResult, type ImdResult } from '../engine/thd';
 import { analyseResonance, type ResonanceResult, type ResonanceSweepType } from '../engine/resonance';
@@ -1238,19 +1238,42 @@ function buildSessionJson(): SessionJson {
       })(),
       channel_identity: channelIdentityResult,
       frequency_response: freqResult
-        ? {
-            source: state.freq.resultSource ?? 'live_capture',
-            sweep_band: serializeFreqBandMeta(state.freq.selectedBandMeta),
-            result: {
-              fft_size: freqResult.fftSize,
-              block_count: freqResult.blockCount,
-              sample_rate_hz: freqResult.sampleRateHz,
-              iriaa_applied: state.iriaaEnabled,
-              frequencies_hz: Array.from(freqResult.frequenciesHz),
-              magnitudes_db: Array.from(freqResult.magnitudesDb),
-            },
-            warnings: [],
-          }
+        ? (() => {
+            const dev = computeFreqDeviationSummary(freqResult, state.iriaaEnabled);
+            return {
+              source: state.freq.resultSource ?? 'live_capture',
+              sweep_band: serializeFreqBandMeta(state.freq.selectedBandMeta),
+              result: {
+                fft_size: freqResult.fftSize,
+                block_count: freqResult.blockCount,
+                sample_rate_hz: freqResult.sampleRateHz,
+                iriaa_applied: state.iriaaEnabled,
+                frequencies_hz: Array.from(freqResult.frequenciesHz),
+                magnitudes_db: Array.from(freqResult.magnitudesDb),
+              },
+              deviation: dev ? {
+                reference_note: dev.referenceNote,
+                iriaa_applied: dev.iriaaApplied,
+                range_start_hz: dev.rangeStartHz,
+                range_end_hz: dev.rangeEndHz,
+                point_count: dev.pointCount,
+                min_db: dev.minDb,
+                max_db: dev.maxDb,
+                peak_to_peak_db: dev.peakToPeakDb,
+                rms_deviation_db: dev.rmsDeviationDb,
+                min_frequency_hz: dev.minFrequencyHz,
+                max_frequency_hz: dev.maxFrequencyHz,
+                band_summaries: dev.bandSummaries.map(b => ({
+                  label: b.label,
+                  freq_start_hz: b.freqStartHz,
+                  freq_end_hz: b.freqEndHz,
+                  mean_db: b.meanDb,
+                  point_count: b.pointCount,
+                })),
+              } : null,
+              warnings: [],
+            };
+          })()
         : null,
       thd: thdResult && thdResult.type === 'thd' ? thdResult : null,
       imd: thdResult && thdResult.type === 'imd' ? thdResult : null,
@@ -1654,10 +1677,24 @@ function buildReportText(): string {
         ? ` · ${bm.frequencyStartHz}–${bm.frequencyEndHz} Hz` : '';
       lines.push(`  Sweep band:            ${bm.label}${range}`);
     }
+    lines.push(`  iRIAA applied:         ${state.iriaaEnabled ? 'Yes' : 'No'}`);
     lines.push(`  FFT size:              ${fr.fftSize}`);
     lines.push(`  Blocks averaged:       ${fr.blockCount}`);
     lines.push(`  Sample rate:           ${fr.sampleRateHz.toLocaleString()} Hz`);
     lines.push(`  Range:                 ${fr.frequenciesHz[0]?.toFixed(0) ?? '?'} – ${fr.frequenciesHz[fr.frequenciesHz.length - 1]?.toFixed(0) ?? '?'} Hz`);
+    const dev = computeFreqDeviationSummary(fr, state.iriaaEnabled);
+    if (dev) {
+      lines.push('  --- Deviation summary (ref: 1 kHz = 0 dB) ---');
+      const fmtHz = (hz: number) => hz < 1000 ? `${hz.toFixed(0)} Hz` : `${(hz / 1000).toFixed(2)} kHz`;
+      lines.push(`  Min deviation:         ${dev.minDb.toFixed(1)} dB @ ${fmtHz(dev.minFrequencyHz)}`);
+      lines.push(`  Max deviation:         ${dev.maxDb.toFixed(1)} dB @ ${fmtHz(dev.maxFrequencyHz)}`);
+      lines.push(`  Peak-to-peak:          ${dev.peakToPeakDb.toFixed(1)} dB`);
+      lines.push(`  RMS deviation:         ${dev.rmsDeviationDb.toFixed(2)} dB`);
+      for (const b of dev.bandSummaries) {
+        const mean = b.meanDb !== null ? `${b.meanDb.toFixed(1)} dB` : 'n/a';
+        lines.push(`  ${b.label.padEnd(22)} ${mean}`);
+      }
+    }
     lines.push('  (Measures full playback/capture chain, not cartridge-only response.)');
     lines.push('  (Full data in JSON export)');
     lines.push('');
@@ -2783,15 +2820,50 @@ function renderFreqPanel(els: Elements): void {
     const sourceBadge = state.freq.resultSource === 'self_test'
       ? '<span class="ea-badge ea-badge--setup">Self-test / Simulated</span>'
       : '<span class="ea-badge ea-badge--manufacturer">Live capture</span>';
+    const iriaaLabel = state.iriaaEnabled
+      ? '<span class="ea-badge ea-badge--ok">iRIAA applied</span>'
+      : '<span class="ea-badge">No iRIAA</span>';
     const bm = state.freq.selectedBandMeta;
     const bandRange = bm?.frequencyStartHz !== null && bm?.frequencyEndHz !== null && bm !== null
       ? ` · ${bm.frequencyStartHz}–${bm.frequencyEndHz} Hz` : '';
+    const dev = computeFreqDeviationSummary(state.freq.result, state.iriaaEnabled);
+    const fmtHz = (hz: number) => hz < 1000 ? `${hz.toFixed(0)} Hz` : `${(hz / 1000).toFixed(2)} kHz`;
+    const deviationHtml = dev ? `
+      <div class="mlab-freq-deviation">
+        <div class="mlab-freq-deviation-head">Deviation summary <span class="mlab-freq-deviation-ref">(ref: 1 kHz = 0 dB)</span></div>
+        <div class="mlab-freq-deviation-row">
+          <span class="mlab-freq-deviation-label">Min deviation</span>
+          <span class="mlab-freq-deviation-val">${dev.minDb.toFixed(1)} dB @ ${renderText(fmtHz(dev.minFrequencyHz))}</span>
+        </div>
+        <div class="mlab-freq-deviation-row">
+          <span class="mlab-freq-deviation-label">Max deviation</span>
+          <span class="mlab-freq-deviation-val">${dev.maxDb.toFixed(1)} dB @ ${renderText(fmtHz(dev.maxFrequencyHz))}</span>
+        </div>
+        <div class="mlab-freq-deviation-row">
+          <span class="mlab-freq-deviation-label">Peak-to-peak</span>
+          <span class="mlab-freq-deviation-val">${dev.peakToPeakDb.toFixed(1)} dB</span>
+        </div>
+        <div class="mlab-freq-deviation-row">
+          <span class="mlab-freq-deviation-label">RMS deviation</span>
+          <span class="mlab-freq-deviation-val">${dev.rmsDeviationDb.toFixed(2)} dB</span>
+        </div>
+        ${dev.bandSummaries.map(b => `
+        <div class="mlab-freq-deviation-row">
+          <span class="mlab-freq-deviation-label">${renderText(b.label)}</span>
+          <span class="mlab-freq-deviation-val">${b.meanDb !== null ? `${b.meanDb.toFixed(1)} dB` : 'n/a'}</span>
+        </div>`).join('')}
+      </div>` : '';
     body.innerHTML = `
       <div class="mlab-freq-chart-wrap">${chartHtml}</div>
+      ${deviationHtml}
       <div class="mlab-wf-result">
         <div class="mlab-wf-result-row">
           <span class="mlab-wf-result-label">Source</span>
           <span class="mlab-wf-result-value">${sourceBadge}</span>
+        </div>
+        <div class="mlab-wf-result-row">
+          <span class="mlab-wf-result-label">iRIAA</span>
+          <span class="mlab-wf-result-value">${iriaaLabel}</span>
         </div>
         ${bm ? `
         <div class="mlab-wf-result-row">
@@ -6382,17 +6454,49 @@ function buildFreqSection(): WebReportSection {
     ['Range', `${fr.frequenciesHz[0]?.toFixed(0) ?? '?'} – ${fr.frequenciesHz[fr.frequenciesHz.length - 1]?.toFixed(0) ?? '?'} Hz`],
   );
 
+  pairs.push(['iRIAA applied', state.iriaaEnabled ? 'Yes' : 'No']);
+
   // Real data present — render the actual frequency response curve
   const svgChart = buildFreqResponseSvg(fr, state.iriaaEnabled);
   const sourceBadge = state.freq.resultSource === 'self_test'
     ? wrBadge('Self-test / Simulated', 'warn')
     : wrBadge('Live capture', 'ok');
 
+  const dev = computeFreqDeviationSummary(fr, state.iriaaEnabled);
+  const fmtHz = (hz: number) => hz < 1000 ? `${hz.toFixed(0)} Hz` : `${(hz / 1000).toFixed(2)} kHz`;
+  const deviationHtml = dev ? `
+    <div class="mlab-freq-deviation mlab-freq-deviation--report">
+      <div class="mlab-freq-deviation-head">Deviation summary <span class="mlab-freq-deviation-ref">(ref: 1 kHz = 0 dB)</span></div>
+      <div class="mlab-freq-deviation-row">
+        <span class="mlab-freq-deviation-label">Min deviation</span>
+        <span class="mlab-freq-deviation-val">${dev.minDb.toFixed(1)} dB @ ${renderText(fmtHz(dev.minFrequencyHz))}</span>
+      </div>
+      <div class="mlab-freq-deviation-row">
+        <span class="mlab-freq-deviation-label">Max deviation</span>
+        <span class="mlab-freq-deviation-val">${dev.maxDb.toFixed(1)} dB @ ${renderText(fmtHz(dev.maxFrequencyHz))}</span>
+      </div>
+      <div class="mlab-freq-deviation-row">
+        <span class="mlab-freq-deviation-label">Peak-to-peak</span>
+        <span class="mlab-freq-deviation-val">${dev.peakToPeakDb.toFixed(1)} dB</span>
+      </div>
+      <div class="mlab-freq-deviation-row">
+        <span class="mlab-freq-deviation-label">RMS deviation</span>
+        <span class="mlab-freq-deviation-val">${dev.rmsDeviationDb.toFixed(2)} dB</span>
+      </div>
+      ${dev.bandSummaries.map(b => `
+      <div class="mlab-freq-deviation-row">
+        <span class="mlab-freq-deviation-label">${renderText(b.label)}</span>
+        <span class="mlab-freq-deviation-val">${b.meanDb !== null ? `${b.meanDb.toFixed(1)} dB` : 'n/a'}</span>
+      </div>`).join('')}
+      <p class="mlab-freq-deviation-note">${renderText(dev.referenceNote)}</p>
+    </div>` : '';
+
   return {
     id: 'freq',
     title: 'Frequency Response',
     html: wrKVs(pairs)
       + `<div class="ea-webreport-freq-chart-wrap">${svgChart}</div>`
+      + deviationHtml
       + `<p style="font-size:var(--ea-text-sm);margin:var(--ea-space-1) 0">Source: ${sourceBadge}</p>`
       + wrNote('Measures full playback/capture chain, not cartridge-only response. Full data in JSON export.'),
   };
