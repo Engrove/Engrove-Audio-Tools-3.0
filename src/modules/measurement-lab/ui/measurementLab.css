@@ -1563,3 +1563,95 @@ button.mlab-coverage-badge--available:focus-visible {
   padding: var(--ea-space-1) var(--ea-space-2);
   white-space: nowrap;
 }
+
+/* ── S5I: Chain readiness panel ─────────────────────────────── */
+
+.mlab-chain-readiness {
+  display: grid;
+  gap: var(--ea-space-1);
+  padding: var(--ea-space-2) var(--ea-space-3);
+  border-radius: var(--ea-radius);
+  border-left: 3px solid var(--ea-border-low);
+  background: var(--ea-bg-panel-alt);
+  font-size: var(--ea-text-sm);
+  margin-bottom: var(--ea-space-2);
+}
+
+.mlab-chain-readiness--ready {
+  border-left-color: var(--ea-color-ok, #22c55e);
+}
+
+.mlab-chain-readiness--warning {
+  border-left-color: var(--ea-color-warn, #f59e0b);
+}
+
+.mlab-chain-readiness--blocked {
+  border-left-color: var(--ea-color-error, #ef4444);
+}
+
+.mlab-chain-readiness--not-checked {
+  border-left-color: var(--ea-border-low);
+}
+
+.mlab-chain-readiness-row {
+  display: flex;
+  gap: var(--ea-space-2);
+  align-items: baseline;
+}
+
+.mlab-chain-readiness-key {
+  min-width: 7rem;
+  flex-shrink: 0;
+}
+
+.mlab-chain-readiness-val {
+  color: var(--ea-text-high);
+}
+
+.mlab-chain-readiness-warning {
+  color: var(--ea-color-warn, #f59e0b);
+  font-size: var(--ea-text-sm);
+  margin: var(--ea-space-1) 0 0;
+}
+
+.mlab-chain-readiness-note {
+  font-size: var(--ea-text-sm);
+  margin: var(--ea-space-1) 0 0;
+}
+
+/* ── S5I: Run quality badge ──────────────────────────────────── */
+
+.mlab-run-quality {
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--ea-space-1);
+  padding: var(--ea-space-1) var(--ea-space-2);
+  border-radius: var(--ea-radius);
+  font-size: var(--ea-text-sm);
+  margin: var(--ea-space-2) 0 var(--ea-space-1);
+  border-left: 3px solid var(--ea-border-low);
+}
+
+.mlab-run-quality--ok {
+  border-left-color: var(--ea-color-ok, #22c55e);
+}
+
+.mlab-run-quality--warning {
+  border-left-color: var(--ea-color-warn, #f59e0b);
+}
+
+.mlab-run-quality--invalid {
+  border-left-color: var(--ea-color-error, #ef4444);
+  color: var(--ea-color-error, #ef4444);
+}
+
+.mlab-run-quality-label {
+  font-weight: 500;
+}
+
+.mlab-run-quality-warnings {
+  margin: var(--ea-space-1) 0 0 var(--ea-space-3);
+  padding: 0;
+  list-style: disc;
+  color: var(--ea-text-low);
+}

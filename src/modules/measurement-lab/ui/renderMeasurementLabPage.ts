@@ -23,6 +23,7 @@ import {
 import { createIriaaFilterNode, type IriaaFilterNode } from '../dsp/iriaaNode';
 import { createSpeedFlutterCapture, type SpeedFlutterCapture, type SpeedFlutterResult } from '../dsp/speedFlutterNode';
 import { createNoiseFloorCapture, type NoiseFloorCapture, type NoiseFloorResult } from '../dsp/noiseFloorNode';
+import { deriveMeasurementRunQuality, deriveMeasurementChainReadiness, type MeasurementRunQuality, type MeasurementChainReadiness, type MeasurementChainReadinessStatus } from '../engine/runQuality';
 import { createStereoChannelCapture, type StereoCapture, type ChannelCaptureMetrics } from '../dsp/stereoCaptureNode';
 import { createSweepCapture, type SweepCapture } from '../dsp/sweepCaptureNode';
 import { summariseChannelBalance } from '../engine/crosstalk';
@@ -110,6 +111,7 @@ type SpeedMeasurementRun = {
   readonly wowFlutterPercent: number | null;
   readonly band: SpeedBandMeta | null;
   readonly warnings: readonly string[];
+  readonly runQuality: MeasurementRunQuality;
 };
 
 type SpeedState = {
@@ -154,6 +156,7 @@ type NoiseFloorRun = {
   readonly rightPeakDbfs: number | null;
   readonly noiseFloorDbfs: number | null;
   readonly warnings: readonly string[];
+  readonly runQuality: MeasurementRunQuality;
 };
 
 type NoiseFloorState = {
@@ -284,6 +287,7 @@ type RefLevelStateBag = {
   elapsedSeconds: number;
   result: ReferenceLevelResult | null;
   resultSource: 'live_capture' | 'self_test' | null;
+  runQuality: MeasurementRunQuality | null;
   selectedBandIndex: string | null;
   capture: RefLevelCapture | null;
   calibrationSet: CalibrationSetEntry[];
@@ -334,7 +338,7 @@ type LabState = {
  * site below; it has no runtime effect.
  */
 const tokenLayoutGeneratedClassNames =
-  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured mlab-vta-candidate-badge mlab-vta-comparison mlab-vta-comparison-candidate mlab-vta-comparison-meta mlab-vta-comparison-warning mlab-vta-comparison-status mlab-vta-comparison-confidence mlab-vta-confidence-level mlab-vta-confidence-level--insufficient mlab-vta-confidence-level--low mlab-vta-confidence-level--medium mlab-vta-confidence-level--high mlab-vta-confidence-reason mlab-vta-gate mlab-vta-gate-head mlab-vta-gate-summary mlab-vta-gate-status mlab-vta-gate-status--not-ready mlab-vta-gate-status--candidate mlab-vta-gate-status--review mlab-vta-gate-msg mlab-vta-gate-table mlab-vta-gate-row mlab-vta-gate-pass mlab-vta-gate-pass--ok mlab-vta-gate-pass--fail mlab-vta-gate-label mlab-vta-gate-detail mlab-vta-policy mlab-vta-policy-head mlab-vta-policy-status-row mlab-vta-policy-status mlab-vta-policy-status--experimental mlab-vta-policy-status--review-not-supported mlab-vta-policy-reason mlab-vta-policy-req-head mlab-vta-policy-req-list mlab-vta-policy-req mlab-guided-order-panel mlab-guided-order-body mlab-guided-order-intro mlab-guided-order-list mlab-guided-order-item mlab-guided-order-item--first mlab-guided-order-step-head mlab-guided-order-track mlab-guided-order-name mlab-guided-order-first-badge mlab-guided-order-detail mlab-guided-order-workflow mlab-speed-ctx-row mlab-speed-ctx-label mlab-speed-ctx-btn mlab-speed-ctx-btn--active mlab-speed-ctx-note mlab-speed-ctx-badge mlab-speed-history mlab-speed-history-head mlab-speed-history-clear mlab-speed-history-empty mlab-speed-history-scroll mlab-speed-history-table mlab-speed-history-row mlab-speed-history-cell mlab-speed-settings mlab-speed-settings--result mlab-speed-settings-head mlab-speed-settings-hint mlab-speed-settings-row mlab-speed-settings-label mlab-speed-settings-value mlab-speed-settings-input-group mlab-speed-settings-input mlab-speed-settings-unit mlab-speed-settings-src mlab-speed-settings-reset mlab-nf-intro mlab-nf-guidance mlab-nf-settings mlab-nf-settings-row mlab-nf-settings-label mlab-nf-settings-select mlab-nf-settings-input mlab-nf-settings-input--wide mlab-nf-settings-input-group mlab-nf-settings-unit mlab-nf-settings-src mlab-nf-result mlab-nf-history mlab-nf-history-head mlab-nf-history-clear mlab-nf-history-scroll mlab-nf-history-table mlab-nf-history-row mlab-nf-history-cell';
+  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured mlab-vta-candidate-badge mlab-vta-comparison mlab-vta-comparison-candidate mlab-vta-comparison-meta mlab-vta-comparison-warning mlab-vta-comparison-status mlab-vta-comparison-confidence mlab-vta-confidence-level mlab-vta-confidence-level--insufficient mlab-vta-confidence-level--low mlab-vta-confidence-level--medium mlab-vta-confidence-level--high mlab-vta-confidence-reason mlab-vta-gate mlab-vta-gate-head mlab-vta-gate-summary mlab-vta-gate-status mlab-vta-gate-status--not-ready mlab-vta-gate-status--candidate mlab-vta-gate-status--review mlab-vta-gate-msg mlab-vta-gate-table mlab-vta-gate-row mlab-vta-gate-pass mlab-vta-gate-pass--ok mlab-vta-gate-pass--fail mlab-vta-gate-label mlab-vta-gate-detail mlab-vta-policy mlab-vta-policy-head mlab-vta-policy-status-row mlab-vta-policy-status mlab-vta-policy-status--experimental mlab-vta-policy-status--review-not-supported mlab-vta-policy-reason mlab-vta-policy-req-head mlab-vta-policy-req-list mlab-vta-policy-req mlab-guided-order-panel mlab-guided-order-body mlab-guided-order-intro mlab-guided-order-list mlab-guided-order-item mlab-guided-order-item--first mlab-guided-order-step-head mlab-guided-order-track mlab-guided-order-name mlab-guided-order-first-badge mlab-guided-order-detail mlab-guided-order-workflow mlab-speed-ctx-row mlab-speed-ctx-label mlab-speed-ctx-btn mlab-speed-ctx-btn--active mlab-speed-ctx-note mlab-speed-ctx-badge mlab-speed-history mlab-speed-history-head mlab-speed-history-clear mlab-speed-history-empty mlab-speed-history-scroll mlab-speed-history-table mlab-speed-history-row mlab-speed-history-cell mlab-speed-settings mlab-speed-settings--result mlab-speed-settings-head mlab-speed-settings-hint mlab-speed-settings-row mlab-speed-settings-label mlab-speed-settings-value mlab-speed-settings-input-group mlab-speed-settings-input mlab-speed-settings-unit mlab-speed-settings-src mlab-speed-settings-reset mlab-nf-intro mlab-nf-guidance mlab-nf-settings mlab-nf-settings-row mlab-nf-settings-label mlab-nf-settings-select mlab-nf-settings-input mlab-nf-settings-input--wide mlab-nf-settings-input-group mlab-nf-settings-unit mlab-nf-settings-src mlab-nf-result mlab-nf-history mlab-nf-history-head mlab-nf-history-clear mlab-nf-history-scroll mlab-nf-history-table mlab-nf-history-row mlab-nf-history-cell mlab-chain-readiness mlab-chain-readiness--ready mlab-chain-readiness--warning mlab-chain-readiness--blocked mlab-chain-readiness--not-checked mlab-chain-readiness-row mlab-chain-readiness-key mlab-chain-readiness-val mlab-chain-readiness-warning mlab-chain-readiness-note mlab-run-quality mlab-run-quality--ok mlab-run-quality--warning mlab-run-quality--invalid mlab-run-quality-label mlab-run-quality-warnings';
 void tokenLayoutGeneratedClassNames;
 
 const speedMeasurementDurationSeconds = 30;
@@ -513,6 +517,7 @@ const state: LabState = {
     elapsedSeconds: 0,
     result: null,
     resultSource: null,
+    runQuality: null,
     selectedBandIndex: null,
     capture: null,
     calibrationSet: [],
@@ -1098,6 +1103,9 @@ function buildSessionJson(): SessionJson {
           speed_error_percent: r.speedErrorPercent,
           wow_flutter_percent: r.wowFlutterPercent,
           band: r.band ? serializeSpeedBandMeta(r.band) : null,
+          run_quality: r.runQuality
+            ? { status: r.runQuality.status, clipping: r.runQuality.clipping, low_signal: r.runQuality.lowSignal, channel_imbalance_db: r.runQuality.channelImbalanceDb, warnings: Array.from(r.runQuality.warnings) }
+            : null,
           warnings: r.warnings,
         }));
         const ls = state.speed.lastSettings;
@@ -1114,6 +1122,7 @@ function buildSessionJson(): SessionJson {
           speed_deviation_percent: speedResult.speedDeviationPercent,
           unweighted_wf_percent: speedResult.unweightedWfPercent,
           weighted_wf_percent: speedResult.weightedWfPercent,
+          run_quality: (() => { const lr = state.speed.runs[state.speed.runs.length - 1]; return lr?.runQuality ? { status: lr.runQuality.status, clipping: lr.runQuality.clipping, low_signal: lr.runQuality.lowSignal, channel_imbalance_db: lr.runQuality.channelImbalanceDb, warnings: Array.from(lr.runQuality.warnings) } : null; })(),
           classification: classifyWf(speedResult.unweightedWfPercent).label,
         } : null;
         if (latest === null && runs.length === 0) return null;
@@ -1162,6 +1171,9 @@ function buildSessionJson(): SessionJson {
               confidence: r.confidence,
               reference_frequency_hz: r.referenceFrequencyHz ?? null,
               reference_level_db: r.referenceLevelDb ?? null,
+              run_quality: state.refLevel.runQuality
+                ? { status: state.refLevel.runQuality.status, clipping: state.refLevel.runQuality.clipping, low_signal: state.refLevel.runQuality.lowSignal, channel_imbalance_db: state.refLevel.runQuality.channelImbalanceDb, warnings: Array.from(state.refLevel.runQuality.warnings) }
+                : null,
               warnings: Array.from(r.warnings),
             }
           : null;
@@ -1283,6 +1295,9 @@ function buildSessionJson(): SessionJson {
         right_rms_dbfs: r.rightRmsDbfs,
         left_peak_dbfs: r.leftPeakDbfs,
         right_peak_dbfs: r.rightPeakDbfs,
+        run_quality: r.runQuality
+          ? { status: r.runQuality.status, clipping: r.runQuality.clipping, low_signal: r.runQuality.lowSignal, channel_imbalance_db: r.runQuality.channelImbalanceDb, warnings: Array.from(r.runQuality.warnings) }
+          : null,
         noise_floor_dbfs: r.noiseFloorDbfs,
         warnings: r.warnings,
       }));
@@ -1300,6 +1315,9 @@ function buildSessionJson(): SessionJson {
         right_peak_dbfs: state.noiseFloor.latest.rightPeakDbfs,
         noise_floor_dbfs: state.noiseFloor.latest.noiseFloorDbfs,
         warnings: state.noiseFloor.latest.warnings,
+        run_quality: state.noiseFloor.latest.runQuality
+          ? { status: state.noiseFloor.latest.runQuality.status, clipping: state.noiseFloor.latest.runQuality.clipping, low_signal: state.noiseFloor.latest.runQuality.lowSignal, channel_imbalance_db: state.noiseFloor.latest.runQuality.channelImbalanceDb, warnings: Array.from(state.noiseFloor.latest.runQuality.warnings) }
+          : null,
       } : null;
       if (nfLatest === null && nfRuns.length === 0) return null;
       return { latest: nfLatest, runs: nfRuns };
@@ -1414,6 +1432,11 @@ function buildReportText(): string {
       lines.push(`    Unweighted W&F (AES6): ${sr.unweightedWfPercent.toFixed(3)} %`);
       lines.push(`    IEC-weighted W&F:      ${sr.weightedWfPercent.toFixed(3)} %`);
       lines.push(`    Classification:        ${classifyWf(sr.unweightedWfPercent).label}`);
+      const latestSpeedRQ = state.speed.runs[state.speed.runs.length - 1]?.runQuality ?? null;
+      if (latestSpeedRQ) {
+        lines.push(`    Run quality:           ${latestSpeedRQ.status}`);
+        if (latestSpeedRQ.warnings.length > 0) latestSpeedRQ.warnings.forEach(w => lines.push(`    Warning:               ${w}`));
+      }
     }
     if (state.speed.runs.length > 0) {
       lines.push(`  Speed run history (${state.speed.runs.length} run${state.speed.runs.length === 1 ? '' : 's'}):`);
@@ -1539,6 +1562,10 @@ function buildReportText(): string {
       lines.push(`  Balance (R − L):       ${refr.balanceDb !== null ? (refr.balanceDb >= 0 ? '+' : '') + refr.balanceDb.toFixed(2) + ' dB' : '—'}`);
       lines.push(`  Headroom:              ${refr.headroomDb !== null ? refr.headroomDb.toFixed(2) + ' dB' : '—'}`);
       lines.push(`  Clipping:              ${refr.clipping ? 'yes' : 'no'}`);
+      if (state.refLevel.runQuality) {
+        lines.push(`  Run quality:           ${state.refLevel.runQuality.status}`);
+        if (state.refLevel.runQuality.warnings.length > 0) state.refLevel.runQuality.warnings.forEach(w => lines.push(`  Warning:               ${w}`));
+      }
       lines.push(`  Confidence:            ${refr.confidence}`);
       if (refr.warnings.length > 0) {
         lines.push(`  Warnings:              ${Array.from(refr.warnings).join('; ')}`);
@@ -1664,6 +1691,10 @@ function buildReportText(): string {
       lines.push(`    R peak:           ${nl.rightPeakDbfs !== null ? nl.rightPeakDbfs.toFixed(1) + ' dBFS' : '—'}`);
       lines.push(`    Noise floor:      ${nl.noiseFloorDbfs !== null ? nl.noiseFloorDbfs.toFixed(1) + ' dBFS' : '—'}`);
       if (nl.warnings.length > 0) nl.warnings.forEach(w => lines.push(`    Warning: ${w}`));
+      if (nl.runQuality) {
+        lines.push(`    Run quality:      ${nl.runQuality.status}`);
+        if (nl.runQuality.warnings.length > 0) nl.runQuality.warnings.forEach(w => lines.push(`    Warning: ${w}`));
+      }
     }
     if (state.noiseFloor.runs.length > 0) {
       lines.push(`  Noise floor history (${state.noiseFloor.runs.length} run${state.noiseFloor.runs.length === 1 ? '' : 's'}):`);
@@ -1711,6 +1742,20 @@ function actionBarMarkup(): string {
   `;
 }
 
+function chainReadinessPanelMarkup(): string {
+  return `
+    <section id="mlab-chain-readiness-panel" class="ea-panel" aria-labelledby="mlab-chain-readiness-title">
+      <div class="ea-panel-header">
+        <span class="ea-panel-header-id">&rarr;</span>
+        <span id="mlab-chain-readiness-title">Measurement chain readiness</span>
+      </div>
+      <div class="ea-panel-body" data-mlab-chain-readiness-body>
+        <p class="ea-muted">Connect a source to check measurement chain readiness.</p>
+      </div>
+    </section>
+  `;
+}
+
 function noiseFloorPanelMarkup(): string {
   return `
     <section id="mlab-noisefloor-panel" class="ea-panel" aria-labelledby="mlab-noisefloor-title">
@@ -1734,6 +1779,7 @@ export function renderMeasurementLabPage(): string {
         <div class="mlab-workbench-grid">
           <div class="mlab-workbench-main">
             ${audioSourcePanelMarkup()}
+            ${chainReadinessPanelMarkup()}
             ${coveragePanelMarkup()}
             ${guidedMeasurementOrderMarkup()}
             ${speedPanelMarkup()}
@@ -1793,6 +1839,7 @@ function elements(root: ParentNode) {
     refLevelBody: root.querySelector<HTMLElement>('[data-mlab-reflevel-body]'),
     advancedBody: root.querySelector<HTMLElement>('[data-mlab-advanced-body]'),
     noiseFloorBody: root.querySelector<HTMLElement>('[data-mlab-noisefloor-body]'),
+    chainReadinessBody: root.querySelector<HTMLElement>('[data-mlab-chain-readiness-body]'),
   };
 }
 
@@ -1853,6 +1900,16 @@ function speedRunHistoryMarkup(runs: readonly SpeedMeasurementRun[]): string {
       </table>
     </div>
   `;
+}
+
+function renderRunQualityHtml(rq: MeasurementRunQuality | null | undefined): string {
+  if (!rq) return '';
+  const label = rq.status === 'ok' ? 'OK' : rq.status === 'warning' ? 'Warning' : 'Invalid';
+  const cls = `mlab-run-quality mlab-run-quality--${rq.status}`;
+  const warnsHtml = rq.warnings.length > 0
+    ? `<ul class="mlab-run-quality-warnings">${Array.from(rq.warnings).map(w => `<li>${renderText(w)}</li>`).join('')}</ul>`
+    : '';
+  return `<div class="${cls}"><span class="mlab-run-quality-label">Run quality: ${label}</span>${warnsHtml}</div>`;
 }
 
 function renderSpeedPanel(els: Elements): void {
@@ -1998,6 +2055,7 @@ function renderSpeedPanel(els: Elements): void {
         </div>
       </div>
       <p class="mlab-chain-note">These readings measure playback/capture speed stability and are affected by the test record, turntable and capture chain.</p>
+      ${renderRunQualityHtml(state.speed.runs[state.speed.runs.length - 1]?.runQuality)}
       <div class="mlab-session-controls">
         <button class="ea-button ea-button--primary" type="button" data-mlab-speed-start>Measure again</button>
       </div>
@@ -2888,6 +2946,14 @@ function startRefLevelCapture(els: Elements): void {
       state.refLevel.result = capturedResult;
       const capturedSource = state.sourceMode === 'self-test' ? 'self_test' as const : 'live_capture' as const;
       state.refLevel.resultSource = capturedSource;
+      state.refLevel.runQuality = deriveMeasurementRunQuality({
+        leftRmsDbfs: capturedResult.leftRmsDbfs,
+        rightRmsDbfs: capturedResult.rightRmsDbfs,
+        leftPeakDbfs: capturedResult.leftPeakDbfs,
+        rightPeakDbfs: capturedResult.rightPeakDbfs,
+        source: capturedSource,
+        measurementKind: 'test_tone',
+      });
       state.refLevel.calibrationSet = addOrReplaceEntry(state.refLevel.calibrationSet, {
         bandIndex: band?.index ?? '__unknown__',
         bandLabel: band?.label ?? 'Unknown band',
@@ -3098,6 +3164,7 @@ function renderRefLevelPanel(els: Elements): void {
           <span class="mlab-wf-result-value">${renderText(r.confidence.charAt(0).toUpperCase() + r.confidence.slice(1))}</span>
         </div>
       </div>
+      ${renderRunQualityHtml(state.refLevel.runQuality)}
       ${warningHtml}
       <p class="mlab-wf-note">Captured at ${(r.sampleRateHz / 1000).toFixed(1)}&nbsp;kHz &middot; balance&nbsp;=&nbsp;R&nbsp;RMS&nbsp;&minus;&nbsp;L&nbsp;RMS</p>
       <div class="mlab-session-controls">
@@ -4958,6 +5025,14 @@ function startSpeedMeasurement(els: Elements): void {
           wowFlutterPercent: result.unweightedWfPercent,
           band: state.speed.bandMeta,
           warnings: [],
+          runQuality: deriveMeasurementRunQuality({
+            leftRmsDbfs: state.channelLevels.L.rmsDbFs,
+            rightRmsDbfs: state.channelLevels.R.rmsDbFs,
+            leftPeakDbfs: state.channelLevels.L.peakDbFs,
+            rightPeakDbfs: state.channelLevels.R.peakDbFs,
+            source: state.speed.resultSource ?? 'live_capture',
+            measurementKind: 'test_tone',
+          }),
         };
         state.speed.runs = [...state.speed.runs, run];
         renderSpeedPanel(els);
@@ -5178,6 +5253,7 @@ async function connectMeasurementLab(els: Elements): Promise<void> {
   renderThdPanel(els);
   renderResonancePanel(els);
   renderNoiseFloorPanel(els);
+  renderChainReadinessPanel(els);
   renderRefLevelPanel(els);
 }
 
@@ -5198,6 +5274,7 @@ async function disconnectMeasurementLab(els: Elements): Promise<void> {
   renderRefLevelPanel(els);
   renderAdvancedPanel(els);
   renderNoiseFloorPanel(els);
+  renderChainReadinessPanel(els);
 }
 
 async function refreshDeviceList(els: Elements): Promise<void> {
@@ -5354,6 +5431,14 @@ function startNoiseFloorCapture(els: Elements): void {
           rightPeakDbfs: result.rightPeakDbfs,
           noiseFloorDbfs: result.noiseFloorDbfs,
           warnings: result.warnings,
+          runQuality: deriveMeasurementRunQuality({
+            leftRmsDbfs: result.leftRmsDbfs,
+            rightRmsDbfs: result.rightRmsDbfs,
+            leftPeakDbfs: result.leftPeakDbfs,
+            rightPeakDbfs: result.rightPeakDbfs,
+            source: captureSource,
+            measurementKind: 'noise_floor',
+          }),
         };
         state.noiseFloor.latest = run;
         state.noiseFloor.runs = [...state.noiseFloor.runs, run];
@@ -5450,7 +5535,8 @@ function renderNoiseFloorPanel(els: Elements): void {
           <div class="mlab-wf-result-row mlab-wf-result-row--grade"><span class="mlab-wf-result-label">Noise floor</span><span class="mlab-wf-result-value">${nfDb}</span></div>
           <p class="mlab-wf-note">Duration: ${latestResult.captureDurationSeconds.toFixed(1)} s</p>
         </div>
-      </div>`;
+      </div>
+      ${renderRunQualityHtml(latestResult.runQuality)}`;
   })() : '';
 
   const historyHtml = nf.runs.length > 0 ? `
@@ -5541,6 +5627,71 @@ function renderNoiseFloorPanel(els: Elements): void {
   });
 }
 
+function renderChainReadinessPanel(els: Elements): void {
+  const body = els.chainReadinessBody;
+  if (!body) return;
+
+  if (state.captureState !== 'live') {
+    body.innerHTML = '<p class="ea-muted">Connect a source to check measurement chain readiness.</p>';
+    return;
+  }
+
+  const readiness = deriveMeasurementChainReadiness({
+    leftRmsDbfs: state.channelLevels.L.rmsDbFs,
+    rightRmsDbfs: state.channelLevels.R.rmsDbFs,
+    leftPeakDbfs: state.channelLevels.L.peakDbFs,
+    rightPeakDbfs: state.channelLevels.R.peakDbFs,
+  });
+
+  const statusLabel: Record<MeasurementChainReadinessStatus, string> = {
+    not_checked: 'Not checked',
+    ready: 'Ready',
+    warning: 'Warning',
+    blocked: 'Blocked',
+  };
+  const statusCssClass: Record<MeasurementChainReadinessStatus, string> = {
+    not_checked: 'mlab-chain-readiness--not-checked',
+    ready: 'mlab-chain-readiness--ready',
+    warning: 'mlab-chain-readiness--warning',
+    blocked: 'mlab-chain-readiness--blocked',
+  };
+
+  const warningsHtml = readiness.warnings.length > 0
+    ? readiness.warnings.map(w => `<p class="mlab-chain-readiness-warning">${renderText(w)}</p>`).join('')
+    : '';
+
+  const balanceRow = readiness.channelImbalanceDb !== null
+    ? `<div class="mlab-chain-readiness-row">
+        <span class="mlab-chain-readiness-key ea-muted">Channel balance</span>
+        <span class="mlab-chain-readiness-val">${readiness.channelImbalanceDb.toFixed(1)}&nbsp;dB L/R</span>
+      </div>`
+    : '';
+
+  const refCalNote = state.refLevel.result
+    ? `<p class="mlab-chain-readiness-note">Last reference level: L&nbsp;${fmtDbfs(state.refLevel.result.leftRmsDbfs)} / R&nbsp;${fmtDbfs(state.refLevel.result.rightRmsDbfs)}</p>`
+    : '<p class="mlab-chain-readiness-note ea-muted">No reference level captured yet. Use Track&nbsp;1 reference level first when using a test record.</p>';
+
+  body.innerHTML = `
+    <div class="mlab-chain-readiness ${statusCssClass[readiness.status]}">
+      <div class="mlab-chain-readiness-row">
+        <span class="mlab-chain-readiness-key ea-muted">Status</span>
+        <span class="mlab-chain-readiness-val">${statusLabel[readiness.status]}</span>
+      </div>
+      <div class="mlab-chain-readiness-row">
+        <span class="mlab-chain-readiness-key ea-muted">Signal present</span>
+        <span class="mlab-chain-readiness-val">${readiness.signalPresent ? 'Yes' : 'No'}</span>
+      </div>
+      <div class="mlab-chain-readiness-row">
+        <span class="mlab-chain-readiness-key ea-muted">Clipping</span>
+        <span class="mlab-chain-readiness-val">${readiness.clipping ? 'Yes &mdash; reduce input gain' : 'No'}</span>
+      </div>
+      ${balanceRow}
+    </div>
+    ${warningsHtml}
+    ${refCalNote}
+  `;
+}
+
 export function enableMeasurementLabInteractions(): void {
   applyStoredTheme();
   const els = elements(document);
@@ -5560,6 +5711,9 @@ export function enableMeasurementLabInteractions(): void {
   renderResonancePanel(els);
   renderRefLevelPanel(els);
   renderAdvancedPanel(els);
+  renderNoiseFloorPanel(els);
+  renderChainReadinessPanel(els);
+  renderLogPanel(els);renderAdvancedPanel(els);
   renderNoiseFloorPanel(els);
   renderLogPanel(els);
   clearMeterDom(els);

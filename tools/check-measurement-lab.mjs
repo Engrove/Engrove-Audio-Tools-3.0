@@ -110,6 +110,7 @@ async function runChecks() {
   copySource('src/modules/measurement-lab/engine/referenceCalibrationSet.ts');
   copySource('src/modules/measurement-lab/engine/channelIdentity.ts');
   copySource('src/modules/measurement-lab/engine/noiseFloor.ts');
+  copySource('src/modules/measurement-lab/engine/runQuality.ts');
   copySource('src/shared/audio-io/levelMetrics.ts');
   compileTempSources();
 
@@ -143,6 +144,9 @@ async function runChecks() {
   const noiseFloorModule = await import(
     pathToFileURL(join(tempRoot, 'dist/modules/measurement-lab/engine/noiseFloor.js')).href
   );
+  const runQualityModule = await import(
+    pathToFileURL(join(tempRoot, 'dist/modules/measurement-lab/engine/runQuality.js')).href
+  );
   const levelMetricsModule = await import(
     pathToFileURL(join(tempRoot, 'dist/shared/audio-io/levelMetrics.js')).href
   );
@@ -162,6 +166,7 @@ async function runChecks() {
   const { analyseSpeedFlutter } = speedFlutterModule;
   const { analyseChannelCapture, summariseChannelBalance } = crosstalkModule;
   const { computeRmsLinear } = levelMetricsModule;
+  const { deriveMeasurementRunQuality, deriveMeasurementChainReadiness } = runQualityModule;
 
   // 1. Analog reference matches the canonical 3-time-constant RIAA
   //    playback table to 0.05 dB.
@@ -746,6 +751,91 @@ async function runChecks() {
       throw new Error('noise floor: empty arrays should produce a warning');
     }
     console.log('- noise floor: empty arrays -> null + warning (no crash): PASS');
+  }
+
+
+  // Run quality engine tests
+  {
+    // Normal signal -> ok
+    const rqOk = deriveMeasurementRunQuality({
+      leftRmsDbfs: -20, rightRmsDbfs: -21,
+      leftPeakDbfs: -6, rightPeakDbfs: -7,
+      source: 'live_capture', measurementKind: 'test_tone',
+    });
+    if (rqOk.status !== 'ok') throw new Error('runQuality: normal signal should be ok, got ' + rqOk.status);
+    if (rqOk.clipping) throw new Error('runQuality: normal signal should not clip');
+    if (rqOk.lowSignal) throw new Error('runQuality: normal signal should not be low');
+    console.log('- runQuality: normal signal -> ok: PASS');
+  }
+  {
+    // Clipping peak >= -0.1 dBFS -> invalid
+    const rqClip = deriveMeasurementRunQuality({
+      leftRmsDbfs: -6, rightRmsDbfs: -6,
+      leftPeakDbfs: 0, rightPeakDbfs: -3,
+      source: 'live_capture', measurementKind: 'test_tone',
+    });
+    if (rqClip.status !== 'invalid') throw new Error('runQuality: clipping should give invalid, got ' + rqClip.status);
+    if (!rqClip.clipping) throw new Error('runQuality: clipping flag should be true');
+    console.log('- runQuality: clipping -> invalid: PASS');
+  }
+  {
+    // Low signal + test_tone -> warning
+    const rqLow = deriveMeasurementRunQuality({
+      leftRmsDbfs: -70, rightRmsDbfs: -75,
+      leftPeakDbfs: -65, rightPeakDbfs: -70,
+      source: 'live_capture', measurementKind: 'test_tone',
+    });
+    if (rqLow.status !== 'warning') throw new Error('runQuality: low signal test_tone should be warning, got ' + rqLow.status);
+    if (!rqLow.lowSignal) throw new Error('runQuality: lowSignal flag should be true');
+    console.log('- runQuality: low signal + test_tone -> warning: PASS');
+  }
+  {
+    // Imbalance > 3 dB -> warning
+    const rqImbal = deriveMeasurementRunQuality({
+      leftRmsDbfs: -20, rightRmsDbfs: -26,
+      leftPeakDbfs: -10, rightPeakDbfs: -16,
+      source: 'live_capture', measurementKind: 'test_tone',
+    });
+    if (rqImbal.status !== 'warning') throw new Error('runQuality: imbalance should give warning, got ' + rqImbal.status);
+    console.log('- runQuality: imbalance > 3 dB -> warning: PASS');
+  }
+  {
+    // Low signal + noise_floor -> ok (not warning/invalid, balanced channels)
+    const rqNf = deriveMeasurementRunQuality({
+      leftRmsDbfs: -70, rightRmsDbfs: -71,
+      leftPeakDbfs: -65, rightPeakDbfs: -66,
+      source: 'live_capture', measurementKind: 'noise_floor',
+    });
+    if (rqNf.status !== 'ok') throw new Error('runQuality: low signal noise_floor should be ok, got ' + rqNf.status);
+    console.log('- runQuality: low signal noise_floor -> ok (not penalised): PASS');
+  }
+  {
+    // self_test -> warning
+    const rqSelf = deriveMeasurementRunQuality({
+      leftRmsDbfs: -20, rightRmsDbfs: -21,
+      leftPeakDbfs: -6, rightPeakDbfs: -7,
+      source: 'self_test', measurementKind: 'test_tone',
+    });
+    if (rqSelf.status !== 'warning') throw new Error('runQuality: self_test should give warning, got ' + rqSelf.status);
+    console.log('- runQuality: self_test -> warning: PASS');
+  }
+  {
+    // Chain readiness: no signal -> not_checked
+    const cr = deriveMeasurementChainReadiness({
+      leftRmsDbfs: -80, rightRmsDbfs: -80,
+      leftPeakDbfs: -75, rightPeakDbfs: -75,
+    });
+    if (cr.status !== 'not_checked') throw new Error('chainReadiness: no signal should give not_checked, got ' + cr.status);
+    console.log('- chainReadiness: no signal -> not_checked: PASS');
+  }
+  {
+    // Chain readiness: good signal -> ready
+    const cr = deriveMeasurementChainReadiness({
+      leftRmsDbfs: -20, rightRmsDbfs: -21,
+      leftPeakDbfs: -6, rightPeakDbfs: -7,
+    });
+    if (cr.status !== 'ready') throw new Error('chainReadiness: good signal should give ready, got ' + cr.status);
+    console.log('- chainReadiness: good signal -> ready: PASS');
   }
 
   console.log('PASS measurement lab engine checks');
@@ -2820,3 +2910,68 @@ function checkS5H4NoiseFloor() {
 }
 
 checkS5H4NoiseFloor();
+
+function checkS5IRunQuality() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const enginePath = join(repoRoot, 'src/modules/measurement-lab/engine/runQuality.ts');
+  const cssSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/measurementLab.css');
+  for (const p of [renderSrcPath, enginePath, cssSrcPath]) {
+    if (!existsSync(p)) { console.error(`S5I: missing file: ${p}`); process.exitCode = 1; return; }
+  }
+  const uiSrc = readFileSync(renderSrcPath, 'utf8');
+  const engSrc = readFileSync(enginePath, 'utf8');
+  const cssSrc = readFileSync(cssSrcPath, 'utf8');
+
+  const checks = [
+    // Engine types and functions
+    ['MeasurementRunQuality type declared', /type MeasurementRunQuality\s*=/.test(engSrc)],
+    ['MeasurementRunQualityStatus type declared', /type MeasurementRunQualityStatus/.test(engSrc)],
+    ['deriveMeasurementRunQuality exported', /export function deriveMeasurementRunQuality/.test(engSrc)],
+    ['MeasurementChainReadiness type declared', /type MeasurementChainReadiness\s*=/.test(engSrc)],
+    ['MeasurementChainReadinessStatus type declared', /type MeasurementChainReadinessStatus/.test(engSrc)],
+    ['deriveMeasurementChainReadiness exported', /export function deriveMeasurementChainReadiness/.test(engSrc)],
+    // Import in UI
+    ['runQuality imported in UI', /from\s+['"].*runQuality['"]/.test(uiSrc)],
+    ['deriveMeasurementRunQuality used in UI', /deriveMeasurementRunQuality/.test(uiSrc)],
+    ['deriveMeasurementChainReadiness used in UI', /deriveMeasurementChainReadiness/.test(uiSrc)],
+    // Chain readiness panel
+    ['chainReadinessPanelMarkup function exists', /chainReadinessPanelMarkup/.test(uiSrc)],
+    ['data-mlab-chain-readiness-body attribute', /data-mlab-chain-readiness-body/.test(uiSrc)],
+    ['chainReadinessBody in elements()', /chainReadinessBody/.test(uiSrc)],
+    ['Measurement chain readiness panel title', /Measurement chain readiness/.test(uiSrc)],
+    ['renderChainReadinessPanel function', /function renderChainReadinessPanel/.test(uiSrc)],
+    // run_quality in export
+    ['run_quality key in JSON export (speed runs)', /run_quality.*r\.runQuality/.test(uiSrc) || /r\.runQuality/.test(uiSrc)],
+    ['run_quality key in JSON export (refLevel)', /state\.refLevel\.runQuality/.test(uiSrc)],
+    ['run_quality key in JSON export (noise floor)', /state\.noiseFloor\.latest\.runQuality/.test(uiSrc)],
+    // runQuality in UI result views
+    ['renderRunQualityHtml function', /function renderRunQualityHtml/.test(uiSrc)],
+    ['runQuality badge in speed result', /renderRunQualityHtml.*speed\.runs/.test(uiSrc)],
+    ['runQuality badge in refLevel result', /renderRunQualityHtml.*refLevel\.runQuality/.test(uiSrc)],
+    ['runQuality badge in noiseFloor result', /renderRunQualityHtml.*runQuality/.test(uiSrc)],
+    // Run quality in text report
+    ['Run quality in text report (speed)', /Run quality.*latestSpeedRQ/.test(uiSrc)],
+    ['Run quality in text report (refLevel)', /Run quality.*refLevel\.runQuality/.test(uiSrc)],
+    ['Run quality in text report (noiseFloor)', /Run quality.*nl\.runQuality/.test(uiSrc)],
+    // CSS
+    ['CSS mlab-chain-readiness', cssSrc.includes('.mlab-chain-readiness')],
+    ['CSS mlab-run-quality', cssSrc.includes('.mlab-run-quality')],
+    // VTA still planned
+    ['VTA workflow still planned', /status\s*:\s*'planned'\s*as\s*const/.test(uiSrc)],
+  ];
+
+  let allPass = true;
+  for (const [label, ok] of checks) {
+    if (!ok) {
+      console.error(`S5I static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S5I static source check (Measurement Chain Calibration & Run Quality Gate): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS5IRunQuality();
