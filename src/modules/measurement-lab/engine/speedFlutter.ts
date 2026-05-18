@@ -174,3 +174,27 @@ export function analyseSpeedFlutter(
   const settlingCount = Math.floor(settlingSeconds * referenceHz);
   return computeSpeedFlutterMetrics(instFreq, referenceHz, settlingCount);
 }
+
+// ── S5N: Speed diagnostic metadata ───────────────────────────────────────────
+
+export type SpeedDiagnosticMeta = {
+  readonly filteredUnfilteredNote: string;
+  readonly unweightedWfNote: string;
+  readonly weightedWfNote: string;
+  readonly wowBandSeparationStatus: 'not_available';
+  readonly wowBandSeparationNote: string;
+};
+
+export function buildSpeedDiagnosticMeta(): SpeedDiagnosticMeta {
+  return {
+    filteredUnfilteredNote:
+      'Two W&F figures are reported: AES6 unweighted (full deviation spectrum) and IEC-weighted (0.5–200 Hz bandpass approximation). Both derive from the same zero-crossing demodulation.',
+    unweightedWfNote:
+      'AES6 unweighted W&F — RMS of the full frequency-deviation series × √2. Covers all temporal speed variations without frequency weighting.',
+    weightedWfNote:
+      'IEC 386 flutter-weighting approximation — bilinear-transformed bandpass (0.5–200 Hz) applied to the deviation series before RMS. Emphasises the dominant flutter band.',
+    wowBandSeparationStatus: 'not_available',
+    wowBandSeparationNote:
+      'Wow (<6 Hz) and flutter (6–200 Hz) band-separated figures require additional filter processing and are not yet implemented.',
+  };
+}

@@ -1695,3 +1695,52 @@ button.mlab-coverage-badge--available:focus-visible {
   list-style: disc;
   color: var(--ea-text-low);
 }
+
+/* ── S5N: Speed run comparison ───────────────────────────────── */
+
+.mlab-speed-comparison {
+  margin: var(--ea-space-2) 0;
+  padding: var(--ea-space-2) var(--ea-space-3);
+  border-left: 3px solid var(--ea-border-low);
+  border-radius: var(--ea-radius);
+  background: var(--ea-bg-panel-alt);
+  font-size: var(--ea-text-sm);
+}
+
+.mlab-speed-comparison--warn {
+  border-left-color: var(--ea-color-warn, #f59e0b);
+}
+
+.mlab-speed-comparison-head {
+  font-weight: 600;
+  margin-bottom: var(--ea-space-1);
+  color: var(--ea-text-high);
+}
+
+.mlab-speed-comparison-ctx {
+  font-weight: 400;
+  margin-left: var(--ea-space-2);
+}
+
+.mlab-speed-comparison-note {
+  font-size: var(--ea-text-sm);
+  color: var(--ea-text-low);
+  margin: 0 0 var(--ea-space-1);
+}
+
+.mlab-speed-comparison-row {
+  display: flex;
+  gap: var(--ea-space-2);
+  align-items: baseline;
+  margin: 2px 0;
+}
+
+.mlab-speed-comparison-label {
+  min-width: 8rem;
+  flex-shrink: 0;
+}
+
+.mlab-speed-comparison-val {
+  color: var(--ea-text-high);
+  font-variant-numeric: tabular-nums;
+}

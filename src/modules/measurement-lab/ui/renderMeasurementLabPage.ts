@@ -23,6 +23,7 @@ import {
 } from '../../../shared/audio-io';
 import { createIriaaFilterNode, type IriaaFilterNode } from '../dsp/iriaaNode';
 import { createSpeedFlutterCapture, type SpeedFlutterCapture, type SpeedFlutterResult } from '../dsp/speedFlutterNode';
+import { buildSpeedDiagnosticMeta, type SpeedDiagnosticMeta } from '../engine/speedFlutter';
 import { createNoiseFloorCapture, type NoiseFloorCapture, type NoiseFloorResult } from '../dsp/noiseFloorNode';
 import { deriveMeasurementRunQuality, deriveMeasurementChainReadiness, buildInputScopeSnapshot, type MeasurementRunQuality, type MeasurementChainReadiness, type MeasurementChainReadinessStatus, type InputScopeSnapshot } from '../engine/runQuality';
 import { createStereoChannelCapture, type StereoCapture, type ChannelCaptureMetrics } from '../dsp/stereoCaptureNode';
@@ -110,6 +111,7 @@ type SpeedMeasurementRun = {
   readonly measuredFrequencyHz: number | null;
   readonly speedErrorPercent: number | null;
   readonly wowFlutterPercent: number | null;
+  readonly wowFlutterWeightedPercent: number | null;
   readonly band: SpeedBandMeta | null;
   readonly warnings: readonly string[];
   readonly runQuality: MeasurementRunQuality;
@@ -1184,6 +1186,7 @@ function buildSessionJson(): SessionJson {
           measured_frequency_hz: r.measuredFrequencyHz,
           speed_error_percent: r.speedErrorPercent,
           wow_flutter_percent: r.wowFlutterPercent,
+          wow_flutter_weighted_percent: r.wowFlutterWeightedPercent,
           band: r.band ? serializeSpeedBandMeta(r.band) : null,
           run_quality: r.runQuality
             ? { status: r.runQuality.status, clipping: r.runQuality.clipping, low_signal: r.runQuality.lowSignal, channel_imbalance_db: r.runQuality.channelImbalanceDb, warnings: Array.from(r.runQuality.warnings) }
@@ -1208,7 +1211,30 @@ function buildSessionJson(): SessionJson {
           classification: classifyWf(speedResult.unweightedWfPercent).label,
         } : null;
         if (latest === null && runs.length === 0) return null;
-        return { latest, runs };
+        const diagMeta = buildSpeedDiagnosticMeta();
+        const cmp = computeSpeedRunComparison(state.speed.runs);
+        return {
+          latest,
+          runs,
+          speed_diagnostics: {
+            filtered_unfiltered_note: diagMeta.filteredUnfilteredNote,
+            unweighted_wf_note: diagMeta.unweightedWfNote,
+            weighted_wf_note: diagMeta.weightedWfNote,
+            wow_band_separation_status: diagMeta.wowBandSeparationStatus,
+            wow_band_separation_note: diagMeta.wowBandSeparationNote,
+          },
+          run_comparison: cmp
+            ? {
+                compatible: cmp.compatible,
+                run_count: cmp.runCount,
+                rpm_context: cmp.rpmContext,
+                delta_speed_error_percent: cmp.deltaSpeedErrorPercent,
+                delta_wf_unweighted_percent: cmp.deltaWfUnweightedPercent,
+                delta_wf_weighted_percent: cmp.deltaWfWeightedPercent,
+                note: cmp.note,
+              }
+            : null,
+        };
       })(),
       channel_identity: channelIdentityResult,
       frequency_response: freqResult
@@ -1562,10 +1588,27 @@ function buildReportText(): string {
         const measHz = run.measuredFrequencyHz !== null ? `${run.measuredFrequencyHz.toFixed(2)} Hz` : '—';
         const err = run.speedErrorPercent !== null ? `${run.speedErrorPercent.toFixed(3)} %` : '—';
         const wf = run.wowFlutterPercent !== null ? `${run.wowFlutterPercent.toFixed(3)} %` : '—';
+        const wfw = run.wowFlutterWeightedPercent !== null ? `${run.wowFlutterWeightedPercent.toFixed(3)} %` : '—';
         const nomSrc = run.nominalFrequencySource;
-        lines.push(`    [${run.createdAt}] ${rpmLabel} | Nominal: ${run.nominalFrequencyHz} Hz (default: ${run.nominalFrequencyHzDefault} Hz, source: ${nomSrc}) | Duration: ${run.captureDurationSeconds.toFixed(1)} s (${run.captureDurationSource}) | Measured: ${measHz} | Speed error: ${err} | W&F: ${wf} | ${run.source}`);
+        lines.push(`    [${run.createdAt}] ${rpmLabel} | Nominal: ${run.nominalFrequencyHz} Hz (default: ${run.nominalFrequencyHzDefault} Hz, source: ${nomSrc}) | Duration: ${run.captureDurationSeconds.toFixed(1)} s (${run.captureDurationSource}) | Measured: ${measHz} | Speed error: ${err} | W&F (AES6): ${wf} | W&F (IEC): ${wfw} | ${run.source}`);
       }
     }
+    // Run comparison
+    const textCmp = computeSpeedRunComparison(state.speed.runs);
+    if (textCmp) {
+      lines.push(`  Run comparison: ${textCmp.note}`);
+      if (textCmp.compatible) {
+        if (textCmp.deltaSpeedErrorPercent !== null) lines.push(`    Δ Speed error:         ${textCmp.deltaSpeedErrorPercent >= 0 ? '+' : ''}${textCmp.deltaSpeedErrorPercent.toFixed(3)} %`);
+        if (textCmp.deltaWfUnweightedPercent !== null) lines.push(`    Δ W&F unweighted:      ${textCmp.deltaWfUnweightedPercent >= 0 ? '+' : ''}${textCmp.deltaWfUnweightedPercent.toFixed(3)} %`);
+        if (textCmp.deltaWfWeightedPercent !== null) lines.push(`    Δ W&F IEC-weighted:    ${textCmp.deltaWfWeightedPercent >= 0 ? '+' : ''}${textCmp.deltaWfWeightedPercent.toFixed(3)} %`);
+      } else {
+        lines.push(`    ${textCmp.note}`);
+      }
+    }
+    // Diagnostic context
+    const textDiag = buildSpeedDiagnosticMeta();
+    lines.push(`  Diagnostic note: ${textDiag.filteredUnfilteredNote}`);
+    lines.push(`  Wow/flutter band separation: ${textDiag.wowBandSeparationNote}`);
     lines.push('');
   }
 
@@ -1971,6 +2014,52 @@ function setActionStatus(els: Elements, kind: 'planned' | 'active' | 'done' | 'e
 
 type WfGrade = { label: string; cssClass: string };
 
+// ── S5N: Speed run comparison ─────────────────────────────────────────────────
+
+type SpeedRunComparison = {
+  readonly compatible: boolean;
+  readonly runCount: number;
+  readonly rpmContext: string;
+  readonly deltaSpeedErrorPercent: number | null;
+  readonly deltaWfUnweightedPercent: number | null;
+  readonly deltaWfWeightedPercent: number | null;
+  readonly note: string;
+};
+
+function computeSpeedRunComparison(runs: readonly SpeedMeasurementRun[]): SpeedRunComparison | null {
+  if (runs.length < 2) return null;
+  const latest = runs[runs.length - 1]!;
+  const prev = runs[runs.length - 2]!;
+  const rpmLabel = (ctx: SpeedContext): string => ctx === '45' ? '45 RPM' : '33⅓ RPM';
+  const compatible = latest.speedContext === prev.speedContext;
+  if (!compatible) {
+    return {
+      compatible: false,
+      runCount: runs.length,
+      rpmContext: `${rpmLabel(prev.speedContext)} → ${rpmLabel(latest.speedContext)}`,
+      deltaSpeedErrorPercent: null,
+      deltaWfUnweightedPercent: null,
+      deltaWfWeightedPercent: null,
+      note: `RPM contexts differ (${rpmLabel(prev.speedContext)} vs ${rpmLabel(latest.speedContext)}) — cross-context comparison is not meaningful.`,
+    };
+  }
+  const ds = latest.speedErrorPercent !== null && prev.speedErrorPercent !== null
+    ? latest.speedErrorPercent - prev.speedErrorPercent : null;
+  const duw = latest.wowFlutterPercent !== null && prev.wowFlutterPercent !== null
+    ? latest.wowFlutterPercent - prev.wowFlutterPercent : null;
+  const dw = latest.wowFlutterWeightedPercent !== null && prev.wowFlutterWeightedPercent !== null
+    ? latest.wowFlutterWeightedPercent - prev.wowFlutterWeightedPercent : null;
+  return {
+    compatible: true,
+    runCount: runs.length,
+    rpmContext: rpmLabel(latest.speedContext),
+    deltaSpeedErrorPercent: ds,
+    deltaWfUnweightedPercent: duw,
+    deltaWfWeightedPercent: dw,
+    note: `Run ${runs.length} vs run ${runs.length - 1} — same context (${rpmLabel(latest.speedContext)}).`,
+  };
+}
+
 function classifyWf(wfPercent: number): WfGrade {
   if (wfPercent < 0.03) return { label: 'Excellent', cssClass: 'mlab-wf-grade--excellent' };
   if (wfPercent < 0.10) return { label: 'Good', cssClass: 'mlab-wf-grade--good' };
@@ -1990,6 +2079,7 @@ function speedRunHistoryMarkup(runs: readonly SpeedMeasurementRun[]): string {
     const measHz = r.measuredFrequencyHz !== null ? r.measuredFrequencyHz.toFixed(2) : '—';
     const err = r.speedErrorPercent !== null ? `${r.speedErrorPercent >= 0 ? '+' : ''}${r.speedErrorPercent.toFixed(3)} %` : '—';
     const wf = r.wowFlutterPercent !== null ? `${r.wowFlutterPercent.toFixed(3)} %` : '—';
+    const wfw = r.wowFlutterWeightedPercent !== null ? `${r.wowFlutterWeightedPercent.toFixed(3)} %` : '—';
     const src = r.source === 'self_test' ? 'Self-test' : 'Live';
     return `<tr class="mlab-speed-history-row">
       <td class="mlab-speed-history-cell">${renderText(time)}</td>
@@ -1998,6 +2088,7 @@ function speedRunHistoryMarkup(runs: readonly SpeedMeasurementRun[]): string {
       <td class="mlab-speed-history-cell">${renderText(measHz)}</td>
       <td class="mlab-speed-history-cell">${renderText(err)}</td>
       <td class="mlab-speed-history-cell">${renderText(wf)}</td>
+      <td class="mlab-speed-history-cell">${renderText(wfw)}</td>
       <td class="mlab-speed-history-cell">${renderText(src)}</td>
     </tr>`;
   }).join('');
@@ -2011,7 +2102,8 @@ function speedRunHistoryMarkup(runs: readonly SpeedMeasurementRun[]): string {
             <th>Nominal Hz</th>
             <th>Measured Hz</th>
             <th>Speed error</th>
-            <th>Wow/flutter</th>
+            <th>W&amp;F (AES6)</th>
+            <th>W&amp;F (IEC)</th>
             <th>Source</th>
           </tr>
         </thead>
@@ -2019,6 +2111,34 @@ function speedRunHistoryMarkup(runs: readonly SpeedMeasurementRun[]): string {
       </table>
     </div>
   `;
+}
+
+function speedRunComparisonMarkup(runs: readonly SpeedMeasurementRun[]): string {
+  const cmp = computeSpeedRunComparison(runs);
+  if (!cmp) return '';
+  if (!cmp.compatible) {
+    return `<div class="mlab-speed-comparison mlab-speed-comparison--warn">
+      <div class="mlab-speed-comparison-head">Run comparison</div>
+      <p class="mlab-speed-comparison-note">${renderText(cmp.note)}</p>
+    </div>`;
+  }
+  const fmtDelta = (v: number | null) => v === null ? '—' : `${v >= 0 ? '+' : ''}${v.toFixed(3)} %`;
+  return `<div class="mlab-speed-comparison">
+    <div class="mlab-speed-comparison-head">Run comparison <span class="mlab-speed-comparison-ctx ea-muted">${renderText(cmp.rpmContext)}</span></div>
+    <p class="mlab-speed-comparison-note">${renderText(cmp.note)}</p>
+    <div class="mlab-speed-comparison-row">
+      <span class="mlab-speed-comparison-label ea-muted">Δ Speed error</span>
+      <span class="mlab-speed-comparison-val">${renderText(fmtDelta(cmp.deltaSpeedErrorPercent))}</span>
+    </div>
+    <div class="mlab-speed-comparison-row">
+      <span class="mlab-speed-comparison-label ea-muted">Δ W&amp;F (AES6)</span>
+      <span class="mlab-speed-comparison-val">${renderText(fmtDelta(cmp.deltaWfUnweightedPercent))}</span>
+    </div>
+    ${cmp.deltaWfWeightedPercent !== null ? `<div class="mlab-speed-comparison-row">
+      <span class="mlab-speed-comparison-label ea-muted">Δ W&amp;F (IEC)</span>
+      <span class="mlab-speed-comparison-val">${renderText(fmtDelta(cmp.deltaWfWeightedPercent))}</span>
+    </div>` : ''}
+  </div>`;
 }
 
 function renderRunQualityHtml(rq: MeasurementRunQuality | null | undefined): string {
@@ -2175,6 +2295,7 @@ function renderSpeedPanel(els: Elements): void {
       </div>
       <p class="mlab-chain-note">These readings measure playback/capture speed stability and are affected by the test record, turntable and capture chain.</p>
       ${renderRunQualityHtml(state.speed.runs[state.speed.runs.length - 1]?.runQuality)}
+      ${speedRunComparisonMarkup(state.speed.runs)}
       <div class="mlab-session-controls">
         <button class="ea-button ea-button--primary" type="button" data-mlab-speed-start>Measure again</button>
       </div>
@@ -5142,6 +5263,7 @@ function startSpeedMeasurement(els: Elements): void {
           measuredFrequencyHz: result.meanFrequencyHz,
           speedErrorPercent: result.speedDeviationPercent,
           wowFlutterPercent: result.unweightedWfPercent,
+          wowFlutterWeightedPercent: result.weightedWfPercent,
           band: state.speed.bandMeta,
           warnings: [],
           runQuality: deriveMeasurementRunQuality({
@@ -6086,6 +6208,7 @@ function buildSpeedSection(): WebReportSection {
       const measHz = r.measuredFrequencyHz !== null ? r.measuredFrequencyHz.toFixed(2) : '—';
       const err = r.speedErrorPercent !== null ? `${r.speedErrorPercent >= 0 ? '+' : ''}${r.speedErrorPercent.toFixed(3)} %` : '—';
       const wf = r.wowFlutterPercent !== null ? `${r.wowFlutterPercent.toFixed(3)} %` : '—';
+      const wfw = r.wowFlutterWeightedPercent !== null ? `${r.wowFlutterWeightedPercent.toFixed(3)} %` : '—';
       const src = r.source === 'self_test' ? 'Self-test' : 'Live';
       const rqBadge = r.runQuality ? wrBadge(r.runQuality.status, r.runQuality.status === 'ok' ? 'ok' : r.runQuality.status === 'warning' ? 'warn' : 'err') : '';
       return `<tr>
@@ -6095,18 +6218,51 @@ function buildSpeedSection(): WebReportSection {
         <td>${renderText(measHz)}</td>
         <td>${renderText(err)}</td>
         <td>${renderText(wf)}</td>
+        <td>${renderText(wfw)}</td>
         <td>${renderText(src)}</td>
         <td>${rqBadge}</td>
       </tr>`;
     }).join('');
     historyHtml = `<h3 style="font-size:var(--ea-text-sm);font-weight:600;margin:var(--ea-space-3) 0 var(--ea-space-2)">Run history (${runs.length} run${runs.length === 1 ? '' : 's'})</h3>
       <table class="ea-webreport-table">
-        <thead><tr><th>Time</th><th>RPM</th><th>Nominal Hz</th><th>Measured Hz</th><th>Speed error</th><th>W&F</th><th>Source</th><th>Quality</th></tr></thead>
+        <thead><tr><th>Time</th><th>RPM</th><th>Nominal Hz</th><th>Measured Hz</th><th>Speed error</th><th>W&amp;F (AES6)</th><th>W&amp;F (IEC)</th><th>Source</th><th>Quality</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>`;
   }
 
-  return { id: 'speed', title: 'Speed / Wow &amp; Flutter', html: latestHtml + historyHtml };
+  // Run comparison (S5N)
+  const reportCmp = computeSpeedRunComparison(runs);
+  let comparisonHtml = '';
+  if (reportCmp) {
+    const heading = `<h3 style="font-size:var(--ea-text-sm);font-weight:600;margin:var(--ea-space-3) 0 var(--ea-space-2)">Run comparison</h3>`;
+    if (!reportCmp.compatible) {
+      comparisonHtml = heading + wrNote(reportCmp.note, 'warn');
+    } else {
+      const cmpPairs: [string, string][] = [
+        ['Context', renderText(reportCmp.rpmContext)],
+        ['Note', renderText(reportCmp.note)],
+      ];
+      if (reportCmp.deltaSpeedErrorPercent !== null)
+        cmpPairs.push(['Δ Speed error', `${reportCmp.deltaSpeedErrorPercent >= 0 ? '+' : ''}${reportCmp.deltaSpeedErrorPercent.toFixed(3)} %`]);
+      if (reportCmp.deltaWfUnweightedPercent !== null)
+        cmpPairs.push(['Δ W&amp;F (AES6)', `${reportCmp.deltaWfUnweightedPercent >= 0 ? '+' : ''}${reportCmp.deltaWfUnweightedPercent.toFixed(3)} %`]);
+      if (reportCmp.deltaWfWeightedPercent !== null)
+        cmpPairs.push(['Δ W&amp;F (IEC)', `${reportCmp.deltaWfWeightedPercent >= 0 ? '+' : ''}${reportCmp.deltaWfWeightedPercent.toFixed(3)} %`]);
+      comparisonHtml = heading + wrKVs(cmpPairs);
+    }
+  }
+
+  // Diagnostic note (S5N)
+  const diagMeta5N = buildSpeedDiagnosticMeta();
+  const diagnosticHtml = `<h3 style="font-size:var(--ea-text-sm);font-weight:600;margin:var(--ea-space-3) 0 var(--ea-space-2)">Diagnostic notes</h3>`
+    + wrKVs([
+        ['Filtered/unfiltered', diagMeta5N.filteredUnfilteredNote],
+        ['Unweighted (AES6)', diagMeta5N.unweightedWfNote],
+        ['IEC-weighted', diagMeta5N.weightedWfNote],
+        ['Wow/flutter band separation', `${wrBadge('Not available', 'warn')} ${diagMeta5N.wowBandSeparationNote}`],
+      ]);
+
+  return { id: 'speed', title: 'Speed / Wow &amp; Flutter', html: latestHtml + comparisonHtml + historyHtml + diagnosticHtml };
 }
 
 function buildNoiseFloorSection(): WebReportSection {

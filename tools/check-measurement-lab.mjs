@@ -3246,3 +3246,75 @@ function checkS5MMeasurementChainHardening() {
 }
 
 checkS5MMeasurementChainHardening();
+
+function checkS5NSpeedDiagnostics() {
+  const renderSrcPath  = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const speedEnginePath = join(repoRoot, 'src/modules/measurement-lab/engine/speedFlutter.ts');
+  const cssSrcPath     = join(repoRoot, 'src/modules/measurement-lab/ui/measurementLab.css');
+
+  for (const p of [renderSrcPath, speedEnginePath, cssSrcPath]) {
+    if (!existsSync(p)) {
+      console.error(`S5N: missing file: ${p}`);
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const uiSrc     = readFileSync(renderSrcPath, 'utf8');
+  const engineSrc = readFileSync(speedEnginePath, 'utf8');
+  const cssSrc    = readFileSync(cssSrcPath, 'utf8');
+
+  const checks = [
+    // 1. SpeedDiagnosticMeta type in speedFlutter.ts
+    ['SpeedDiagnosticMeta type in speedFlutter.ts', /SpeedDiagnosticMeta/.test(engineSrc)],
+    // 2. buildSpeedDiagnosticMeta function in speedFlutter.ts
+    ['buildSpeedDiagnosticMeta in speedFlutter.ts', /function buildSpeedDiagnosticMeta/.test(engineSrc)],
+    // 3. wow_band_separation_status not_available in engine
+    ['wow_band_separation_status not_available in engine', /wowBandSeparationStatus.*not_available|not_available.*wowBandSeparationStatus/.test(engineSrc)],
+    // 4. wowFlutterWeightedPercent in SpeedMeasurementRun type
+    ['wowFlutterWeightedPercent in SpeedMeasurementRun type', /wowFlutterWeightedPercent\s*:\s*number\s*\|\s*null/.test(uiSrc)],
+    // 5. wowFlutterWeightedPercent populated in run creation
+    ['wowFlutterWeightedPercent populated in run creation', /wowFlutterWeightedPercent\s*:\s*result\.weightedWfPercent/.test(uiSrc)],
+    // 6. computeSpeedRunComparison function exists
+    ['computeSpeedRunComparison function in render file', /function computeSpeedRunComparison/.test(uiSrc)],
+    // 7. run comparison handles incompatible RPM contexts
+    ['run comparison handles incompatible contexts', /cross-context comparison is not meaningful/.test(uiSrc)],
+    // 8. speed_diagnostics in JSON export
+    ['speed_diagnostics in JSON export', /speed_diagnostics/.test(uiSrc)],
+    // 9. run_comparison in JSON export
+    ['run_comparison in JSON export', /run_comparison/.test(uiSrc)],
+    // 10. MEASUREMENT CHAIN in text report (S5M regression)
+    ['MEASUREMENT CHAIN section still present (S5M regression)', /MEASUREMENT CHAIN/.test(uiSrc)],
+    // 11. Wow/flutter band separation in text report
+    ['Wow/flutter band separation note in text report', /wowBandSeparationNote/.test(uiSrc)],
+    // 12. mlab-speed-comparison CSS added
+    ['mlab-speed-comparison CSS present', /\.mlab-speed-comparison/.test(cssSrc)],
+    // 13. speedRunComparisonMarkup function in render file
+    ['speedRunComparisonMarkup function in render file', /function speedRunComparisonMarkup/.test(uiSrc)],
+    // 14. buildSpeedDiagnosticMeta imported in render file
+    ['buildSpeedDiagnosticMeta imported in render file', /buildSpeedDiagnosticMeta/.test(uiSrc)],
+    // 15. VTA still planned (regression)
+    ['VTA workflow still planned (regression)', /status\s*:\s*'planned'\s*as\s*const/.test(uiSrc)],
+    // 16. openWebReportModal still present (S5J regression)
+    ['openWebReportModal still present (S5J regression)', /openWebReportModal/.test(uiSrc)],
+    // 17. buildFreqResponseSvg still present (S5K regression)
+    ['buildFreqResponseSvg still present (S5K regression)', /buildFreqResponseSvg/.test(uiSrc)],
+    // 18. input_scope still present (S5M regression)
+    ['input_scope still present (S5M regression)', /input_scope/.test(uiSrc)],
+  ];
+
+  let allPass = true;
+  for (const [label, ok] of checks) {
+    if (!ok) {
+      console.error(`S5N static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S5N static source check (Speed Diagnostics Hardening): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS5NSpeedDiagnostics();
