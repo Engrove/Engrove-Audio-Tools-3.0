@@ -958,6 +958,23 @@ type SessionJson = {
   schema: 'engrove-toolbox.session/v1';
   tool: 'measurement-lab';
   timestamp: string;
+  session_metadata: {
+    generated_at: string;
+    selected_test_record_id: string | null;
+    selected_test_record_label: string | null;
+    source_mode: string;
+    iriaa_applied: boolean;
+    self_test_runs_present: boolean;
+    run_counts: {
+      speed: number;
+      noise_floor: number;
+      reference_level: number;
+      channel_identity: number;
+      frequency_response: number;
+      thd_imd: number;
+      vta_imd: number;
+    };
+  };
   capture: {
     device_label_hash: string | null;
     requested_sample_rate_hz: number;
@@ -1032,6 +1049,7 @@ function serializeVtaBandMeta(band: TestBand | null) {
 
 function buildSessionJson(): SessionJson {
   const deviceLabel = state.devices.find(d => d.deviceId === state.selectedDeviceId)?.label ?? null;
+  const sessionRecord = selectedRecord();
 
   const speedResult = state.speed.result;
   const channelIdentityResult = (() => {
@@ -1079,6 +1097,29 @@ function buildSessionJson(): SessionJson {
     schema: 'engrove-toolbox.session/v1',
     tool: 'measurement-lab',
     timestamp: new Date().toISOString(),
+    session_metadata: {
+      generated_at: new Date().toISOString(),
+      selected_test_record_id: state.selectedTestRecordId,
+      selected_test_record_label: sessionRecord
+        ? `${sessionRecord.manufacturer} — ${sessionRecord.title}`
+        : null,
+      source_mode: state.sourceMode,
+      iriaa_applied: state.iriaaEnabled,
+      self_test_runs_present:
+        state.speed.runs.some(r => r.source === 'self_test') ||
+        state.noiseFloor.runs.some(r => r.source === 'self_test') ||
+        state.speed.resultSource === 'self_test' ||
+        state.refLevel.resultSource === 'self_test',
+      run_counts: {
+        speed: state.speed.runs.length,
+        noise_floor: state.noiseFloor.runs.length,
+        reference_level: state.refLevel.result ? 1 : 0,
+        channel_identity: state.channel.leftCapture && state.channel.rightCapture ? 1 : 0,
+        frequency_response: state.freq.result ? 1 : 0,
+        thd_imd: state.thd.result ? 1 : 0,
+        vta_imd: state.vta.runs.length,
+      },
+    },
     capture: {
       device_label_hash: deviceLabel != null ? fnv1aHex(deviceLabel) : null,
       requested_sample_rate_hz: defaultRequestedSampleRateHz,
@@ -1388,12 +1429,25 @@ function exportLog(): void {
 function buildReportText(): string {
   const hr = '━'.repeat(48);
   const ts = new Date().toISOString();
+  const textRecord = selectedRecord();
   const lines: string[] = [
     'ENGROVE MEASUREMENT LAB — Session Report',
     `Generated: ${ts}`,
     hr,
     '',
   ];
+
+  // Session summary — run counts
+  lines.push('SESSION SUMMARY');
+  lines.push(`  Test record:           ${textRecord ? `${textRecord.manufacturer} — ${textRecord.title}` : 'None selected'}`);
+  lines.push(`  Speed runs:            ${state.speed.runs.length}`);
+  lines.push(`  Noise floor runs:      ${state.noiseFloor.runs.length}`);
+  lines.push(`  Reference level:       ${state.refLevel.result ? 'Captured' : 'Not captured'}`);
+  lines.push(`  Channel identity:      ${state.channel.leftCapture && state.channel.rightCapture ? 'Captured' : 'Not captured'}`);
+  lines.push(`  Frequency response:    ${state.freq.result ? 'Captured' : 'Not captured'}`);
+  lines.push(`  THD / IMD:             ${state.thd.result ? 'Captured' : 'Not captured'}`);
+  lines.push(`  VTA IMD runs:          ${state.vta.runs.length} (experimental/planned)`);
+  lines.push('');
 
   // Capture
   lines.push('CAPTURE SETUP');
@@ -5693,15 +5747,100 @@ function buildSummarySection(): WebReportSection {
       })()
     : 'Source not connected';
 
-  const pairs: [string, string][] = [
+  const generatedAt = new Date().toISOString();
+
+  const sessionPairs: [string, string][] = [
+    ['Generated', renderText(generatedAt)],
     ['Source mode', renderText(state.sourceMode === 'self-test' ? 'Self-test (internal oscillator)' : 'Live capture')],
-    ['Test record', renderText(recordLabel)],
     ['Software iRIAA', state.iriaaEnabled ? 'Applied' : 'Bypass'],
+    ['Test record', renderText(recordLabel)],
+    ...(record ? [['Record ID', renderText(record.id)] as [string, string]] : []),
     ['Measurement chain', renderText(chainStatus)],
-    ['Speed runs', String(state.speed.runs.length)],
-    ['Noise floor runs', String(state.noiseFloor.runs.length)],
-    ['VTA IMD runs', String(state.vta.runs.length)],
+    ...(state.honesty
+      ? [
+          ['Sample rate (actual)', `${state.honesty.contextActualHz.toLocaleString()} Hz`] as [string, string],
+          ['Sample-rate honesty', renderText(state.honesty.classification)] as [string, string],
+        ]
+      : []),
   ];
+
+  // Coverage table — what was measured and what is still missing
+  type CoverageKind = 'ok' | 'warn' | 'err' | 'info' | 'exp';
+  const coverageRows: { name: string; detail: string; badge: CoverageKind }[] = [
+    {
+      name: 'Reference Level',
+      detail: state.refLevel.result
+        ? `Captured · source: ${state.refLevel.resultSource ?? 'live_capture'}${state.refLevel.runQuality ? ` · quality: ${state.refLevel.runQuality.status}` : ''}`
+        : 'Not captured in this session',
+      badge: state.refLevel.result ? 'ok' : 'info',
+    },
+    {
+      name: 'Speed &amp; Wow/Flutter',
+      detail: state.speed.runs.length > 0
+        ? `${state.speed.runs.length} run${state.speed.runs.length === 1 ? '' : 's'}`
+        : (state.speed.result ? 'Result available (no run history)' : 'Not captured in this session'),
+      badge: state.speed.runs.length > 0 ? 'ok' : 'info',
+    },
+    {
+      name: 'Noise Floor',
+      detail: state.noiseFloor.runs.length > 0
+        ? `${state.noiseFloor.runs.length} run${state.noiseFloor.runs.length === 1 ? '' : 's'}`
+        : 'Not captured in this session',
+      badge: state.noiseFloor.runs.length > 0 ? 'ok' : 'info',
+    },
+    {
+      name: 'Channel Identity',
+      detail: state.channel.leftCapture && state.channel.rightCapture
+        ? `Captured · source: ${state.channel.source ?? 'live_capture'}`
+        : 'Not captured in this session',
+      badge: state.channel.leftCapture && state.channel.rightCapture ? 'ok' : 'info',
+    },
+    {
+      name: 'Frequency Response',
+      detail: state.freq.result
+        ? `Captured · source: ${state.freq.resultSource ?? 'live_capture'} · ${state.freq.result.blockCount} blocks`
+        : 'Not captured in this session',
+      badge: state.freq.result ? 'ok' : 'info',
+    },
+    {
+      name: 'THD / IMD',
+      detail: state.thd.result
+        ? `Captured · source: ${state.thd.resultSource ?? 'live_capture'} · ${isThdResult(state.thd.result) ? 'THD' : 'IMD'}`
+        : 'Not captured in this session',
+      badge: state.thd.result ? 'ok' : 'info',
+    },
+    {
+      name: 'Resonance',
+      detail: state.resonance.result
+        ? `Captured · peak: ${state.resonance.result.peakFrequencyHz.toFixed(1)} Hz`
+        : 'Not captured in this session',
+      badge: state.resonance.result ? 'ok' : 'info',
+    },
+    {
+      name: 'VTA IMD Optimizer',
+      detail: state.vta.runs.length > 0
+        ? `${state.vta.runs.length} run${state.vta.runs.length === 1 ? '' : 's'} (experimental — not a final recommendation)`
+        : 'Not measured — experimental/planned workflow',
+      badge: 'exp',
+    },
+  ];
+
+  const coverageTableRows = coverageRows
+    .map(r => `<tr>
+      <td>${r.name}</td>
+      <td>${wrBadge(r.badge === 'ok' ? 'Captured' : r.badge === 'exp' ? 'Experimental' : 'Not captured', r.badge)}</td>
+      <td>${renderText(r.detail)}</td>
+    </tr>`)
+    .join('');
+
+  const coverageTable = `
+    <h3 style="font-size:var(--ea-text-sm);font-weight:600;margin:var(--ea-space-3) 0 var(--ea-space-2)">
+      Session measurement coverage
+    </h3>
+    <table class="ea-webreport-table">
+      <thead><tr><th>Measurement</th><th>Status</th><th>Detail</th></tr></thead>
+      <tbody>${coverageTableRows}</tbody>
+    </table>`;
 
   const selfTestWarning = selfTestRuns
     ? wrNote('This report contains measurements captured with self-test (simulated) data. Self-test results do not reflect real-world rig performance.', 'warn')
@@ -5710,7 +5849,7 @@ function buildSummarySection(): WebReportSection {
   return {
     id: 'summary',
     title: 'Report Summary',
-    html: wrKVs(pairs) + selfTestWarning,
+    html: wrKVs(sessionPairs) + coverageTable + selfTestWarning,
   };
 }
 
@@ -5810,6 +5949,12 @@ function buildReferenceLevelSection(): WebReportSection {
     ['Source', renderText(state.refLevel.resultSource ?? 'live_capture')],
     ['L RMS', fmtDbfs(r.leftRmsDbfs)],
     ['R RMS', fmtDbfs(r.rightRmsDbfs)],
+    ['L peak', fmtDbfs(r.leftPeakDbfs)],
+    ['R peak', fmtDbfs(r.rightPeakDbfs)],
+    ['Balance (R−L)', r.balanceDb != null ? `${r.balanceDb >= 0 ? '+' : ''}${r.balanceDb.toFixed(2)} dB` : '—'],
+    ['Headroom', r.headroomDb != null ? `${r.headroomDb.toFixed(2)} dB` : '—'],
+    ['Clipping', r.clipping ? 'Yes — reduce input gain' : 'No'],
+    ['Confidence', renderText(r.confidence)],
     ['Reference level', r.referenceLevelDb != null ? `${r.referenceLevelDb.toFixed(2)} dB` : '—'],
   ];
   if (state.refLevel.calibrationSet.length > 0) {
@@ -5819,7 +5964,7 @@ function buildReferenceLevelSection(): WebReportSection {
   return {
     id: 'reference-level',
     title: 'Reference Level',
-    html: wrKVs(pairs) + wrRunQuality(state.refLevel.runQuality),
+    html: wrKVs(pairs) + wrWarnings(r.warnings) + wrRunQuality(state.refLevel.runQuality),
   };
 }
 

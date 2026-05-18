@@ -3114,3 +3114,69 @@ function checkS5KFreqCurveAndAnalytics() {
 }
 
 checkS5KFreqCurveAndAnalytics();
+
+function checkS5LSessionMetadataProvenance() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const indexHtmlPath = join(repoRoot, 'index.html');
+  const headersPath   = join(repoRoot, 'public/_headers');
+
+  for (const p of [renderSrcPath, indexHtmlPath, headersPath]) {
+    if (!existsSync(p)) {
+      console.error(`S5L: missing file: ${p}`);
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const uiSrc      = readFileSync(renderSrcPath, 'utf8');
+  const indexHtml  = readFileSync(indexHtmlPath, 'utf8');
+  const headersSrc = readFileSync(headersPath, 'utf8');
+
+  const checks = [
+    // 1. session_metadata added to JSON export
+    ['session_metadata in buildSessionJson', /session_metadata\s*:/.test(uiSrc)],
+    // 2. generated_at in session_metadata
+    ['generated_at in session_metadata', /generated_at\s*:/.test(uiSrc)],
+    // 3. run_counts in session_metadata
+    ['run_counts in session_metadata', /run_counts\s*:/.test(uiSrc)],
+    // 4. selected_test_record_label in session_metadata
+    ['selected_test_record_label in session_metadata', /selected_test_record_label\s*:/.test(uiSrc)],
+    // 5. SESSION SUMMARY in text report
+    ['SESSION SUMMARY section in text report', /SESSION SUMMARY/.test(uiSrc)],
+    // 6. Coverage table in web report summary ("Not captured" wording)
+    ['Not captured coverage in web report summary', /Not captured/.test(uiSrc)],
+    // 7. Session measurement coverage table heading
+    ['Session measurement coverage heading', /Session measurement coverage/.test(uiSrc)],
+    // 8. Reference level section has provenance fields (balance, headroom, confidence)
+    ['Reference level section has balance_db / headroom fields', /Balance.*R.*L|headroom/i.test(uiSrc.slice(uiSrc.indexOf('buildReferenceLevelSection'), uiSrc.indexOf('buildSpeedSection')))],
+    // 9. S5J openWebReportModal still present
+    ['S5J openWebReportModal still present', /openWebReportModal/.test(uiSrc)],
+    // 10. S5K freq curve still present
+    ['S5K buildFreqResponseSvg still present', /buildFreqResponseSvg/.test(uiSrc)],
+    // 11. VTA still planned
+    ['VTA workflow still planned', /status\s*:\s*'planned'\s*as\s*const/.test(uiSrc)],
+    // 12. JSON export still present
+    ['JSON export (downloadSessionJson) still present', /downloadSessionJson/.test(uiSrc)],
+    // 13. Text report still present
+    ['Text report (downloadReportText) still present', /downloadReportText/.test(uiSrc)],
+    // 14. Simple Analytics still in index.html
+    ['Simple Analytics still in index.html', /scripts\.simpleanalyticscdn\.com\/latest\.js/.test(indexHtml)],
+    // 15. CSP still includes simpleanalyticscdn.com
+    ['CSP still includes simpleanalyticscdn.com', /script-src[^;]*https:\/\/scripts\.simpleanalyticscdn\.com/.test(headersSrc)],
+  ];
+
+  let allPass = true;
+  for (const [label, ok] of checks) {
+    if (!ok) {
+      console.error(`S5L static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S5L static source check (Session Metadata & Run Provenance): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS5LSessionMetadataProvenance();
