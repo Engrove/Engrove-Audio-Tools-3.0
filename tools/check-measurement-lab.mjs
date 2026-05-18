@@ -2975,3 +2975,76 @@ function checkS5IRunQuality() {
 }
 
 checkS5IRunQuality();
+
+function checkS5JWebReport() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const modalSrcPath  = join(repoRoot, 'src/shared/ui/webReportModal.ts');
+  const cssSrcPath    = join(repoRoot, 'src/modules/measurement-lab/ui/measurementLab.css');
+
+  for (const p of [renderSrcPath, modalSrcPath]) {
+    if (!existsSync(p)) {
+      console.error(`S5J: missing file: ${p}`);
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const uiSrc    = readFileSync(renderSrcPath, 'utf8');
+  const modalSrc = readFileSync(modalSrcPath, 'utf8');
+  const cssSrc   = existsSync(cssSrcPath) ? readFileSync(cssSrcPath, 'utf8') : '';
+  const allSrc   = uiSrc + '\n' + modalSrc + '\n' + cssSrc;
+
+  const checks = [
+    // 1. WebReportPayload type exists
+    ['WebReportPayload type declared', /type WebReportPayload\s*=/.test(modalSrc)],
+    // 2. openWebReportModal function exists
+    ['openWebReportModal function exported', /export function openWebReportModal/.test(modalSrc)],
+    // 3. window.print() called in modal
+    ['window.print() called', /window\.print\(\)/.test(modalSrc)],
+    // 4. @media print present
+    ['@media print present', /@media\s+print/.test(allSrc)],
+    // 5. @page rule present
+    ['@page rule present', /@page\s*\{/.test(allSrc)],
+    // 6. A4 size specified
+    ['A4 size specified', /size:\s*A4/.test(allSrc)],
+    // 7. buildMeasurementLabWebReport function exists
+    ['buildMeasurementLabWebReport function exists', /function buildMeasurementLabWebReport/.test(uiSrc)],
+    // 8. Open web report button in UI
+    ['Open web report button present', /Open web report|View printable report/.test(uiSrc)],
+    // 9. Measurement chain readiness in web report
+    ['Measurement chain readiness section in web report', /buildChainReadinessSection|Measurement Chain Readiness/.test(uiSrc)],
+    // 10. Speed / Wow section in web report
+    ['Speed / Wow section in web report', /buildSpeedSection|Speed \/ Wow/.test(uiSrc)],
+    // 11. Noise Floor / Rig Baseline in web report
+    ['Noise Floor / Rig Baseline section in web report', /buildNoiseFloorSection|Noise Floor \/ Rig Baseline/.test(uiSrc)],
+    // 12. VTA IMD Optimizer in web report
+    ['VTA IMD Optimizer section in web report', /buildVtaSection|VTA IMD Optimizer/.test(uiSrc)],
+    // 13. Experimental only — not a final recommendation.
+    ['Experimental only — not a final recommendation', /Experimental only — not a final recommendation/.test(uiSrc)],
+    // 14. Escaping/sanitization helper used (renderText or escapeHtml in report builder)
+    ['Escaping helper used in report sections', /renderText|escapeHtml/.test(uiSrc)],
+    // 15. JSON export still present
+    ['JSON export (downloadSessionJson) still exists', /downloadSessionJson/.test(uiSrc)],
+    // 16. Text report still present
+    ['Text report (downloadReportText) still exists', /downloadReportText/.test(uiSrc)],
+    // 17. VTA workflow still planned (not supported)
+    ['VTA workflow still planned', /status\s*:\s*'planned'\s*as\s*const/.test(uiSrc)],
+    // 18. webReportBtn wired in elements()
+    ['webReportBtn in elements()', /webReportBtn/.test(uiSrc)],
+  ];
+
+  let allPass = true;
+  for (const [label, ok] of checks) {
+    if (!ok) {
+      console.error(`S5J static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S5J static source check (Global Web Report Modal & Measurement Lab Rich Report): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS5JWebReport();

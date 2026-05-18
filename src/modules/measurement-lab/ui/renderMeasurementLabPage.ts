@@ -1,4 +1,5 @@
 import { renderText } from '../../../shared/ui/renderSafe';
+import { openWebReportModal, type WebReportPayload, type WebReportSection } from '../../../shared/ui/webReportModal';
 import { renderToolTopbar } from '../../../shared/ui/renderToolTopbar';
 import {
   AudioDeviceEnumerationError,
@@ -1734,6 +1735,7 @@ function actionBarMarkup(): string {
         </span>
       </div>
       <div class="ea-actionbar__group">
+        <button class="ea-button ea-button--ghost" type="button" data-mlab-web-report>Open web report</button>
         <button class="ea-button ea-button--ghost" type="button" data-mlab-export-report>Export Report</button>
         <button class="ea-button ea-button--ghost" type="button" data-mlab-export>Export JSON</button>
         <button class="ea-button ea-button--ghost" type="button" data-mlab-reset>Reset</button>
@@ -1816,6 +1818,7 @@ function elements(root: ParentNode) {
     disconnect: root.querySelector<HTMLButtonElement>('[data-mlab-disconnect]'),
     exportBtn: root.querySelector<HTMLButtonElement>('[data-mlab-export]'),
     exportReportBtn: root.querySelector<HTMLButtonElement>('[data-mlab-export-report]'),
+    webReportBtn: root.querySelector<HTMLButtonElement>('[data-mlab-web-report]'),
     reset: root.querySelector<HTMLButtonElement>('[data-mlab-reset]'),
     actionStatusDot: root.querySelector<HTMLElement>('[data-mlab-action-status] .ea-dot'),
     actionStatusText: root.querySelector<HTMLElement>('[data-mlab-action-status-text]'),
@@ -5627,6 +5630,541 @@ function renderNoiseFloorPanel(els: Elements): void {
   });
 }
 
+// ── S5J: Measurement Lab rich report builder ─────────────────────────────────
+
+function wrKV(key: string, val: string): string {
+  return `<div class="ea-webreport-kv-key">${key}</div><div class="ea-webreport-kv-val">${val}</div>`;
+}
+
+function wrKVs(pairs: readonly [string, string][]): string {
+  return `<div class="ea-webreport-kv">${pairs.map(([k, v]) => wrKV(k, v)).join('')}</div>`;
+}
+
+function wrBadge(label: string, kind: 'ok' | 'warn' | 'err' | 'info' | 'exp'): string {
+  return `<span class="ea-webreport-badge ea-webreport-badge--${kind}">${renderText(label)}</span>`;
+}
+
+function wrNote(text: string, kind: 'warn' | 'err' | '' = ''): string {
+  const cls = kind ? ` ea-webreport-note--${kind}` : '';
+  return `<div class="ea-webreport-note${cls}">${renderText(text)}</div>`;
+}
+
+function wrEmpty(): string {
+  return '<p class="ea-webreport-empty">No measurement captured in this session.</p>';
+}
+
+function wrWarnings(warnings: readonly string[]): string {
+  if (warnings.length === 0) return '';
+  return warnings.map(w => `<p class="ea-webreport-warning">⚠ ${renderText(w)}</p>`).join('');
+}
+
+function wrRunQuality(rq: MeasurementRunQuality | null | undefined): string {
+  if (!rq) return '';
+  const kind = rq.status === 'ok' ? 'ok' : rq.status === 'warning' ? 'warn' : 'err';
+  const label = rq.status === 'ok' ? 'OK' : rq.status === 'warning' ? 'Warning' : 'Invalid';
+  return wrBadge(`Run quality: ${label}`, kind) + wrWarnings(rq.warnings);
+}
+
+function wrPlaceholder(text: string): string {
+  return `<div class="ea-webreport-placeholder" aria-label="Placeholder — ${renderText(text)}">${renderText(text)}</div>`;
+}
+
+function buildSummarySection(): WebReportSection {
+  const record = selectedRecord();
+  const recordLabel = record ? `${record.manufacturer} — ${record.title}` : 'None selected';
+  const selfTestRuns =
+    state.speed.runs.some(r => r.source === 'self_test') ||
+    state.noiseFloor.runs.some(r => r.source === 'self_test') ||
+    state.speed.resultSource === 'self_test' ||
+    state.refLevel.resultSource === 'self_test';
+
+  const chainStatus = state.captureState === 'live'
+    ? (() => {
+        const r = deriveMeasurementChainReadiness({
+          leftRmsDbfs: state.channelLevels.L.rmsDbFs,
+          rightRmsDbfs: state.channelLevels.R.rmsDbFs,
+          leftPeakDbfs: state.channelLevels.L.peakDbFs,
+          rightPeakDbfs: state.channelLevels.R.peakDbFs,
+        });
+        const lbl: Record<MeasurementChainReadinessStatus, string> = {
+          not_checked: 'Not checked', ready: 'Ready', warning: 'Warning', blocked: 'Blocked',
+        };
+        return lbl[r.status];
+      })()
+    : 'Source not connected';
+
+  const pairs: [string, string][] = [
+    ['Source mode', renderText(state.sourceMode === 'self-test' ? 'Self-test (internal oscillator)' : 'Live capture')],
+    ['Test record', renderText(recordLabel)],
+    ['Software iRIAA', state.iriaaEnabled ? 'Applied' : 'Bypass'],
+    ['Measurement chain', renderText(chainStatus)],
+    ['Speed runs', String(state.speed.runs.length)],
+    ['Noise floor runs', String(state.noiseFloor.runs.length)],
+    ['VTA IMD runs', String(state.vta.runs.length)],
+  ];
+
+  const selfTestWarning = selfTestRuns
+    ? wrNote('This report contains measurements captured with self-test (simulated) data. Self-test results do not reflect real-world rig performance.', 'warn')
+    : '';
+
+  return {
+    id: 'summary',
+    title: 'Report Summary',
+    html: wrKVs(pairs) + selfTestWarning,
+  };
+}
+
+function buildTestRecordSection(): WebReportSection {
+  const record = selectedRecord();
+  if (!record) {
+    return { id: 'test-record', title: 'Test Record / Guided Order', html: wrEmpty() };
+  }
+
+  const bandRows = record.sides.flatMap(side =>
+    side.bands.map(b => {
+      const freq = b.frequencyHz != null ? `${b.frequencyHz.toLocaleString('en-US')} Hz` : '—';
+      const level = b.levelDb != null ? `${b.levelDb} dB` : '—';
+      return `<tr><td>${renderText(b.index)}</td><td>${renderText(b.label)}</td><td>${renderText(b.purpose ?? '')}</td><td>${renderText(freq)}</td><td>${renderText(level)}</td></tr>`;
+    }),
+  );
+
+  const side0Bands = record.sides[0]?.bands ?? [];
+  const track1 = side0Bands.find(b => b.index === '1' || b.index === '1A') ?? side0Bands[0] ?? null;
+  const track1Note = track1
+    ? wrNote(`Recommended first measurement: Track ${renderText(track1.index)} — ${renderText(track1.label)}. Use the Reference Level workflow.`)
+    : '';
+
+  const vtaBands = getVtaImdBands(record);
+  const vtaNote = vtaBands.length > 0
+    ? `<p>VTA IMD band available: ${renderText(vtaBands[0]!.label)}. VTA workflow status: <strong>Experimental / Planned</strong>.</p>`
+    : '<p>No VTA IMD band available for this test record.</p>';
+
+  const tableHtml = bandRows.length > 0
+    ? `<table class="ea-webreport-table">
+        <thead><tr><th>#</th><th>Label</th><th>Purpose</th><th>Frequency</th><th>Level</th></tr></thead>
+        <tbody>${bandRows.join('')}</tbody>
+      </table>`
+    : '<p class="ea-webreport-empty">No band data available for this record.</p>';
+
+  return {
+    id: 'test-record',
+    title: 'Test Record / Guided Order',
+    html: wrKVs([
+      ['Record', renderText(`${record.manufacturer} — ${record.title}`)],
+      ['ID', renderText(record.id)],
+    ]) + track1Note + tableHtml + vtaNote,
+  };
+}
+
+function buildChainReadinessSection(): WebReportSection {
+  if (state.captureState !== 'live') {
+    return {
+      id: 'chain-readiness',
+      title: 'Measurement Chain Readiness',
+      html: '<p class="ea-webreport-empty">Source not connected — connect a source to derive chain readiness.</p>',
+    };
+  }
+
+  const readiness = deriveMeasurementChainReadiness({
+    leftRmsDbfs: state.channelLevels.L.rmsDbFs,
+    rightRmsDbfs: state.channelLevels.R.rmsDbFs,
+    leftPeakDbfs: state.channelLevels.L.peakDbFs,
+    rightPeakDbfs: state.channelLevels.R.peakDbFs,
+  });
+
+  const statusLabels: Record<MeasurementChainReadinessStatus, string> = {
+    not_checked: 'Not checked', ready: 'Ready', warning: 'Warning', blocked: 'Blocked',
+  };
+  const statusKinds: Record<MeasurementChainReadinessStatus, 'ok' | 'warn' | 'err' | 'info'> = {
+    not_checked: 'info', ready: 'ok', warning: 'warn', blocked: 'err',
+  };
+
+  const pairs: [string, string][] = [
+    ['Status', statusLabels[readiness.status] + wrBadge(statusLabels[readiness.status], statusKinds[readiness.status])],
+    ['Signal present', readiness.signalPresent ? 'Yes' : 'No'],
+    ['Clipping', readiness.clipping ? 'Yes — reduce input gain' : 'No'],
+    ['Low signal', readiness.lowSignal ? 'Yes' : 'No'],
+  ];
+  if (readiness.channelImbalanceDb !== null) {
+    pairs.push(['Channel imbalance', `${readiness.channelImbalanceDb.toFixed(1)} dB L/R`]);
+  }
+
+  const refNote = state.refLevel.result
+    ? `<p>Last reference level: L ${fmtDbfs(state.refLevel.result.leftRmsDbfs)} / R ${fmtDbfs(state.refLevel.result.rightRmsDbfs)}</p>`
+    : wrNote('No reference level captured yet. Capture Reference Level first when using a test record.', 'warn');
+
+  return {
+    id: 'chain-readiness',
+    title: 'Measurement Chain Readiness',
+    html: wrKVs(pairs) + wrWarnings(readiness.warnings) + refNote,
+  };
+}
+
+function buildReferenceLevelSection(): WebReportSection {
+  const r = state.refLevel.result;
+  if (!r) {
+    return { id: 'reference-level', title: 'Reference Level', html: wrEmpty() };
+  }
+
+  const pairs: [string, string][] = [
+    ['Source', renderText(state.refLevel.resultSource ?? 'live_capture')],
+    ['L RMS', fmtDbfs(r.leftRmsDbfs)],
+    ['R RMS', fmtDbfs(r.rightRmsDbfs)],
+    ['Reference level', r.referenceLevelDb != null ? `${r.referenceLevelDb.toFixed(2)} dB` : '—'],
+  ];
+  if (state.refLevel.calibrationSet.length > 0) {
+    pairs.push(['Calibration entries', String(state.refLevel.calibrationSet.length)]);
+  }
+
+  return {
+    id: 'reference-level',
+    title: 'Reference Level',
+    html: wrKVs(pairs) + wrRunQuality(state.refLevel.runQuality),
+  };
+}
+
+function buildSpeedSection(): WebReportSection {
+  const sr = state.speed.result;
+  const runs = state.speed.runs;
+  if (!sr && runs.length === 0) {
+    return { id: 'speed', title: 'Speed / Wow &amp; Flutter', html: wrEmpty() };
+  }
+
+  let latestHtml = '';
+  if (sr) {
+    const ls = state.speed.lastSettings;
+    const nomHz = ls ? ls.nominalFrequencyHz : nominalFrequencyHz33[state.speed.speedContext];
+    const nomDefault = ls ? ls.nominalFrequencyHzDefault : nominalFrequencyHz33[state.speed.speedContext];
+    const nomSrc = ls ? ls.nominalFrequencySource : 'fallback_default';
+    const durSec = ls ? ls.captureDurationSeconds : speedMeasurementDurationSeconds;
+    const durSrc = ls ? ls.captureDurationSource : 'default';
+    const wfClass = classifyWf(sr.unweightedWfPercent);
+    const latestRQ = runs[runs.length - 1]?.runQuality ?? null;
+
+    const pairs: [string, string][] = [
+      ['Source', renderText(state.speed.resultSource ?? 'live_capture')],
+      ['Speed context', state.speed.speedContext === '45' ? '45 RPM' : '33⅓ RPM'],
+      ['Nominal frequency', `${nomHz.toLocaleString('en-US')} Hz (default: ${nomDefault.toLocaleString('en-US')} Hz, source: ${renderText(nomSrc)})`],
+      ['Capture duration', `${durSec.toFixed(1)} s (${renderText(durSrc)})`],
+      ['Measured frequency', `${sr.meanFrequencyHz.toFixed(2)} Hz`],
+      ['Speed error', `${sr.speedDeviationPercent >= 0 ? '+' : ''}${sr.speedDeviationPercent.toFixed(3)} %`],
+      ['W&F unweighted (AES6)', `${sr.unweightedWfPercent.toFixed(3)} %`],
+      ['W&F IEC-weighted', `${sr.weightedWfPercent.toFixed(3)} %`],
+      ['Classification', renderText(wfClass.label)],
+    ];
+    if (state.speed.bandMeta) {
+      const bm = state.speed.bandMeta;
+      pairs.push(['Band', renderText(bm.label) + (bm.frequencyHz != null ? ` · ${bm.frequencyHz.toLocaleString('en-US')} Hz` : '')]);
+    }
+    latestHtml = `<h3 style="font-size:var(--ea-text-sm);font-weight:600;margin:0 0 var(--ea-space-2)">Latest result</h3>` + wrKVs(pairs) + wrRunQuality(latestRQ);
+  }
+
+  let historyHtml = '';
+  if (runs.length > 0) {
+    const rows = runs.map(r => {
+      const time = r.createdAt.replace('T', ' ').replace(/\.\d+Z$/, ' UTC');
+      const rpmLabel = r.speedContext === '45' ? '45' : '33⅓';
+      const measHz = r.measuredFrequencyHz !== null ? r.measuredFrequencyHz.toFixed(2) : '—';
+      const err = r.speedErrorPercent !== null ? `${r.speedErrorPercent >= 0 ? '+' : ''}${r.speedErrorPercent.toFixed(3)} %` : '—';
+      const wf = r.wowFlutterPercent !== null ? `${r.wowFlutterPercent.toFixed(3)} %` : '—';
+      const src = r.source === 'self_test' ? 'Self-test' : 'Live';
+      const rqBadge = r.runQuality ? wrBadge(r.runQuality.status, r.runQuality.status === 'ok' ? 'ok' : r.runQuality.status === 'warning' ? 'warn' : 'err') : '';
+      return `<tr>
+        <td>${renderText(time)}</td>
+        <td>${renderText(rpmLabel)}</td>
+        <td>${renderText(r.nominalFrequencyHz.toLocaleString('en-US'))}</td>
+        <td>${renderText(measHz)}</td>
+        <td>${renderText(err)}</td>
+        <td>${renderText(wf)}</td>
+        <td>${renderText(src)}</td>
+        <td>${rqBadge}</td>
+      </tr>`;
+    }).join('');
+    historyHtml = `<h3 style="font-size:var(--ea-text-sm);font-weight:600;margin:var(--ea-space-3) 0 var(--ea-space-2)">Run history (${runs.length} run${runs.length === 1 ? '' : 's'})</h3>
+      <table class="ea-webreport-table">
+        <thead><tr><th>Time</th><th>RPM</th><th>Nominal Hz</th><th>Measured Hz</th><th>Speed error</th><th>W&F</th><th>Source</th><th>Quality</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+  return { id: 'speed', title: 'Speed / Wow &amp; Flutter', html: latestHtml + historyHtml };
+}
+
+function buildNoiseFloorSection(): WebReportSection {
+  const latest = state.noiseFloor.latest;
+  const runs = state.noiseFloor.runs;
+  if (!latest && runs.length === 0) {
+    return { id: 'noise-floor', title: 'Noise Floor / Rig Baseline', html: wrEmpty() };
+  }
+
+  let latestHtml = '';
+  if (latest) {
+    const pairs: [string, string][] = [
+      ['Source', renderText(latest.source)],
+      ['Scenario', renderText(noiseFloorScenarioLabel(latest.scenarioKind))],
+      ...(latest.rpm !== null ? [['RPM', `${latest.rpm.toFixed(latest.rpm === Math.round(latest.rpm) ? 0 : 1)}`] as [string, string]] : []),
+      ...(latest.tonearmPosition ? [['Tonearm position', renderText(latest.tonearmPosition)] as [string, string]] : []),
+      ['Capture duration', `${latest.captureDurationSeconds.toFixed(1)} s`],
+      ['L RMS', latest.leftRmsDbfs !== null ? `${latest.leftRmsDbfs.toFixed(1)} dBFS` : '—'],
+      ['R RMS', latest.rightRmsDbfs !== null ? `${latest.rightRmsDbfs.toFixed(1)} dBFS` : '—'],
+      ['L peak', latest.leftPeakDbfs !== null ? `${latest.leftPeakDbfs.toFixed(1)} dBFS` : '—'],
+      ['R peak', latest.rightPeakDbfs !== null ? `${latest.rightPeakDbfs.toFixed(1)} dBFS` : '—'],
+      ['Noise floor', latest.noiseFloorDbfs !== null ? `${latest.noiseFloorDbfs.toFixed(1)} dBFS` : '—'],
+    ];
+    latestHtml = `<h3 style="font-size:var(--ea-text-sm);font-weight:600;margin:0 0 var(--ea-space-2)">Latest result</h3>`
+      + wrKVs(pairs) + wrWarnings(latest.warnings) + wrRunQuality(latest.runQuality);
+  }
+
+  let historyHtml = '';
+  if (runs.length > 0) {
+    const rows = [...runs].reverse().map(r => {
+      const time = r.createdAt.replace('T', ' ').replace(/\.\d+Z$/, ' UTC');
+      const rpmPart = r.rpm !== null ? ` ${r.rpm.toFixed(r.rpm === Math.round(r.rpm) ? 0 : 1)} RPM` : '';
+      const nfPart = r.noiseFloorDbfs !== null ? `${r.noiseFloorDbfs.toFixed(1)} dBFS` : '—';
+      const rqBadge = r.runQuality ? wrBadge(r.runQuality.status, r.runQuality.status === 'ok' ? 'ok' : r.runQuality.status === 'warning' ? 'warn' : 'err') : '';
+      return `<tr>
+        <td>${renderText(time)}</td>
+        <td>${renderText(noiseFloorScenarioLabel(r.scenarioKind))}${renderText(rpmPart)}</td>
+        <td>${renderText(r.captureDurationSeconds.toFixed(1))} s</td>
+        <td>${r.leftRmsDbfs !== null ? renderText(r.leftRmsDbfs.toFixed(1)) + ' dBFS' : '—'}</td>
+        <td>${r.rightRmsDbfs !== null ? renderText(r.rightRmsDbfs.toFixed(1)) + ' dBFS' : '—'}</td>
+        <td>${renderText(nfPart)}</td>
+        <td>${renderText(r.source)}</td>
+        <td>${rqBadge}</td>
+      </tr>`;
+    }).join('');
+    historyHtml = `<h3 style="font-size:var(--ea-text-sm);font-weight:600;margin:var(--ea-space-3) 0 var(--ea-space-2)">Run history (${runs.length} run${runs.length === 1 ? '' : 's'})</h3>
+      <table class="ea-webreport-table">
+        <thead><tr><th>Time</th><th>Scenario</th><th>Duration</th><th>L RMS</th><th>R RMS</th><th>Noise floor</th><th>Source</th><th>Quality</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+  return { id: 'noise-floor', title: 'Noise Floor / Rig Baseline', html: latestHtml + historyHtml };
+}
+
+function buildChannelSection(): WebReportSection {
+  const { leftCapture, rightCapture, identityResult, source, leftBandMeta, rightBandMeta } = state.channel;
+  if (!leftCapture && !rightCapture) {
+    return { id: 'channel', title: 'Channel Identity / Crosstalk', html: wrEmpty() };
+  }
+
+  const pairs: [string, string][] = [
+    ['Source', renderText(source ?? 'live_capture')],
+  ];
+  if (leftBandMeta) {
+    const lf = leftBandMeta.frequencyHz != null ? ` · ${leftBandMeta.frequencyHz.toLocaleString('en-US')} Hz` : '';
+    pairs.push(['Left band', renderText(leftBandMeta.label) + renderText(lf)]);
+  }
+  if (rightBandMeta) {
+    const rf = rightBandMeta.frequencyHz != null ? ` · ${rightBandMeta.frequencyHz.toLocaleString('en-US')} Hz` : '';
+    pairs.push(['Right band', renderText(rightBandMeta.label) + renderText(rf)]);
+  }
+  if (identityResult) {
+    pairs.push(
+      ['Identity', renderText(identityResult.identity)],
+      ['Confidence', renderText(identityResult.confidence)],
+      ['Balance (R−L wanted)', identityResult.wantedBalanceDb != null ? `${identityResult.wantedBalanceDb.toFixed(2)} dB` : 'n/a'],
+      ['L→R crosstalk', `${identityResult.leftToRightCrosstalkDb.toFixed(1)} dB`],
+      ['R→L crosstalk', `${identityResult.rightToLeftCrosstalkDb.toFixed(1)} dB`],
+    );
+    return { id: 'channel', title: 'Channel Identity / Crosstalk', html: wrKVs(pairs) + wrWarnings(identityResult.warnings) };
+  }
+  if (leftCapture && rightCapture) {
+    pairs.push(
+      ['L RMS', `${leftCapture.leftRmsDbFs.toFixed(2)} dBFS`],
+      ['R RMS', `${rightCapture.rightRmsDbFs.toFixed(2)} dBFS`],
+      ['L→R crosstalk', `${leftCapture.crosstalkDb.toFixed(1)} dB`],
+      ['R→L crosstalk', `${rightCapture.crosstalkDb.toFixed(1)} dB`],
+    );
+  }
+  return { id: 'channel', title: 'Channel Identity / Crosstalk', html: wrKVs(pairs) };
+}
+
+function buildFreqSection(): WebReportSection {
+  const fr = state.freq.result;
+  if (!fr) {
+    return { id: 'freq', title: 'Frequency Response', html: wrEmpty() };
+  }
+
+  const pairs: [string, string][] = [
+    ['Source', renderText(state.freq.resultSource ?? 'live_capture')],
+  ];
+  if (state.freq.selectedBandMeta) {
+    const bm = state.freq.selectedBandMeta;
+    const range = bm.frequencyStartHz !== null && bm.frequencyEndHz !== null
+      ? ` · ${bm.frequencyStartHz}–${bm.frequencyEndHz} Hz` : '';
+    pairs.push(['Sweep band', renderText(bm.label) + renderText(range)]);
+  }
+  pairs.push(
+    ['FFT size', String(fr.fftSize)],
+    ['Blocks averaged', String(fr.blockCount)],
+    ['Sample rate', `${fr.sampleRateHz.toLocaleString()} Hz`],
+    ['Range', `${fr.frequenciesHz[0]?.toFixed(0) ?? '?'} – ${fr.frequenciesHz[fr.frequenciesHz.length - 1]?.toFixed(0) ?? '?'} Hz`],
+  );
+
+  return {
+    id: 'freq',
+    title: 'Frequency Response',
+    html: wrKVs(pairs)
+      + wrNote('Measures full playback/capture chain, not cartridge-only response. Full data in JSON export.')
+      + wrPlaceholder('Graph/curve output will appear here when trace data is available.'),
+  };
+}
+
+function buildThdSection(): WebReportSection {
+  const tr = state.thd.result;
+  if (!tr) {
+    return { id: 'thd', title: 'THD / IMD', html: wrEmpty() };
+  }
+
+  const pairs: [string, string][] = [
+    ['Source', renderText(state.thd.resultSource ?? 'live_capture')],
+  ];
+  if (state.thd.bandMeta) {
+    const tbm = state.thd.bandMeta;
+    const tf = tbm.frequencyHz != null ? ` · ${tbm.frequencyHz.toLocaleString('en-US')} Hz` : '';
+    pairs.push(['Band', renderText(tbm.label) + renderText(tf)]);
+  }
+
+  if (isThdResult(tr)) {
+    pairs.push(
+      ['Type', 'THD'],
+      ['Fundamental', `${tr.fundamentalHz} Hz`],
+      ['THD', `${tr.thdPercent.toFixed(3)} %`],
+    );
+    if (tr.harmonics.length > 0) {
+      const hdbs = tr.harmonics.map((h, i) => `${i + 2}nd: ${h.toFixed(1)} dBc`).join(', ');
+      pairs.push(['Harmonics', hdbs]);
+    }
+  } else {
+    pairs.push(
+      ['Type', 'SMPTE IMD'],
+      ['f1 (LF)', `${tr.f1Hz} Hz`],
+      ['f2 (HF)', `${tr.f2Hz} Hz`],
+      ['IMD', `${tr.imdPercent.toFixed(3)} %`],
+    );
+  }
+
+  return { id: 'thd', title: 'THD / IMD', html: wrKVs(pairs) };
+}
+
+function buildVtaSection(): WebReportSection {
+  const runs = state.vta.runs;
+  const record = selectedRecord();
+  const vtaBands = getVtaImdBands(record);
+  const vtaBand = vtaBands[0] ?? null;
+  const vtaCmp = deriveVtaImdComparison(runs);
+  const vtaGate = deriveVtaSupportedGate({
+    runs,
+    comparison: vtaCmp,
+    hasUsableVtaBand: hasUsableVtaImdBand(vtaBand),
+    hasVtaBandAtAll: vtaBands.length > 0,
+    capturingRunId: state.vta.capturingRunId,
+  });
+  const vtaPolicy = deriveVtaWorkflowStatusPolicy(vtaGate);
+
+  const headerPairs: [string, string][] = [
+    ['Workflow status', renderText(vtaPolicy.workflowStatus) + ' ' + wrBadge('Experimental', 'exp')],
+    ['Measured runs', String(vtaCmp.measuredCount)],
+    ['Placeholder runs', String(vtaCmp.placeholderCount)],
+    ['Comparison status', renderText(vtaCmp.status)],
+    ['Confidence', renderText(vtaCmp.confidence)],
+  ];
+  if (vtaBand) {
+    headerPairs.push(['IMD band', renderText(vtaBand.label)]);
+  }
+
+  let candidateHtml = '';
+  if (vtaCmp.status === 'experimental_candidate' && vtaCmp.candidateRunId !== null) {
+    const cPairs: [string, string][] = [
+      ['Candidate label', renderText(vtaCmp.candidateHeightLabel ?? '—')],
+      ...(vtaCmp.candidateHeightMm !== null ? [['Candidate height', `${vtaCmp.candidateHeightMm} mm`] as [string, string]] : []),
+      ...(vtaCmp.candidateImdPercent !== null ? [['Candidate IMD', `${vtaCmp.candidateImdPercent.toFixed(2)} %`] as [string, string]] : []),
+      ...(vtaCmp.nextBestDeltaPercent !== null ? [['Delta to next best', `${vtaCmp.nextBestDeltaPercent.toFixed(3)} %`] as [string, string]] : []),
+    ];
+    candidateHtml = `<h3 style="font-size:var(--ea-text-sm);font-weight:600;margin:var(--ea-space-3) 0 var(--ea-space-2)">Experimental candidate</h3>` + wrKVs(cPairs);
+  }
+
+  let runsHtml = '';
+  if (runs.length > 0) {
+    const rows = runs.map(r => {
+      const imd = r.imdPercent !== null ? `${r.imdPercent.toFixed(2)} %` : 'not measured';
+      const mm = r.heightMm !== null ? `${r.heightMm} mm` : '—';
+      const confBadge = r.confidence === 'experimental' ? wrBadge('experimental', 'exp') : wrBadge(r.confidence, 'info');
+      return `<tr>
+        <td>${renderText(r.heightLabel || '—')}</td>
+        <td>${renderText(mm)}</td>
+        <td>${renderText(imd)}</td>
+        <td>${renderText(r.source)}</td>
+        <td>${confBadge}</td>
+        <td>${renderText(r.note ? r.note.slice(0, 80) : '')}</td>
+      </tr>`;
+    }).join('');
+    runsHtml = `<h3 style="font-size:var(--ea-text-sm);font-weight:600;margin:var(--ea-space-3) 0 var(--ea-space-2)">Runs (${runs.length})</h3>
+      <table class="ea-webreport-table">
+        <thead><tr><th>Label</th><th>Height</th><th>IMD</th><th>Source</th><th>Confidence</th><th>Note</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  } else {
+    runsHtml = wrEmpty();
+  }
+
+  const gatePairs: [string, string][] = [
+    ['Gate status', renderText(vtaGate.status)],
+    ['Gate passed', `${vtaGate.passedCount} / ${vtaGate.totalCount}`],
+  ];
+  const gateRows = vtaGate.criteria.map(c =>
+    `<tr><td>${c.passed ? '✓' : '✗'}</td><td>${renderText(c.label)}</td><td>${renderText(c.detail)}</td></tr>`
+  ).join('');
+  const gateHtml = `<h3 style="font-size:var(--ea-text-sm);font-weight:600;margin:var(--ea-space-3) 0 var(--ea-space-2)">Supported readiness gate</h3>`
+    + wrKVs(gatePairs)
+    + `<table class="ea-webreport-table"><thead><tr><th></th><th>Criterion</th><th>Detail</th></tr></thead><tbody>${gateRows}</tbody></table>`
+    + wrNote('Gate status does not change VTA workflow status — remains Planned until formally reviewed.');
+
+  const policyHtml = `<h3 style="font-size:var(--ea-text-sm);font-weight:600;margin:var(--ea-space-3) 0 var(--ea-space-2)">Workflow status policy</h3>`
+    + wrKVs([
+      ['Policy status', renderText(vtaPolicy.status)],
+      ['Workflow status', renderText(vtaPolicy.workflowStatus)],
+      ['Policy reason', renderText(vtaPolicy.reason)],
+    ])
+    + `<p style="font-size:var(--ea-text-sm);margin:var(--ea-space-2) 0 var(--ea-space-1)">Required before a supported lift:</p>`
+    + `<ul style="margin:0;padding-left:var(--ea-space-4);font-size:var(--ea-text-sm)">${vtaPolicy.requiredBeforeSupported.map(r => `<li>${renderText(r)}</li>`).join('')}</ul>`;
+
+  const disclaimer = wrNote('Experimental only — not a final recommendation.', 'warn');
+
+  return {
+    id: 'vta',
+    title: 'VTA IMD Optimizer — Experimental',
+    html: wrKVs(headerPairs) + wrWarnings(vtaCmp.warnings) + candidateHtml + runsHtml + gateHtml + policyHtml + disclaimer,
+  };
+}
+
+export function buildMeasurementLabWebReport(): WebReportPayload {
+  const generatedAt = new Date().toISOString();
+  const record = selectedRecord();
+  const subtitle = record
+    ? `Measurement Lab · ${record.manufacturer} — ${record.title}`
+    : 'Measurement Lab · No test record selected';
+
+  const sections: WebReportSection[] = [
+    buildSummarySection(),
+    buildTestRecordSection(),
+    buildChainReadinessSection(),
+    buildReferenceLevelSection(),
+    buildSpeedSection(),
+    buildNoiseFloorSection(),
+    buildChannelSection(),
+    buildFreqSection(),
+    buildThdSection(),
+    buildVtaSection(),
+  ];
+
+  return { title: 'Engrove Measurement Lab — Session Report', subtitle, generatedAt, sections };
+}
+
+// ── End S5J ──────────────────────────────────────────────────────────────────
+
 function renderChainReadinessPanel(els: Elements): void {
   const body = els.chainReadinessBody;
   if (!body) return;
@@ -5833,6 +6371,11 @@ export function enableMeasurementLabInteractions(): void {
     state.sourceMode = 'self-test';
     renderSourceMode(els);
     void connectMeasurementLab(els);
+  });
+
+  els.webReportBtn?.addEventListener('click', () => {
+    openWebReportModal(buildMeasurementLabWebReport());
+    appendLog('Opened web report.');
   });
 
   els.exportBtn?.addEventListener('click', () => {
