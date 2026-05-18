@@ -3394,3 +3394,79 @@ function checkS5OFreqResponseDeviation() {
 }
 
 checkS5OFreqResponseDeviation();
+
+function checkS5PResonanceFoundation() {
+  const renderSrcPath   = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const resonanceEngPath = join(repoRoot, 'src/modules/measurement-lab/engine/resonance.ts');
+  const cssSrcPath      = join(repoRoot, 'src/modules/measurement-lab/ui/measurementLab.css');
+
+  for (const p of [renderSrcPath, resonanceEngPath, cssSrcPath]) {
+    if (!existsSync(p)) {
+      console.error(`S5P static check FAIL: required file not found: ${p}`);
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const uiSrc     = readFileSync(renderSrcPath, 'utf8');
+  const engSrc    = readFileSync(resonanceEngPath, 'utf8');
+  const cssSrc    = readFileSync(cssSrcPath, 'utf8');
+
+  const checks = [
+    // 1. ResonanceDiagnosticMeta type in resonance.ts
+    ['ResonanceDiagnosticMeta type in resonance.ts', /ResonanceDiagnosticMeta/.test(engSrc)],
+    // 2. buildResonanceDiagnosticMeta function in resonance.ts
+    ['buildResonanceDiagnosticMeta in resonance.ts', /function buildResonanceDiagnosticMeta/.test(engSrc)],
+    // 3. typical range note mentions 8-12 Hz / 12-16 Hz
+    ['typicalRangeNote mentions typical Hz range', /8.{1,3}12 Hz|12.{1,3}16 Hz/.test(engSrc)],
+    // 4. limitations note mentions groove noise / rumble
+    ['limitationsNote mentions groove noise or rumble', /groove noise|rumble/.test(engSrc)],
+    // 5. wow band overlap note present
+    ['wowBandOverlapNote present', /wowBandOverlapNote/.test(engSrc)],
+    // 6. resultSource field added to ResonanceStateBag
+    ['resultSource field in ResonanceStateBag', /resultSource\s*:\s*'live_capture'\s*\|\s*'self_test'\s*\|\s*null/.test(uiSrc)],
+    // 7. runQuality field added to ResonanceStateBag
+    ['runQuality field in ResonanceStateBag', /runQuality\s*:\s*MeasurementRunQuality\s*\|\s*null/.test(uiSrc)],
+    // 8. resonance runQuality derived with deriveMeasurementRunQuality
+    ['resonance runQuality derived in startResonanceCapture', /state\.resonance\.runQuality\s*=\s*deriveMeasurementRunQuality/.test(uiSrc)],
+    // 9. resonance resultSource set in startResonanceCapture
+    ['resonance resultSource set in startResonanceCapture', /state\.resonance\.resultSource\s*=\s*captureSource/.test(uiSrc)],
+    // 10. JSON export resonance has source field
+    ['resonance JSON export includes source field', /source\s*:\s*state\.resonance\.resultSource/.test(uiSrc)],
+    // 11. JSON export resonance has run_quality field
+    ['resonance JSON export includes run_quality', /run_quality\s*:/.test(uiSrc) && /diagnostic_notes/.test(uiSrc)],
+    // 12. JSON export resonance has diagnostic_notes
+    ['resonance JSON export includes diagnostic_notes', /diagnostic_notes\s*:\s*\{/.test(uiSrc)],
+    // 13. buildResonanceSection function in render file
+    ['buildResonanceSection function in render file', /function buildResonanceSection/.test(uiSrc)],
+    // 14. buildResonanceSection included in buildMeasurementLabWebReport
+    ['buildResonanceSection called in buildMeasurementLabWebReport', /buildResonanceSection\(\)/.test(uiSrc)],
+    // 15. resonance text report shows no-data state
+    ['resonance text report has no-data state', /Not captured in this session/.test(uiSrc)],
+    // 16. mlab-resonance-diagnostic CSS class present
+    ['mlab-resonance-diagnostic CSS class present', /\.mlab-resonance-diagnostic/.test(cssSrc)],
+    // 17. buildFreqResponseSvg still present (S5K regression)
+    ['buildFreqResponseSvg still present (S5K regression)', /buildFreqResponseSvg/.test(uiSrc)],
+    // 18. speed_diagnostics still present (S5N regression)
+    ['speed_diagnostics still present (S5N regression)', /speed_diagnostics/.test(uiSrc)],
+    // 19. frequency_response deviation still present (S5O regression)
+    ['freq deviation still present (S5O regression)', /computeFreqDeviationSummary/.test(uiSrc)],
+    // 20. input_scope still present (S5M regression)
+    ['input_scope still present (S5M regression)', /input_scope/.test(uiSrc)],
+  ];
+
+  let allPass = true;
+  for (const [label, ok] of checks) {
+    if (!ok) {
+      console.error(`S5P static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S5P static source check (Resonance Measurement Foundation): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS5PResonanceFoundation();

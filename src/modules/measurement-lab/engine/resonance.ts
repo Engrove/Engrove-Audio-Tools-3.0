@@ -128,3 +128,28 @@ export function analyseResonance(
     sampleCount: Math.max(0, samples.length - settleN),
   };
 }
+
+// ── S5P: Resonance diagnostic metadata ───────────────────────────────────────
+
+export type ResonanceDiagnosticMeta = {
+  readonly measurementNote: string;
+  readonly qEstimateNote: string;
+  readonly typicalRangeNote: string;
+  readonly limitationsNote: string;
+  readonly wowBandOverlapNote: string;
+};
+
+export function buildResonanceDiagnosticMeta(): ResonanceDiagnosticMeta {
+  return {
+    measurementNote:
+      'Captures the tonearm–cartridge system resonant frequency from the peak of the amplitude envelope during a low-frequency sweep (typically 5–25 Hz). Peak sample index is mapped to frequency via the sweep time–frequency relationship.',
+    qEstimateNote:
+      'Q (quality factor) is estimated from the −3 dB bandwidth of the envelope peak. Higher Q indicates sharper, less-damped resonance. Values are approximate; envelope LP smoothing introduces a bias that narrows effective bandwidth.',
+    typicalRangeNote:
+      'Typical tonearm–cartridge resonance: 8–12 Hz for MM cartridges, 12–16 Hz for MC. Values outside 5–20 Hz may indicate a cartridge–arm compliance mismatch or a measurement artifact.',
+    limitationsNote:
+      'Measures the combined tonearm + cartridge system. Cannot separate individual arm or cartridge contribution. Accuracy depends on the test record providing a clean, low-distortion sweep in the measured frequency range. Groove noise and rumble can distort envelope peak detection below 10 Hz.',
+    wowBandOverlapNote:
+      'The resonance measurement window (5–25 Hz) overlaps the wow modulation band (<6 Hz) and typical turntable rumble bands. Wow, flutter or rumble contributions to the captured signal are not filtered before peak detection.',
+  };
+}

@@ -32,7 +32,7 @@ import { summariseChannelBalance } from '../engine/crosstalk';
 import { computeFrequencyResponse, computeFreqDeviationSummary, type FreqResponseResult, type FreqDeviationSummary } from '../engine/freqResponse';
 import { computeRiaaMagnitudeDb } from '../engine/iriaaFilter';
 import { analyseTHD, analyseIMD, type ThdResult, type ImdResult } from '../engine/thd';
-import { analyseResonance, type ResonanceResult, type ResonanceSweepType } from '../engine/resonance';
+import { analyseResonance, buildResonanceDiagnosticMeta, type ResonanceResult, type ResonanceSweepType, type ResonanceDiagnosticMeta } from '../engine/resonance';
 import { analyzeReferenceLevel, type ReferenceLevelResult } from '../engine/referenceLevel';
 import {
   addOrReplaceEntry,
@@ -247,6 +247,8 @@ type ResonanceStateBag = {
   active: boolean;
   elapsedSeconds: number;
   result: ResonanceResult | null;
+  resultSource: 'live_capture' | 'self_test' | null;
+  runQuality: MeasurementRunQuality | null;
   capture: SweepCapture | null;
 };
 
@@ -507,6 +509,8 @@ const state: LabState = {
     active: false,
     elapsedSeconds: 0,
     result: null,
+    resultSource: null,
+    runQuality: null,
     capture: null,
   },
   log: [],
@@ -1278,14 +1282,30 @@ function buildSessionJson(): SessionJson {
       thd: thdResult && thdResult.type === 'thd' ? thdResult : null,
       imd: thdResult && thdResult.type === 'imd' ? thdResult : null,
       resonance: resResult
-        ? {
-            peak_frequency_hz: resResult.peakFrequencyHz,
-            peak_amplitude_dbfs: resResult.peakAmplitudeDbFs,
-            q_estimate: resResult.qEstimate,
-            sweep_type: state.resonance.sweepType,
-            sweep_from_hz: state.resonance.fromHz,
-            sweep_to_hz: state.resonance.toHz,
-          }
+        ? (() => {
+            const diagMeta = buildResonanceDiagnosticMeta();
+            const rq = state.resonance.runQuality;
+            return {
+              source: state.resonance.resultSource ?? 'live_capture',
+              peak_frequency_hz: resResult.peakFrequencyHz,
+              peak_amplitude_dbfs: resResult.peakAmplitudeDbFs,
+              q_estimate: resResult.qEstimate,
+              sample_count: resResult.sampleCount,
+              sweep_type: state.resonance.sweepType,
+              sweep_from_hz: state.resonance.fromHz,
+              sweep_to_hz: state.resonance.toHz,
+              run_quality: rq
+                ? { status: rq.status, clipping: rq.clipping, low_signal: rq.lowSignal, channel_imbalance_db: rq.channelImbalanceDb, warnings: Array.from(rq.warnings) }
+                : null,
+              diagnostic_notes: {
+                measurement_note: diagMeta.measurementNote,
+                q_estimate_note: diagMeta.qEstimateNote,
+                typical_range_note: diagMeta.typicalRangeNote,
+                limitations_note: diagMeta.limitationsNote,
+                wow_band_overlap_note: diagMeta.wowBandOverlapNote,
+              },
+            };
+          })()
         : null,
       reference_level: (() => {
         const r = state.refLevel.result;
@@ -1731,16 +1751,28 @@ function buildReportText(): string {
   }
 
   // Resonance
+  lines.push('RESONANCE');
   const rr = state.resonance.result;
   if (rr) {
-    lines.push('RESONANCE');
+    lines.push(`  Source:                ${state.resonance.resultSource ?? 'live_capture'}`);
     lines.push(`  Peak frequency:        ${rr.peakFrequencyHz.toFixed(2)} Hz`);
     lines.push(`  Peak amplitude:        ${rr.peakAmplitudeDbFs.toFixed(1)} dBFS`);
     lines.push(`  Q estimate:            ${rr.qEstimate != null ? rr.qEstimate.toFixed(2) : 'n/a'}`);
     lines.push(`  Sweep type:            ${state.resonance.sweepType}`);
     lines.push(`  Sweep range:           ${state.resonance.fromHz}–${state.resonance.toHz} Hz`);
-    lines.push('');
+    if (state.resonance.runQuality) {
+      lines.push(`  Run quality:           ${state.resonance.runQuality.status}`);
+      for (const w of state.resonance.runQuality.warnings) {
+        lines.push(`  Warning:               ${w}`);
+      }
+    }
+    const diagMeta = buildResonanceDiagnosticMeta();
+    lines.push(`  (${diagMeta.typicalRangeNote})`);
+    lines.push(`  (${diagMeta.limitationsNote})`);
+  } else {
+    lines.push('  Not captured in this session.');
   }
+  lines.push('');
 
   // Reference level calibration
   const refr = state.refLevel.result;
@@ -3971,15 +4003,27 @@ function startResonanceCapture(els: Elements): void {
   state.resonance.active = true;
   state.resonance.elapsedSeconds = 0;
   state.resonance.result = null;
+  state.resonance.resultSource = null;
+  state.resonance.runQuality = null;
   renderResonancePanel(els);
 
+  const captureSource = state.sourceMode === 'self-test' ? 'self_test' : 'live_capture';
   const { durationSeconds, fromHz, toHz, sweepType } = state.resonance;
   state.resonance.capture = createSweepCapture(context, source, durationSeconds, {
     onProgress: (elapsed) => { state.resonance.elapsedSeconds = elapsed; renderResonancePanel(els); },
     onDone: (samples) => {
       state.resonance.capture = null;
       state.resonance.active = false;
+      state.resonance.resultSource = captureSource;
       state.resonance.result = analyseResonance(samples, context.sampleRate, fromHz, toHz, sweepType);
+      state.resonance.runQuality = deriveMeasurementRunQuality({
+        leftRmsDbfs: state.channelLevels.L.rmsDbFs,
+        rightRmsDbfs: state.channelLevels.R.rmsDbFs,
+        leftPeakDbfs: state.channelLevels.L.peakDbFs,
+        rightPeakDbfs: state.channelLevels.R.peakDbFs,
+        source: captureSource,
+        measurementKind: 'test_tone',
+      });
       appendLog(`Resonance complete — peak ${state.resonance.result.peakFrequencyHz.toFixed(2)} Hz, Q ${state.resonance.result.qEstimate?.toFixed(2) ?? 'n/a'}`);
       renderResonancePanel(els);
     },
@@ -4019,8 +4063,22 @@ function renderResonancePanel(els: Elements): void {
     const r = state.resonance.result;
     const qStr = r.qEstimate !== null ? r.qEstimate.toFixed(1) : '—';
     const f0Str = r.peakFrequencyHz.toFixed(1);
+    const sourceBadge = state.resonance.resultSource === 'self_test'
+      ? '<span class="ea-badge ea-badge--setup">Self-test / Simulated</span>'
+      : '<span class="ea-badge ea-badge--manufacturer">Live capture</span>';
+    const rq = state.resonance.runQuality;
+    const rqHtml = rq ? `
+        <div class="mlab-wf-result-row">
+          <span class="mlab-wf-result-label">Run quality</span>
+          <span class="mlab-wf-result-value">${renderText(rq.status)}${rq.warnings.length ? ' — ' + Array.from(rq.warnings).map(renderText).join('; ') : ''}</span>
+        </div>` : '';
+    const diagMeta = buildResonanceDiagnosticMeta();
     body.innerHTML = `
       <div class="mlab-wf-result">
+        <div class="mlab-wf-result-row">
+          <span class="mlab-wf-result-label">Source</span>
+          <span class="mlab-wf-result-value">${sourceBadge}</span>
+        </div>
         <div class="mlab-wf-result-row">
           <span class="mlab-wf-result-label">Resonance frequency</span>
           <span class="mlab-wf-result-value">${f0Str}&nbsp;Hz</span>
@@ -4033,7 +4091,14 @@ function renderResonancePanel(els: Elements): void {
           <span class="mlab-wf-result-label">Q estimate</span>
           <span class="mlab-wf-result-value">${qStr}</span>
         </div>
+        ${rqHtml}
         <p class="mlab-wf-note">Sweep ${state.resonance.fromHz}&ndash;${state.resonance.toHz}&nbsp;Hz (${state.resonance.sweepType}) &middot; ${state.resonance.durationSeconds}&nbsp;s</p>
+      </div>
+      <div class="mlab-resonance-diagnostic">
+        <div class="mlab-resonance-diagnostic-head">Diagnostic notes</div>
+        <p class="mlab-resonance-diagnostic-note">${renderText(diagMeta.typicalRangeNote)}</p>
+        <p class="mlab-resonance-diagnostic-note">${renderText(diagMeta.limitationsNote)}</p>
+        <p class="mlab-resonance-diagnostic-note">${renderText(diagMeta.wowBandOverlapNote)}</p>
       </div>
       <div class="mlab-session-controls">
         <button class="ea-button ea-button--primary" type="button" data-mlab-res-start>Measure again</button>
@@ -6068,7 +6133,7 @@ function buildSummarySection(): WebReportSection {
     {
       name: 'Resonance',
       detail: state.resonance.result
-        ? `Captured · peak: ${state.resonance.result.peakFrequencyHz.toFixed(1)} Hz`
+        ? `Captured · source: ${state.resonance.resultSource ?? 'live_capture'} · peak: ${state.resonance.result.peakFrequencyHz.toFixed(1)} Hz${state.resonance.runQuality ? ` · quality: ${state.resonance.runQuality.status}` : ''}`
         : 'Not captured in this session',
       badge: state.resonance.result ? 'ok' : 'info',
     },
@@ -6539,6 +6604,58 @@ function buildThdSection(): WebReportSection {
   return { id: 'thd', title: 'THD / IMD', html: wrKVs(pairs) };
 }
 
+// ── S5P: Resonance web report section ────────────────────────────────────────
+
+function buildResonanceSection(): WebReportSection {
+  const rr = state.resonance.result;
+  if (!rr) {
+    return {
+      id: 'resonance',
+      title: 'Resonance',
+      html: wrEmpty()
+        + wrPlaceholder('No resonance measurement captured in this session. Play a low-frequency sweep band on your test record and use the Resonance panel to capture the result.'),
+    };
+  }
+
+  const diagMeta = buildResonanceDiagnosticMeta();
+  const rq = state.resonance.runQuality;
+  const sourceBadge = state.resonance.resultSource === 'self_test'
+    ? wrBadge('Self-test / Simulated', 'warn')
+    : wrBadge('Live capture', 'ok');
+
+  const pairs: [string, string][] = [
+    ['Source', sourceBadge],
+    ['Resonance frequency', `${rr.peakFrequencyHz.toFixed(2)} Hz`],
+    ['Peak amplitude', `${rr.peakAmplitudeDbFs.toFixed(1)} dBFS`],
+    ['Q estimate', rr.qEstimate !== null ? rr.qEstimate.toFixed(2) : '—'],
+    ['Sweep type', renderText(state.resonance.sweepType)],
+    ['Sweep range', `${state.resonance.fromHz}–${state.resonance.toHz} Hz`],
+    ['Duration', `${state.resonance.durationSeconds} s`],
+    ['Sample count', rr.sampleCount.toLocaleString()],
+  ];
+  if (rq) {
+    pairs.push(['Run quality', renderText(rq.status)]);
+    if (rq.warnings.length > 0) {
+      pairs.push(['Warnings', Array.from(rq.warnings).map(renderText).join('; ')]);
+    }
+  }
+
+  const diagnosticHtml = `
+    <div class="mlab-resonance-diagnostic mlab-resonance-diagnostic--report">
+      <div class="mlab-resonance-diagnostic-head">Diagnostic notes</div>
+      <p class="mlab-resonance-diagnostic-note">${renderText(diagMeta.typicalRangeNote)}</p>
+      <p class="mlab-resonance-diagnostic-note">${renderText(diagMeta.qEstimateNote)}</p>
+      <p class="mlab-resonance-diagnostic-note">${renderText(diagMeta.limitationsNote)}</p>
+      <p class="mlab-resonance-diagnostic-note">${renderText(diagMeta.wowBandOverlapNote)}</p>
+    </div>`;
+
+  return {
+    id: 'resonance',
+    title: 'Resonance',
+    html: wrKVs(pairs) + diagnosticHtml,
+  };
+}
+
 function buildVtaSection(): WebReportSection {
   const runs = state.vta.runs;
   const record = selectedRecord();
@@ -6647,6 +6764,7 @@ export function buildMeasurementLabWebReport(): WebReportPayload {
     buildChannelSection(),
     buildFreqSection(),
     buildThdSection(),
+    buildResonanceSection(),
     buildVtaSection(),
   ];
 
