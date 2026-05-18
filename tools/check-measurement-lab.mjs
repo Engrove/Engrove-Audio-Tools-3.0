@@ -3048,3 +3048,69 @@ function checkS5JWebReport() {
 }
 
 checkS5JWebReport();
+
+function checkS5KFreqCurveAndAnalytics() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const modalSrcPath  = join(repoRoot, 'src/shared/ui/webReportModal.ts');
+  const indexHtmlPath = join(repoRoot, 'index.html');
+  const headersPath   = join(repoRoot, 'public/_headers');
+
+  for (const p of [renderSrcPath, modalSrcPath, indexHtmlPath, headersPath]) {
+    if (!existsSync(p)) {
+      console.error(`S5K: missing file: ${p}`);
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const uiSrc      = readFileSync(renderSrcPath, 'utf8');
+  const modalSrc   = readFileSync(modalSrcPath, 'utf8');
+  const indexHtml  = readFileSync(indexHtmlPath, 'utf8');
+  const headersSrc = readFileSync(headersPath, 'utf8');
+
+  const checks = [
+    // 1. Real curve rendering path: buildFreqResponseSvg is called inside buildFreqSection
+    ['buildFreqResponseSvg called inside buildFreqSection', /buildFreqSection[\s\S]{0,2000}buildFreqResponseSvg/.test(uiSrc)],
+    // 2. No fake frequency data introduced (no hardcoded magnitudesDb / fake Float64Array in report)
+    ['No fake magnitudesDb array in report builder', !/magnitudesDb\s*=\s*new Float64Array\s*\(/.test(uiSrc)],
+    // 3. No-data placeholder remains when no real data
+    ['No-data placeholder kept when freq data absent', /buildFreqSection[\s\S]{0,200}wrEmpty\(\)|wrPlaceholder/.test(uiSrc)],
+    // 4. Simple Analytics script present in index.html
+    ['Simple Analytics script in index.html', /scripts\.simpleanalyticscdn\.com\/latest\.js/.test(indexHtml)],
+    // 5. Simple Analytics async attribute present
+    ['Simple Analytics script has async attribute', /<script[^>]+async[^>]+scripts\.simpleanalyticscdn\.com|<script[^>]+scripts\.simpleanalyticscdn\.com[^>]+async/.test(indexHtml)],
+    // 6. CSP allows simpleanalyticscdn.com in script-src
+    ['CSP script-src includes simpleanalyticscdn.com', /script-src[^;]*https:\/\/scripts\.simpleanalyticscdn\.com/.test(headersSrc)],
+    // 7. CSP still includes Cloudflare static script source
+    ['CSP script-src retains Cloudflare static', /script-src[^;]*https:\/\/static\.cloudflareinsights\.com/.test(headersSrc)],
+    // 8. CSP still includes Microsoft Clarity
+    ['CSP script-src retains Clarity', /script-src[^;]*https:\/\/\*\.clarity\.ms/.test(headersSrc)],
+    // 9. S5J openWebReportModal still present
+    ['S5J openWebReportModal still present', /openWebReportModal/.test(uiSrc)],
+    // 10. S5J buildMeasurementLabWebReport still present
+    ['S5J buildMeasurementLabWebReport still present', /buildMeasurementLabWebReport/.test(uiSrc)],
+    // 11. VTA still planned
+    ['VTA workflow still planned', /status\s*:\s*'planned'\s*as\s*const/.test(uiSrc)],
+    // 12. JSON export still present
+    ['JSON export (downloadSessionJson) still present', /downloadSessionJson/.test(uiSrc)],
+    // 13. Text report still present
+    ['Text report (downloadReportText) still present', /downloadReportText/.test(uiSrc)],
+    // 14. Print CSS for freq chart in modal styles
+    ['Print-friendly freq chart CSS in modal', /mlab-freq-response.*stroke|stroke.*mlab-freq-response/.test(modalSrc) || /\.mlab-freq-response/.test(modalSrc)],
+  ];
+
+  let allPass = true;
+  for (const [label, ok] of checks) {
+    if (!ok) {
+      console.error(`S5K static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S5K static source check (Freq Response Curve + Simple Analytics CSP): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS5KFreqCurveAndAnalytics();

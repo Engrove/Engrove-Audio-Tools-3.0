@@ -5984,7 +5984,11 @@ function buildChannelSection(): WebReportSection {
 function buildFreqSection(): WebReportSection {
   const fr = state.freq.result;
   if (!fr) {
-    return { id: 'freq', title: 'Frequency Response', html: wrEmpty() };
+    return {
+      id: 'freq',
+      title: 'Frequency Response',
+      html: wrEmpty() + wrPlaceholder('Graph/curve output will appear here when trace data is available.'),
+    };
   }
 
   const pairs: [string, string][] = [
@@ -6003,12 +6007,19 @@ function buildFreqSection(): WebReportSection {
     ['Range', `${fr.frequenciesHz[0]?.toFixed(0) ?? '?'} – ${fr.frequenciesHz[fr.frequenciesHz.length - 1]?.toFixed(0) ?? '?'} Hz`],
   );
 
+  // Real data present — render the actual frequency response curve
+  const svgChart = buildFreqResponseSvg(fr, state.iriaaEnabled);
+  const sourceBadge = state.freq.resultSource === 'self_test'
+    ? wrBadge('Self-test / Simulated', 'warn')
+    : wrBadge('Live capture', 'ok');
+
   return {
     id: 'freq',
     title: 'Frequency Response',
     html: wrKVs(pairs)
-      + wrNote('Measures full playback/capture chain, not cartridge-only response. Full data in JSON export.')
-      + wrPlaceholder('Graph/curve output will appear here when trace data is available.'),
+      + `<div class="ea-webreport-freq-chart-wrap">${svgChart}</div>`
+      + `<p style="font-size:var(--ea-text-sm);margin:var(--ea-space-1) 0">Source: ${sourceBadge}</p>`
+      + wrNote('Measures full playback/capture chain, not cartridge-only response. Full data in JSON export.'),
   };
 }
 

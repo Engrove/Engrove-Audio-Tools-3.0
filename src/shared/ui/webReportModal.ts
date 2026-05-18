@@ -367,6 +367,27 @@ const webReportCss = `
 
   .ea-webreport-note--warn { border-left-color: #b45309; }
   .ea-webreport-note--err  { border-left-color: #b91c1c; }
+
+  /* ── Freq chart print overrides ─── */
+  .ea-webreport-freq-chart-wrap {
+    margin: 4mm 0;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .mlab-freq-chart {
+    max-width: 100%;
+  }
+
+  .mlab-freq-grid       { stroke: #ccc; }
+  .mlab-freq-grid--zero { stroke: #888; stroke-width: 1.5; }
+  .mlab-freq-axis-label { fill: #555; }
+  .mlab-freq-response   { stroke: #1d4ed8; stroke-width: 1.5; }
+  .mlab-freq-riaa       { stroke: #888; }
+
+  .mlab-freq-legend          { color: #555; }
+  .mlab-freq-legend-swatch   { background: #1d4ed8; }
+  .mlab-freq-legend-swatch--dashed { border-top-color: #888; }
 }
 `;
 
