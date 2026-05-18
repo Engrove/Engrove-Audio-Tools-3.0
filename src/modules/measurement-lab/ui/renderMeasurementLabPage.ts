@@ -1758,11 +1758,15 @@ function renderSpeedPanel(els: Elements): void {
   `;
 
   if (state.speed.active) {
-    const pct = Math.min(100, (state.speed.elapsedSeconds / speedMeasurementDurationSeconds) * 100);
-    const remaining = Math.max(0, speedMeasurementDurationSeconds - state.speed.elapsedSeconds);
+    const activeSpeedDurationSeconds = (() => {
+      const d = state.speed.lastSettings?.captureDurationSeconds;
+      return (d !== undefined && Number.isFinite(d) && d > 0) ? d : speedMeasurementDurationSeconds;
+    })();
+    const pct = Math.min(100, (state.speed.elapsedSeconds / activeSpeedDurationSeconds) * 100);
+    const remaining = Math.max(0, activeSpeedDurationSeconds - state.speed.elapsedSeconds);
     body.innerHTML = `
       ${ctxToggleHtml}
-      <p class="ea-muted">Recording ${state.speed.referenceHz}&thinsp;Hz reference tone&hellip;</p>
+      <p class="ea-muted">Recording ${state.speed.referenceHz.toLocaleString('en-US')}&thinsp;Hz reference tone for ${activeSpeedDurationSeconds.toFixed(1)}&thinsp;s&hellip;</p>
       <div class="mlab-progress-track" role="progressbar" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100" aria-label="Recording progress">
         <div class="mlab-progress-fill" style="width:${pct.toFixed(1)}%"></div>
       </div>

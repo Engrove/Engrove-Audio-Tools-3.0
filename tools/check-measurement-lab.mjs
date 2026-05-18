@@ -2603,3 +2603,64 @@ function checkS5H2EditableSpeedParams() {
 }
 
 checkS5H2EditableSpeedParams();
+
+function checkS5H3ActiveDurationBinding() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  if (!existsSync(renderSrcPath)) {
+    console.error('S5H.3 static check: source file not found');
+    process.exitCode = 1;
+    return;
+  }
+  const src = readFileSync(renderSrcPath, 'utf8');
+
+  // Extract the active speed block for targeted checks
+  const activeBlockIdx = src.indexOf('if (state.speed.active) {');
+  const activeBlockSrc = activeBlockIdx >= 0 ? src.slice(activeBlockIdx, activeBlockIdx + 800) : '';
+
+  // Build regexes via constructor to avoid shell escape issues
+  const reActiveDurVar = new RegExp('activeSpeedDurationSeconds');
+  const reActiveDurBinding = new RegExp('activeSpeedDurationSeconds[\\s\\S]{0,200}captureDurationSeconds');
+  const rePctUsesActive = new RegExp('pct[\\s\\S]{0,60}activeSpeedDurationSeconds');
+  const reRemainingUsesActive = new RegExp('remaining[\\s\\S]{0,60}activeSpeedDurationSeconds');
+  const reLastSettingsBeforeActive = new RegExp('lastSettings\\s*=\\s*settings[\\s\\S]{0,200}state\\.speed\\.active\\s*=\\s*true');
+  const reNoDivByConst = new RegExp('elapsedSeconds\\s*/\\s*speedMeasurementDurationSeconds');
+  const reNoSubConst = new RegExp('speedMeasurementDurationSeconds\\s*-\\s*state\\.speed\\.elapsedSeconds');
+
+  const checks = [
+    // 1. activeSpeedDurationSeconds variable is defined in active block
+    ['active block defines activeSpeedDurationSeconds', reActiveDurVar.test(activeBlockSrc)],
+    // 2. activeSpeedDurationSeconds binds to lastSettings.captureDurationSeconds
+    ['activeSpeedDurationSeconds reads captureDurationSeconds from lastSettings', reActiveDurBinding.test(activeBlockSrc)],
+    // 3. pct uses activeSpeedDurationSeconds, not the constant
+    ['progress pct uses activeSpeedDurationSeconds', rePctUsesActive.test(activeBlockSrc)],
+    // 4. remaining uses activeSpeedDurationSeconds, not the constant
+    ['remaining time uses activeSpeedDurationSeconds', reRemainingUsesActive.test(activeBlockSrc)],
+    // 5. lastSettings is assigned before active = true
+    ['lastSettings = settings before active = true', reLastSettingsBeforeActive.test(src)],
+    // 6. No direct division by speedMeasurementDurationSeconds in active block
+    ['no direct elapsedSeconds / speedMeasurementDurationSeconds in active block', !reNoDivByConst.test(activeBlockSrc)],
+    // 7. No direct speedMeasurementDurationSeconds - elapsedSeconds in active block
+    ['no direct speedMeasurementDurationSeconds - elapsedSeconds in active block', !reNoSubConst.test(activeBlockSrc)],
+    // 8. Fallback to speedMeasurementDurationSeconds when lastSettings absent
+    ['activeSpeedDurationSeconds fallback to speedMeasurementDurationSeconds', /activeSpeedDurationSeconds[\s\S]{0,300}speedMeasurementDurationSeconds/.test(activeBlockSrc)],
+    // 9. S5H.2 settings still present (regression guard)
+    ['S5H.2 deriveSpeedMeasurementSettings still present', /function deriveSpeedMeasurementSettings/.test(src)],
+    // 10. VTA workflow still planned
+    ['VTA workflow still planned', /status\s*:\s*'planned'\s*as\s*const/.test(src)],
+  ];
+
+  let allPass = true;
+  for (const [label, ok] of checks) {
+    if (!ok) {
+      console.error(`S5H.3 static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S5H.3 static source check (Active Speed Capture Duration Progress Binding): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS5H3ActiveDurationBinding();
