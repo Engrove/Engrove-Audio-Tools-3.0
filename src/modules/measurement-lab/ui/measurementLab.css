@@ -1029,6 +1029,50 @@ button.mlab-coverage-badge--available:focus-visible {
   border-left: 2px solid var(--ea-border-subtle);
 }
 
+.mlab-vta-comparison-confidence {
+  margin-top: var(--ea-space-1);
+  font-size: var(--ea-font-size-small);
+  color: var(--ea-text-low);
+}
+
+.mlab-vta-confidence-level {
+  font-size: var(--ea-font-size-micro);
+  font-weight: 700;
+  letter-spacing: var(--ea-letter-label);
+  text-transform: uppercase;
+  display: inline-block;
+  padding: 1px var(--ea-space-2);
+  border-radius: var(--ea-radius-pill);
+}
+
+.mlab-vta-confidence-level--insufficient {
+  background: var(--ea-bg-input);
+  color: var(--ea-text-low);
+  opacity: 0.7;
+}
+
+.mlab-vta-confidence-level--low {
+  background: var(--ea-bg-input);
+  color: var(--ea-text-low);
+}
+
+.mlab-vta-confidence-level--medium {
+  background: var(--ea-bg-panel-alt);
+  color: var(--ea-text-high);
+}
+
+.mlab-vta-confidence-level--high {
+  background: var(--ea-bg-panel-alt);
+  color: var(--ea-text-high);
+  font-weight: 800;
+}
+
+.mlab-vta-confidence-reason {
+  font-size: var(--ea-font-size-micro);
+  color: var(--ea-text-low);
+  margin-left: var(--ea-space-1);
+}
+
 @media (max-width: 1180px) {
   .mlab-workbench-grid {
     grid-template-columns: 1fr;

@@ -1868,7 +1868,7 @@ function checkS5DVtaComparison() {
       /function deriveVtaImdComparison[\s\S]{0,700}not_enough_measured_runs/],
     // 5. experimental_candidate status in deriveVtaImdComparison
     ['experimental_candidate status in deriveVtaImdComparison',
-      /function deriveVtaImdComparison[\s\S]{0,1500}experimental_candidate/],
+      /function deriveVtaImdComparison[\s\S]{0,2900}experimental_candidate/],
     // 6. candidateRunId in vtaRunTableMarkup opts
     ['candidateRunId in vtaRunTableMarkup opts',
       /function vtaRunTableMarkup[\s\S]{0,200}candidateRunId\s*:\s*string\s*\|\s*null/],
@@ -1894,7 +1894,7 @@ function checkS5DVtaComparison() {
       /comparison\s*:\s*\(\s*\(\s*\)\s*=>[\s\S]{0,200}status\s*:\s*cmp\.status/],
     // 14. measured_count in comparison export
     ['measured_count in comparison export',
-      /comparison\s*:\s*\(\s*\(\s*\)\s*=>[\s\S]{0,200}measured_count\s*:\s*cmp\.measuredCount/],
+      /comparison\s*:\s*\(\s*\(\s*\)\s*=>[\s\S]{0,350}measured_count\s*:\s*cmp\.measuredCount/],
     // 15. candidate_imd_percent in comparison export (not best_setting)
     ['candidate_imd_percent in comparison export',
       /comparison\s*:\s*\(\s*\(\s*\)\s*=>[\s\S]{0,400}candidate_imd_percent\s*:\s*cmp\.candidateImdPercent/],
@@ -2072,6 +2072,75 @@ function checkS5D1NoClaim() {
 }
 
 checkS5D1NoClaim();
+
+function checkS5EVtaConfidence() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  if (!existsSync(renderSrcPath)) {
+    console.error('S5E static check: source file not found');
+    process.exitCode = 1;
+    return;
+  }
+  const src = readFileSync(renderSrcPath, 'utf8');
+
+  const checks = [
+    // 1. VtaImdComparisonConfidence type defined
+    ['VtaImdComparisonConfidence type defined', /type VtaImdComparisonConfidence\s*=/],
+    // 2. confidence field in VtaImdComparison type
+    ['confidence field in VtaImdComparison', /type VtaImdComparison[\s\S]{0,400}readonly confidence\s*:/],
+    // 3. confidenceReasons field in VtaImdComparison type
+    ['confidenceReasons field in VtaImdComparison', /type VtaImdComparison[\s\S]{0,500}readonly confidenceReasons\s*:/],
+    // 4. confidence value 'insufficient' in derive function
+    ['insufficient confidence value', /function deriveVtaImdComparison[\s\S]{0,700}confidence\s*:\s*'insufficient'/],
+    // 5. confidence value 'low' in derive function
+    ['low confidence value', /function deriveVtaImdComparison[\s\S]{0,2300}'low'/],
+    // 6. confidence value 'medium' in derive function
+    ['medium confidence value', /function deriveVtaImdComparison[\s\S]{0,1800}'medium'/],
+    // 7. confidence value 'high' in derive function
+    ['high confidence value', /function deriveVtaImdComparison[\s\S]{0,1900}'high'/],
+    // 8. confidenceReasons populated in derive function
+    ['confidenceReasons populated in derive function',
+      /function deriveVtaImdComparison[\s\S]{0,700}confidenceReasons\s*:/],
+    // 9. Comparison confidence shown in UI
+    ['Comparison confidence shown in UI', /Comparison confidence:/],
+    // 10. mlab-vta-confidence-level class used in UI
+    ['mlab-vta-confidence-level class used', /mlab-vta-confidence-level/],
+    // 11. mlab-vta-confidence-level--insufficient modifier
+    ['mlab-vta-confidence-level--insufficient modifier', /mlab-vta-confidence-level--insufficient/],
+    // 12. VTA IMD OPTIMIZER section in report
+    ['VTA IMD OPTIMIZER in report', /VTA IMD OPTIMIZER/],
+    // 13. EXPERIMENTAL label in report
+    ['EXPERIMENTAL label in report', /VTA IMD OPTIMIZER.*EXPERIMENTAL|EXPERIMENTAL.*VTA IMD/],
+    // 14. not a final VTA recommendation in report
+    ['not a final VTA recommendation in report', /not a final VTA recommendation/],
+    // 15. confidence_reasons in JSON export
+    ['confidence_reasons in JSON export',
+      /comparison\s*:\s*\(\s*\(\s*\)\s*=>[\s\S]{0,300}confidence_reasons\s*:/],
+    // 16. confidence in JSON export
+    ['confidence in JSON export',
+      /comparison\s*:\s*\(\s*\(\s*\)\s*=>[\s\S]{0,250}confidence\s*:\s*cmp\.confidence/],
+    // 17. no best_setting / bestSetting / optimal_height / recommended_height
+    ['No final-claim fields in source',
+      !/best_setting|bestSetting|recommended_height|optimal_height/.test(src)],
+    // 18. VTA workflow not supported (check whole file)
+    ['VTA status not supported in source', !/implementationStatus\s*:\s*'supported'/.test(src)],
+  ];
+
+  let allPass = true;
+  for (const [label, result] of checks) {
+    const ok = typeof result === 'boolean' ? result : result.test(src);
+    if (!ok) {
+      console.error(`S5E static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S5E static source check (VTA Comparison Confidence & Report Integration): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS5EVtaConfidence();
 
 try {
   await runChecks();

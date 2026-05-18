@@ -245,7 +245,7 @@ type LabState = {
  * site below; it has no runtime effect.
  */
 const tokenLayoutGeneratedClassNames =
-  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured mlab-vta-candidate-badge mlab-vta-comparison mlab-vta-comparison-candidate mlab-vta-comparison-meta mlab-vta-comparison-warning mlab-vta-comparison-status';
+  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured mlab-vta-candidate-badge mlab-vta-comparison mlab-vta-comparison-candidate mlab-vta-comparison-meta mlab-vta-comparison-warning mlab-vta-comparison-status mlab-vta-comparison-confidence mlab-vta-confidence-level mlab-vta-confidence-level--insufficient mlab-vta-confidence-level--low mlab-vta-confidence-level--medium mlab-vta-confidence-level--high mlab-vta-confidence-reason';
 void tokenLayoutGeneratedClassNames;
 
 const speedMeasurementDurationSeconds = 30;
@@ -941,6 +941,8 @@ function buildSessionJson(): SessionJson {
             const cmp = deriveVtaImdComparison(state.vta.runs);
             return {
               status: cmp.status,
+              confidence: cmp.confidence,
+              confidence_reasons: cmp.confidenceReasons,
               measured_count: cmp.measuredCount,
               placeholder_count: cmp.placeholderCount,
               candidate_run_id: cmp.candidateRunId,
@@ -1185,6 +1187,58 @@ function buildReportText(): string {
         lines.push(`    ${e.bandLabel}  |  ${freq}  |  L: ${fmtDbfs(e.result.leftRmsDbfs)}  R: ${fmtDbfs(e.result.rightRmsDbfs)}  bal: ${bal}  ${clip}  ${e.result.confidence}  [${e.source}]`);
       }
     }
+    lines.push('');
+  }
+
+  // VTA IMD — experimental section
+  if (state.vta.runs.length > 0) {
+    const record = selectedRecord();
+    const vtaBands = getVtaImdBands(record);
+    const vtaBand = vtaBands[0] ?? null;
+    const vtaCmp = deriveVtaImdComparison(state.vta.runs);
+    lines.push('VTA IMD OPTIMIZER — EXPERIMENTAL');
+    lines.push('  Status:                Capture gateway preview — not yet fully validated');
+    if (record) {
+      lines.push(`  Test record:           ${record.manufacturer} — ${record.title}`);
+    }
+    if (vtaBand) {
+      const f1 = vtaBand.f1Hz != null ? `${vtaBand.f1Hz} Hz` : '—';
+      const f2 = vtaBand.f2Hz != null ? `${vtaBand.f2Hz} Hz` : '—';
+      lines.push(`  Band:                  ${vtaBand.label}`);
+      lines.push(`  f1:                    ${f1}`);
+      lines.push(`  f2:                    ${f2}`);
+      lines.push(`  Ratio:                 ${vtaBand.ratio ?? '—'}`);
+      lines.push(`  Standard:              ${vtaBand.standard ?? '—'}`);
+    }
+    lines.push(`  Measured runs:         ${vtaCmp.measuredCount}`);
+    lines.push(`  Placeholder runs:      ${vtaCmp.placeholderCount}`);
+    lines.push('  Runs:');
+    for (const r of state.vta.runs) {
+      const imd = r.imdPercent !== null ? `${r.imdPercent.toFixed(2)} %` : 'not measured';
+      const mm = r.heightMm !== null ? `${r.heightMm} mm` : '—';
+      lines.push(`    ${r.heightLabel || '—'}  |${mm}  |  IMD: ${imd}  |  ${r.source}  |  ${r.confidence}`);
+      if (r.warnings.length > 0) {
+        r.warnings.forEach(w => lines.push(`      Warning: ${w}`));
+      }
+    }
+    lines.push('  Comparison:');
+    lines.push(`    Status:              ${vtaCmp.status}`);
+    lines.push(`    Confidence:          ${vtaCmp.confidence}`);
+    vtaCmp.confidenceReasons.forEach(r => lines.push(`    Confidence reason:   ${r}`));
+    if (vtaCmp.status === 'experimental_candidate') {
+      lines.push(`    Candidate:           ${vtaCmp.candidateHeightLabel ?? '—'}`);
+      if (vtaCmp.candidateHeightMm !== null) {
+        lines.push(`    Candidate height:    ${vtaCmp.candidateHeightMm} mm`);
+      }
+      if (vtaCmp.candidateImdPercent !== null) {
+        lines.push(`    Candidate IMD:       ${vtaCmp.candidateImdPercent.toFixed(2)} %`);
+      }
+      if (vtaCmp.nextBestDeltaPercent !== null) {
+        lines.push(`    Delta to next best:  ${vtaCmp.nextBestDeltaPercent.toFixed(3)} %`);
+      }
+    }
+    vtaCmp.warnings.forEach(w => lines.push(`    Warning: ${w}`));
+    lines.push('  Note: Experimental candidate only — not a final VTA recommendation.');
     lines.push('');
   }
 
@@ -3136,6 +3190,8 @@ function startVtaCapture(els: Elements, runId: string): void {
   });
 }
 
+type VtaImdComparisonConfidence = 'insufficient' | 'low' | 'medium' | 'high';
+
 type VtaImdComparison = {
   readonly measuredCount: number;
   readonly placeholderCount: number;
@@ -3145,6 +3201,8 @@ type VtaImdComparison = {
   readonly candidateHeightLabel: string | null;
   readonly nextBestDeltaPercent: number | null;
   readonly status: 'not_enough_measured_runs' | 'experimental_candidate';
+  readonly confidence: VtaImdComparisonConfidence;
+  readonly confidenceReasons: readonly string[];
   readonly warnings: readonly string[];
 };
 
@@ -3157,16 +3215,28 @@ function deriveVtaImdComparison(runs: readonly VtaImdRun[]): VtaImdComparison {
   const measuredCount = measured.length;
   const placeholderCount = runs.length - measuredCount;
 
-  if (measuredCount < 2) {
+  if (measuredCount === 0) {
     return {
-      measuredCount,
-      placeholderCount,
-      candidateRunId: null,
-      candidateImdPercent: null,
-      candidateHeightMm: null,
-      candidateHeightLabel: null,
+      measuredCount, placeholderCount,
+      candidateRunId: null, candidateImdPercent: null,
+      candidateHeightMm: null, candidateHeightLabel: null,
       nextBestDeltaPercent: null,
       status: 'not_enough_measured_runs',
+      confidence: 'insufficient',
+      confidenceReasons: ['No measured VTA IMD runs.'],
+      warnings: ['At least two measured VTA runs are required for comparison.'],
+    };
+  }
+
+  if (measuredCount === 1) {
+    return {
+      measuredCount, placeholderCount,
+      candidateRunId: null, candidateImdPercent: null,
+      candidateHeightMm: null, candidateHeightLabel: null,
+      nextBestDeltaPercent: null,
+      status: 'not_enough_measured_runs',
+      confidence: 'insufficient',
+      confidenceReasons: ['At least two measured runs are required for comparison.'],
       warnings: ['At least two measured VTA runs are required for comparison.'],
     };
   }
@@ -3175,21 +3245,44 @@ function deriveVtaImdComparison(runs: readonly VtaImdRun[]): VtaImdComparison {
   const candidate = sorted[0]!;
   const nextBest = sorted[1]!;
   const delta = (nextBest.imdPercent as number) - (candidate.imdPercent as number);
+  const isNearTie = delta < 0.1;
+
+  const confidenceReasons: string[] = [];
+  let confidence: VtaImdComparisonConfidence;
+  if (measuredCount >= 5) {
+    if (isNearTie) {
+      confidence = 'medium';
+      confidenceReasons.push('Five or more measured runs available, but candidate and next best are very close.');
+    } else {
+      confidence = 'high';
+      confidenceReasons.push('Five or more measured runs available with sufficient separation.');
+    }
+  } else if (measuredCount >= 3) {
+    confidence = 'medium';
+    confidenceReasons.push('Three or more measured runs are available.');
+  } else {
+    confidence = 'low';
+    confidenceReasons.push('Only two measured runs are available.');
+  }
+  if (isNearTie) {
+    confidenceReasons.push('Lowest IMD run is close to the next measured run.');
+  }
 
   const warnings: string[] = ['Experimental candidate only — not a final VTA recommendation.'];
-  if (delta < 0.1) {
+  if (isNearTie) {
     warnings.push(`Near-tie detected (delta ${delta.toFixed(3)} %). Results may not be distinguishable.`);
   }
 
   return {
-    measuredCount,
-    placeholderCount,
+    measuredCount, placeholderCount,
     candidateRunId: candidate.id,
     candidateImdPercent: candidate.imdPercent,
     candidateHeightMm: candidate.heightMm,
     candidateHeightLabel: candidate.heightLabel,
     nextBestDeltaPercent: delta,
     status: 'experimental_candidate',
+    confidence,
+    confidenceReasons,
     warnings,
   };
 }
@@ -3433,9 +3526,22 @@ function renderAdvancedPanel(els: Elements): void {
           </div>
           ${vtaRunTableMarkup(state.vta.runs, vtaOpts)}
           ${(() => {
+            const confLevel = comparison.confidence;
+            const confLabel = confLevel === 'insufficient' ? 'Insufficient'
+              : confLevel === 'low' ? 'Low'
+              : confLevel === 'medium' ? 'Medium'
+              : 'High';
+            const confReasonsHtml = comparison.confidenceReasons.map(r =>
+              `<span class="mlab-vta-confidence-reason">${renderText(r)}</span>`
+            ).join(' ');
             if (comparison.status === 'not_enough_measured_runs') {
               return `
                 <div class="mlab-vta-comparison mlab-vta-comparison-status">
+                  <div class="mlab-vta-comparison-confidence">
+                    Comparison confidence:
+                    <span class="mlab-vta-confidence-level mlab-vta-confidence-level--insufficient">${confLabel}</span>
+                    <span class="mlab-vta-confidence-reason">${confReasonsHtml}</span>
+                  </div>
                   <span class="ea-muted">Comparison not available — at least two measured VTA runs required.</span>
                 </div>
               `;
@@ -3459,9 +3565,15 @@ function renderAdvancedPanel(els: Elements): void {
                   Placeholder runs: ${comparison.placeholderCount} &middot;
                   Delta to next best: ${delta}&thinsp;%
                 </div>
+                <div class="mlab-vta-comparison-confidence">
+                  Comparison confidence:
+                  <span class="mlab-vta-confidence-level mlab-vta-confidence-level--${confLevel}">${confLabel}</span>
+                  ${confReasonsHtml}
+                </div>
                 ${warnHtml}
               </div>
             `;
+          })()}
           })()}
         </div>
       </div>
