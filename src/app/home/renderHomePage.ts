@@ -66,7 +66,7 @@ const tools: readonly ToolCard[] = [
     icon: icons.data,
     title: 'Data Explorer',
     summary: 'Browse cartridge and tonearm reference data to find useful setup values, compare specifications and support your calculations across the tools.',
-    ariaLabel: 'Data Explorer — coming soon',
+    ariaLabel: 'Data Explorer — not available in this release',
   },
 ];
 

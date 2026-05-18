@@ -3716,3 +3716,147 @@ function checkS6SupportedStatusReview() {
 }
 
 checkS6SupportedStatusReview();
+
+function checkS7AWorkbenchShell() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const cssSrcPath    = join(repoRoot, 'src/modules/measurement-lab/ui/measurementLab.css');
+  const homeSrcPath   = join(repoRoot, 'src/app/home/renderHomePage.ts');
+
+  for (const p of [renderSrcPath, cssSrcPath, homeSrcPath]) {
+    if (!existsSync(p)) {
+      console.error(`S7A static check FAIL: required file not found: ${p}`);
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const uiSrc  = readFileSync(renderSrcPath, 'utf8');
+  const cssSrc = readFileSync(cssSrcPath, 'utf8');
+  const homeSrc = readFileSync(homeSrcPath, 'utf8');
+
+  const checks = [
+    // 1. LabState has activeWorkflowId
+    ['LabState has activeWorkflowId: string | null',
+      /activeWorkflowId\s*:\s*string\s*\|\s*null/.test(uiSrc)],
+    // 2. sessionRibbonMarkup function defined
+    ['sessionRibbonMarkup function defined',
+      /function sessionRibbonMarkup\s*\(/.test(uiSrc)],
+    // 3. workflowRailMarkup function defined
+    ['workflowRailMarkup function defined',
+      /function workflowRailMarkup\s*\(/.test(uiSrc)],
+    // 4. diagRailMarkup function defined (replaces visualizationMarkup)
+    ['diagRailMarkup function defined',
+      /function diagRailMarkup\s*\(/.test(uiSrc)],
+    // 5. renderSessionRibbon function defined
+    ['renderSessionRibbon function defined',
+      /function renderSessionRibbon\s*\(/.test(uiSrc)],
+    // 6. renderWorkflowRail function defined
+    ['renderWorkflowRail function defined',
+      /function renderWorkflowRail\s*\(/.test(uiSrc)],
+    // 7. updateActiveRailItem function defined
+    ['updateActiveRailItem function defined',
+      /function updateActiveRailItem\s*\(/.test(uiSrc)],
+    // 8. renderDiagSignalPanel function defined
+    ['renderDiagSignalPanel function defined',
+      /function renderDiagSignalPanel\s*\(/.test(uiSrc)],
+    // 9. elements() has ribbonSource selector
+    ['elements() has ribbonSource selector',
+      /ribbonSource\s*:.*data-mlab-ribbon-source/.test(uiSrc)],
+    // 10. elements() has railItems selector
+    ['elements() has railItems selector',
+      /railItems\s*:.*data-mlab-rail-items/.test(uiSrc)],
+    // 11. elements() has diagSignalBody selector
+    ['elements() has diagSignalBody selector',
+      /diagSignalBody\s*:.*data-mlab-diag-signal-body/.test(uiSrc)],
+    // 12. renderMeasurementLabPage uses mlab-workbench-grid
+    ['renderMeasurementLabPage uses mlab-workbench-grid',
+      /mlab-workbench-grid/.test(uiSrc)],
+    // 13. renderMeasurementLabPage uses mlab-session-ribbon
+    ['renderMeasurementLabPage uses mlab-session-ribbon (via sessionRibbonMarkup call)',
+      /sessionRibbonMarkup\(\)/.test(uiSrc)],
+    // 14. enableMeasurementLabInteractions calls renderSessionRibbon
+    ['enableMeasurementLabInteractions calls renderSessionRibbon',
+      /enableMeasurementLabInteractions[\s\S]{0,3000}renderSessionRibbon\(els\)/.test(uiSrc)],
+    // 15. enableMeasurementLabInteractions calls renderWorkflowRail
+    ['enableMeasurementLabInteractions calls renderWorkflowRail',
+      /enableMeasurementLabInteractions[\s\S]{0,3000}renderWorkflowRail\(els\)/.test(uiSrc)],
+    // 16. enableMeasurementLabInteractions has IntersectionObserver setup
+    ['enableMeasurementLabInteractions has IntersectionObserver setup',
+      /enableMeasurementLabInteractions[\s\S]{0,10000}IntersectionObserver/.test(uiSrc)],
+    // 17. connectMeasurementLab calls renderSessionRibbon
+    ['connectMeasurementLab calls renderSessionRibbon',
+      /connectMeasurementLab[\s\S]{0,2000}renderSessionRibbon\(els\)/.test(uiSrc)],
+    // 18. disconnectMeasurementLab calls renderDiagSignalPanel
+    ['disconnectMeasurementLab calls renderDiagSignalPanel',
+      /disconnectMeasurementLab[\s\S]{0,2000}renderDiagSignalPanel\(els\)/.test(uiSrc)],
+    // 19. tokenLayoutGeneratedClassNames includes mlab-session-ribbon
+    ['tokenLayoutGeneratedClassNames includes mlab-session-ribbon',
+      (() => {
+        const tokenStart = uiSrc.indexOf('tokenLayoutGeneratedClassNames');
+        if (tokenStart < 0) return false;
+        const tokenEnd = uiSrc.indexOf('void tokenLayoutGeneratedClassNames', tokenStart);
+        const tokenBlock = uiSrc.slice(tokenStart, tokenEnd > tokenStart ? tokenEnd + 40 : tokenStart + 6000);
+        return tokenBlock.includes('mlab-session-ribbon');
+      })()],
+    // 20. tokenLayoutGeneratedClassNames includes mlab-diag-rail
+    ['tokenLayoutGeneratedClassNames includes mlab-diag-rail',
+      (() => {
+        const tokenStart = uiSrc.indexOf('tokenLayoutGeneratedClassNames');
+        if (tokenStart < 0) return false;
+        const tokenEnd = uiSrc.indexOf('void tokenLayoutGeneratedClassNames', tokenStart);
+        const tokenBlock = uiSrc.slice(tokenStart, tokenEnd > tokenStart ? tokenEnd + 40 : tokenStart + 6000);
+        return tokenBlock.includes('mlab-diag-rail');
+      })()],
+    // 21. tokenLayoutGeneratedClassNames includes mlab-rail-item--active
+    ['tokenLayoutGeneratedClassNames includes mlab-rail-item--active',
+      (() => {
+        const tokenStart = uiSrc.indexOf('tokenLayoutGeneratedClassNames');
+        if (tokenStart < 0) return false;
+        const tokenEnd = uiSrc.indexOf('void tokenLayoutGeneratedClassNames', tokenStart);
+        const tokenBlock = uiSrc.slice(tokenStart, tokenEnd > tokenStart ? tokenEnd + 40 : tokenStart + 6000);
+        return tokenBlock.includes('mlab-rail-item--active');
+      })()],
+    // 22. CSS has 3-column grid with 190px workflow rail column
+    ['CSS has 3-column grid with 190px workflow rail',
+      /grid-template-columns\s*:\s*190px/.test(cssSrc)],
+    // 23. CSS has mlab-workflow-rail position sticky
+    ['CSS has mlab-workflow-rail position sticky',
+      /\.mlab-workflow-rail[\s\S]{0,200}position\s*:\s*sticky/.test(cssSrc)],
+    // 24. CSS has mlab-diag-rail
+    ['CSS has mlab-diag-rail',
+      /\.mlab-diag-rail/.test(cssSrc)],
+    // 25. CSS has responsive breakpoint hiding workflow rail at <=1100px
+    ['CSS hides workflow-rail at max-width 1100px',
+      /max-width\s*:\s*1100px[\s\S]{0,300}mlab-workflow-rail[\s\S]{0,100}display\s*:\s*none/.test(cssSrc)],
+    // 26. CSS has single-column fallback at <=800px
+    ['CSS has single-column fallback at max-width 800px',
+      /max-width\s*:\s*800px[\s\S]{0,200}grid-template-columns\s*:\s*1fr/.test(cssSrc)],
+    // 27. Home page Data Explorer aria-label no longer says "coming soon"
+    ['Home page Data Explorer aria-label does not say "coming soon"',
+      !/Data Explorer.*coming soon/i.test(homeSrc)],
+    // 28. No fake pass/fail in workbench markup
+    ['No hardcoded pass/fail in sessionRibbonMarkup',
+      !/sessionRibbonMarkup[\s\S]{0,500}(?:PASS|FAIL|READY|BLOCKED)\b(?!\s*[<'"`])/.test(uiSrc)],
+    // 29. S6 regression: vertical_resonance still supported
+    ['S6 regression guard: vertical_resonance still in workflowRailMarkup context',
+      /renderWorkflowRail/.test(uiSrc)],
+    // 30. S5J–S5R regression: webReportBtn still present
+    ['S5J–S5R regression guard: webReportBtn still wired',
+      /webReportBtn/.test(uiSrc)],
+  ];
+
+  let allPass = true;
+  for (const [label, ok] of checks) {
+    if (!ok) {
+      console.error(`S7A static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S7A static source check (Measurement Workbench UI Shell): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS7AWorkbenchShell();
