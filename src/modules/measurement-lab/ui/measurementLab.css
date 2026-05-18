@@ -1619,6 +1619,46 @@ button.mlab-coverage-badge--available:focus-visible {
   margin: var(--ea-space-1) 0 0;
 }
 
+/* ── S5M: Chain readiness status badge & explain ────────────── */
+
+.mlab-chain-status-badge {
+  display: inline-block;
+  padding: 1px var(--ea-space-2);
+  border-radius: var(--ea-radius-sm);
+  font-size: 0.7em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.mlab-chain-status-badge--ready {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+}
+
+.mlab-chain-status-badge--warning {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+}
+
+.mlab-chain-status-badge--blocked {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+.mlab-chain-status-badge--not-checked {
+  background: var(--ea-bg-subtle, rgba(255, 255, 255, 0.05));
+  color: var(--ea-text-low);
+}
+
+.mlab-chain-readiness-explain {
+  font-size: var(--ea-text-sm);
+  color: var(--ea-text-mid);
+  margin: var(--ea-space-1) 0;
+  line-height: 1.5;
+}
+
 /* ── S5I: Run quality badge ──────────────────────────────────── */
 
 .mlab-run-quality {

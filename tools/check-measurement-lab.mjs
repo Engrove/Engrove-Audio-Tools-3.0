@@ -3180,3 +3180,69 @@ function checkS5LSessionMetadataProvenance() {
 }
 
 checkS5LSessionMetadataProvenance();
+
+function checkS5MMeasurementChainHardening() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const runQualityPath = join(repoRoot, 'src/modules/measurement-lab/engine/runQuality.ts');
+  const cssSrcPath     = join(repoRoot, 'src/modules/measurement-lab/ui/measurementLab.css');
+
+  for (const p of [renderSrcPath, runQualityPath, cssSrcPath]) {
+    if (!existsSync(p)) {
+      console.error(`S5M: missing file: ${p}`);
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const uiSrc  = readFileSync(renderSrcPath, 'utf8');
+  const rqSrc  = readFileSync(runQualityPath, 'utf8');
+  const cssSrc = readFileSync(cssSrcPath, 'utf8');
+
+  const checks = [
+    // 1. InputScopeSnapshot type in runQuality.ts
+    ['InputScopeSnapshot type in runQuality.ts', /InputScopeSnapshot/.test(rqSrc)],
+    // 2. buildInputScopeSnapshot function in runQuality.ts
+    ['buildInputScopeSnapshot function in runQuality.ts', /function buildInputScopeSnapshot/.test(rqSrc)],
+    // 3. resonance in run_counts (type definition)
+    ['resonance in run_counts type', /run_counts[\s\S]{0,300}resonance\s*:\s*number/.test(uiSrc)],
+    // 4. resonance in buildSessionJson run_counts implementation
+    ['resonance in buildSessionJson run_counts', /resonance\s*:\s*state\.resonance\.result\s*\?/.test(uiSrc)],
+    // 5. input_scope in SessionJson type
+    ['input_scope field in SessionJson type', /input_scope\s*:\s*\{[\s\S]{0,600}source_connected/.test(uiSrc)],
+    // 6. input_scope in buildSessionJson return
+    ['input_scope built in buildSessionJson', /buildInputScopeSnapshot\s*\(/.test(uiSrc)],
+    // 7. mlab-chain-status-badge in CSS
+    ['mlab-chain-status-badge in CSS', /\.mlab-chain-status-badge/.test(cssSrc)],
+    // 8. mlab-chain-readiness-explain in CSS
+    ['mlab-chain-readiness-explain in CSS', /\.mlab-chain-readiness-explain/.test(cssSrc)],
+    // 9. statusBadgeClass in renderChainReadinessPanel (badge per status)
+    ['statusBadgeClass in renderChainReadinessPanel', /statusBadgeClass/.test(uiSrc)],
+    // 10. statusExplain in renderChainReadinessPanel (explanatory text)
+    ['statusExplain in renderChainReadinessPanel', /statusExplain/.test(uiSrc)],
+    // 11. MEASUREMENT CHAIN section in text report
+    ['MEASUREMENT CHAIN section in text report', /MEASUREMENT CHAIN/.test(uiSrc)],
+    // 12. Resonance in SESSION SUMMARY text report
+    ['Resonance in SESSION SUMMARY text report', /SESSION SUMMARY[\s\S]{0,1000}Resonance:/.test(uiSrc)],
+    // 13. buildInputScopeSnapshot imported in render file
+    ['buildInputScopeSnapshot imported in renderMeasurementLabPage', /buildInputScopeSnapshot/.test(uiSrc)],
+    // 14. S5L run_counts resonance normalization (regression guard)
+    ['S5L run_counts has speed and resonance (regression)', /run_counts\s*:\s*\{[\s\S]{0,400}speed\s*:\s*number[\s\S]{0,400}resonance\s*:\s*number/.test(uiSrc)],
+    // 15. S5J/S5K/S5L regressions: openWebReportModal, buildFreqResponseSvg, JSON+text exports
+    ['openWebReportModal still present (S5J regression)', /openWebReportModal/.test(uiSrc)],
+  ];
+
+  let allPass = true;
+  for (const [label, ok] of checks) {
+    if (!ok) {
+      console.error(`S5M static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S5M static source check (Measurement Chain Hardening & Input Scope): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS5MMeasurementChainHardening();

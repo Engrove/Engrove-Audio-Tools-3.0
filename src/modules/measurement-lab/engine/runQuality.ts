@@ -141,3 +141,65 @@ export function deriveMeasurementChainReadiness(args: {
 
   return { status, signalPresent, clipping, lowSignal, channelImbalanceDb, warnings };
 }
+
+// ── S5M: Input Scope Snapshot ─────────────────────────────────────────────────
+
+export type InputScopeSnapshot = {
+  readonly capturedAt: string;
+  readonly sourceConnected: boolean;
+  readonly status: MeasurementChainReadinessStatus;
+  readonly signalPresent: boolean;
+  readonly clipping: boolean;
+  readonly lowSignal: boolean;
+  readonly channelImbalanceDb: number | null;
+  readonly leftRmsDbfs: number | null;
+  readonly rightRmsDbfs: number | null;
+  readonly leftPeakDbfs: number | null;
+  readonly rightPeakDbfs: number | null;
+  readonly warnings: readonly string[];
+};
+
+export function buildInputScopeSnapshot(args: {
+  readonly sourceConnected: boolean;
+  readonly leftRmsDbfs: number | null;
+  readonly rightRmsDbfs: number | null;
+  readonly leftPeakDbfs: number | null;
+  readonly rightPeakDbfs: number | null;
+}): InputScopeSnapshot {
+  if (!args.sourceConnected) {
+    return {
+      capturedAt: new Date().toISOString(),
+      sourceConnected: false,
+      status: 'not_checked',
+      signalPresent: false,
+      clipping: false,
+      lowSignal: false,
+      channelImbalanceDb: null,
+      leftRmsDbfs: null,
+      rightRmsDbfs: null,
+      leftPeakDbfs: null,
+      rightPeakDbfs: null,
+      warnings: ['Source was not connected when this snapshot was taken.'],
+    };
+  }
+  const readiness = deriveMeasurementChainReadiness({
+    leftRmsDbfs: args.leftRmsDbfs,
+    rightRmsDbfs: args.rightRmsDbfs,
+    leftPeakDbfs: args.leftPeakDbfs,
+    rightPeakDbfs: args.rightPeakDbfs,
+  });
+  return {
+    capturedAt: new Date().toISOString(),
+    sourceConnected: true,
+    status: readiness.status,
+    signalPresent: readiness.signalPresent,
+    clipping: readiness.clipping,
+    lowSignal: readiness.lowSignal,
+    channelImbalanceDb: readiness.channelImbalanceDb,
+    leftRmsDbfs: args.leftRmsDbfs,
+    rightRmsDbfs: args.rightRmsDbfs,
+    leftPeakDbfs: args.leftPeakDbfs,
+    rightPeakDbfs: args.rightPeakDbfs,
+    warnings: readiness.warnings,
+  };
+}

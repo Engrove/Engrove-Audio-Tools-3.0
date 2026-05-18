@@ -24,7 +24,7 @@ import {
 import { createIriaaFilterNode, type IriaaFilterNode } from '../dsp/iriaaNode';
 import { createSpeedFlutterCapture, type SpeedFlutterCapture, type SpeedFlutterResult } from '../dsp/speedFlutterNode';
 import { createNoiseFloorCapture, type NoiseFloorCapture, type NoiseFloorResult } from '../dsp/noiseFloorNode';
-import { deriveMeasurementRunQuality, deriveMeasurementChainReadiness, type MeasurementRunQuality, type MeasurementChainReadiness, type MeasurementChainReadinessStatus } from '../engine/runQuality';
+import { deriveMeasurementRunQuality, deriveMeasurementChainReadiness, buildInputScopeSnapshot, type MeasurementRunQuality, type MeasurementChainReadiness, type MeasurementChainReadinessStatus, type InputScopeSnapshot } from '../engine/runQuality';
 import { createStereoChannelCapture, type StereoCapture, type ChannelCaptureMetrics } from '../dsp/stereoCaptureNode';
 import { createSweepCapture, type SweepCapture } from '../dsp/sweepCaptureNode';
 import { summariseChannelBalance } from '../engine/crosstalk';
@@ -973,6 +973,7 @@ type SessionJson = {
       frequency_response: number;
       thd_imd: number;
       vta_imd: number;
+      resonance: number;
     };
   };
   capture: {
@@ -982,6 +983,20 @@ type SessionJson = {
     honesty_classification: string | null;
     iriaa_applied: boolean;
     source_mode: string;
+  };
+  input_scope: {
+    captured_at: string;
+    source_connected: boolean;
+    status: string;
+    signal_present: boolean;
+    clipping: boolean;
+    low_signal: boolean;
+    channel_imbalance_db: number | null;
+    left_rms_dbfs: number | null;
+    right_rms_dbfs: number | null;
+    left_peak_dbfs: number | null;
+    right_peak_dbfs: number | null;
+    warnings: readonly string[];
   };
   selection: { cartridge: null; tonearm: null; test_record: string | null };
   measurements: {
@@ -1118,6 +1133,7 @@ function buildSessionJson(): SessionJson {
         frequency_response: state.freq.result ? 1 : 0,
         thd_imd: state.thd.result ? 1 : 0,
         vta_imd: state.vta.runs.length,
+        resonance: state.resonance.result ? 1 : 0,
       },
     },
     capture: {
@@ -1128,6 +1144,30 @@ function buildSessionJson(): SessionJson {
       iriaa_applied: state.iriaaEnabled,
       source_mode: state.sourceMode,
     },
+    input_scope: (() => {
+      const isLive = state.captureState === 'live';
+      const snap: InputScopeSnapshot = buildInputScopeSnapshot({
+        sourceConnected: isLive,
+        leftRmsDbfs: isLive ? state.channelLevels.L.rmsDbFs : null,
+        rightRmsDbfs: isLive ? state.channelLevels.R.rmsDbFs : null,
+        leftPeakDbfs: isLive ? state.channelLevels.L.peakDbFs : null,
+        rightPeakDbfs: isLive ? state.channelLevels.R.peakDbFs : null,
+      });
+      return {
+        captured_at: snap.capturedAt,
+        source_connected: snap.sourceConnected,
+        status: snap.status,
+        signal_present: snap.signalPresent,
+        clipping: snap.clipping,
+        low_signal: snap.lowSignal,
+        channel_imbalance_db: snap.channelImbalanceDb,
+        left_rms_dbfs: snap.leftRmsDbfs,
+        right_rms_dbfs: snap.rightRmsDbfs,
+        left_peak_dbfs: snap.leftPeakDbfs,
+        right_peak_dbfs: snap.rightPeakDbfs,
+        warnings: Array.from(snap.warnings),
+      };
+    })(),
     selection: { cartridge: null, tonearm: null, test_record: state.selectedTestRecordId },
     measurements: {
       speed: (() => {
@@ -1446,6 +1486,7 @@ function buildReportText(): string {
   lines.push(`  Channel identity:      ${state.channel.leftCapture && state.channel.rightCapture ? 'Captured' : 'Not captured'}`);
   lines.push(`  Frequency response:    ${state.freq.result ? 'Captured' : 'Not captured'}`);
   lines.push(`  THD / IMD:             ${state.thd.result ? 'Captured' : 'Not captured'}`);
+  lines.push(`  Resonance:             ${state.resonance.result ? `Captured · peak ${state.resonance.result.peakFrequencyHz.toFixed(1)} Hz` : 'Not captured'}`);
   lines.push(`  VTA IMD runs:          ${state.vta.runs.length} (experimental/planned)`);
   lines.push('');
 
@@ -1460,6 +1501,27 @@ function buildReportText(): string {
     lines.push(`  Sample-rate honesty:   ${state.honesty.classification}`);
   }
   lines.push(`  Software iRIAA:        ${state.iriaaEnabled ? 'applied' : 'bypass'}`);
+  lines.push('');
+
+  // Measurement chain
+  lines.push('MEASUREMENT CHAIN');
+  if (state.captureState === 'live') {
+    const textChain = deriveMeasurementChainReadiness({
+      leftRmsDbfs: state.channelLevels.L.rmsDbFs,
+      rightRmsDbfs: state.channelLevels.R.rmsDbFs,
+      leftPeakDbfs: state.channelLevels.L.peakDbFs,
+      rightPeakDbfs: state.channelLevels.R.peakDbFs,
+    });
+    lines.push(`  Status:                ${textChain.status}`);
+    lines.push(`  Signal present:        ${textChain.signalPresent ? 'Yes' : 'No'}`);
+    lines.push(`  Clipping:              ${textChain.clipping ? 'Yes — reduce input gain' : 'No'}`);
+    if (textChain.channelImbalanceDb !== null) lines.push(`  Channel balance:       ${textChain.channelImbalanceDb.toFixed(1)} dB L/R`);
+    lines.push(`  L RMS:                 ${fmtDbfs(state.channelLevels.L.rmsDbFs)}`);
+    lines.push(`  R RMS:                 ${fmtDbfs(state.channelLevels.R.rmsDbFs)}`);
+    textChain.warnings.forEach(w => lines.push(`  Warning:               ${w}`));
+  } else {
+    lines.push('  Source not connected — chain readiness not available at export time.');
+  }
   lines.push('');
 
   // Speed
@@ -5904,7 +5966,8 @@ function buildChainReadinessSection(): WebReportSection {
     };
   }
 
-  const readiness = deriveMeasurementChainReadiness({
+  const snap: InputScopeSnapshot = buildInputScopeSnapshot({
+    sourceConnected: true,
     leftRmsDbfs: state.channelLevels.L.rmsDbFs,
     rightRmsDbfs: state.channelLevels.R.rmsDbFs,
     leftPeakDbfs: state.channelLevels.L.peakDbFs,
@@ -5917,15 +5980,26 @@ function buildChainReadinessSection(): WebReportSection {
   const statusKinds: Record<MeasurementChainReadinessStatus, 'ok' | 'warn' | 'err' | 'info'> = {
     not_checked: 'info', ready: 'ok', warning: 'warn', blocked: 'err',
   };
+  const statusExplainReport: Record<MeasurementChainReadinessStatus, string> = {
+    not_checked: 'No audio signal detected. Check connections and ensure the stylus is on the record.',
+    ready: 'Signal levels look healthy — measurements can proceed.',
+    warning: 'Signal present but one or more conditions are outside the ideal range.',
+    blocked: 'Clipping detected. Reduce input gain before capturing measurements.',
+  };
 
   const pairs: [string, string][] = [
-    ['Status', statusLabels[readiness.status] + wrBadge(statusLabels[readiness.status], statusKinds[readiness.status])],
-    ['Signal present', readiness.signalPresent ? 'Yes' : 'No'],
-    ['Clipping', readiness.clipping ? 'Yes — reduce input gain' : 'No'],
-    ['Low signal', readiness.lowSignal ? 'Yes' : 'No'],
+    ['Status', statusLabels[snap.status] + wrBadge(statusLabels[snap.status], statusKinds[snap.status])],
+    ['Explanation', statusExplainReport[snap.status]],
+    ['Signal present', snap.signalPresent ? 'Yes' : 'No'],
+    ['Clipping', snap.clipping ? 'Yes — reduce input gain' : 'No'],
+    ['Low signal', snap.lowSignal ? 'Yes' : 'No'],
+    ['L RMS', fmtDbfs(snap.leftRmsDbfs)],
+    ['R RMS', fmtDbfs(snap.rightRmsDbfs)],
+    ['L peak', fmtDbfs(snap.leftPeakDbfs)],
+    ['R peak', fmtDbfs(snap.rightPeakDbfs)],
   ];
-  if (readiness.channelImbalanceDb !== null) {
-    pairs.push(['Channel imbalance', `${readiness.channelImbalanceDb.toFixed(1)} dB L/R`]);
+  if (snap.channelImbalanceDb !== null) {
+    pairs.push(['Channel imbalance', `${snap.channelImbalanceDb.toFixed(1)} dB L/R`]);
   }
 
   const refNote = state.refLevel.result
@@ -5935,7 +6009,7 @@ function buildChainReadinessSection(): WebReportSection {
   return {
     id: 'chain-readiness',
     title: 'Measurement Chain Readiness',
-    html: wrKVs(pairs) + wrWarnings(readiness.warnings) + refNote,
+    html: wrKVs(pairs) + wrWarnings(Array.from(snap.warnings)) + refNote,
   };
 }
 
@@ -6349,9 +6423,21 @@ function renderChainReadinessPanel(els: Elements): void {
     warning: 'mlab-chain-readiness--warning',
     blocked: 'mlab-chain-readiness--blocked',
   };
+  const statusBadgeClass: Record<MeasurementChainReadinessStatus, string> = {
+    not_checked: 'mlab-chain-status-badge--not-checked',
+    ready: 'mlab-chain-status-badge--ready',
+    warning: 'mlab-chain-status-badge--warning',
+    blocked: 'mlab-chain-status-badge--blocked',
+  };
+  const statusExplain: Record<MeasurementChainReadinessStatus, string> = {
+    not_checked: 'No audio signal detected. Check connections and ensure the stylus is on the record.',
+    ready: 'Signal levels look healthy — you can proceed with measurements.',
+    warning: 'Signal present but one or more conditions are outside the ideal range. Review warnings before measuring.',
+    blocked: 'Clipping detected. Reduce input gain before capturing any measurements.',
+  };
 
   const warningsHtml = readiness.warnings.length > 0
-    ? readiness.warnings.map(w => `<p class="mlab-chain-readiness-warning">${renderText(w)}</p>`).join('')
+    ? readiness.warnings.map(w => `<p class="mlab-chain-readiness-warning"><span aria-hidden="true">⚠&nbsp;</span>${renderText(w)}</p>`).join('')
     : '';
 
   const balanceRow = readiness.channelImbalanceDb !== null
@@ -6361,6 +6447,11 @@ function renderChainReadinessPanel(els: Elements): void {
       </div>`
     : '';
 
+  const levelsRow = `<div class="mlab-chain-readiness-row">
+      <span class="mlab-chain-readiness-key ea-muted">Live levels</span>
+      <span class="mlab-chain-readiness-val">L&nbsp;${fmtDbfs(state.channelLevels.L.rmsDbFs)} / R&nbsp;${fmtDbfs(state.channelLevels.R.rmsDbFs)} RMS</span>
+    </div>`;
+
   const refCalNote = state.refLevel.result
     ? `<p class="mlab-chain-readiness-note">Last reference level: L&nbsp;${fmtDbfs(state.refLevel.result.leftRmsDbfs)} / R&nbsp;${fmtDbfs(state.refLevel.result.rightRmsDbfs)}</p>`
     : '<p class="mlab-chain-readiness-note ea-muted">No reference level captured yet. Use Track&nbsp;1 reference level first when using a test record.</p>';
@@ -6369,8 +6460,11 @@ function renderChainReadinessPanel(els: Elements): void {
     <div class="mlab-chain-readiness ${statusCssClass[readiness.status]}">
       <div class="mlab-chain-readiness-row">
         <span class="mlab-chain-readiness-key ea-muted">Status</span>
-        <span class="mlab-chain-readiness-val">${statusLabel[readiness.status]}</span>
+        <span class="mlab-chain-readiness-val">
+          <span class="mlab-chain-status-badge ${statusBadgeClass[readiness.status]}">${statusLabel[readiness.status]}</span>
+        </span>
       </div>
+      <p class="mlab-chain-readiness-explain">${statusExplain[readiness.status]}</p>
       <div class="mlab-chain-readiness-row">
         <span class="mlab-chain-readiness-key ea-muted">Signal present</span>
         <span class="mlab-chain-readiness-val">${readiness.signalPresent ? 'Yes' : 'No'}</span>
@@ -6380,6 +6474,7 @@ function renderChainReadinessPanel(els: Elements): void {
         <span class="mlab-chain-readiness-val">${readiness.clipping ? 'Yes &mdash; reduce input gain' : 'No'}</span>
       </div>
       ${balanceRow}
+      ${levelsRow}
     </div>
     ${warningsHtml}
     ${refCalNote}
