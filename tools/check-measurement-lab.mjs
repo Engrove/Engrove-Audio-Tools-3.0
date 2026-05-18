@@ -3546,3 +3546,77 @@ function checkS5QHarmonicBreakdown() {
 }
 
 checkS5QHarmonicBreakdown();
+
+function checkS5RAzimuthStepFoundation() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const cssSrcPath    = join(repoRoot, 'src/modules/measurement-lab/ui/measurementLab.css');
+
+  for (const p of [renderSrcPath, cssSrcPath]) {
+    if (!existsSync(p)) {
+      console.error(`S5R static check FAIL: required file not found: ${p}`);
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const uiSrc  = readFileSync(renderSrcPath, 'utf8');
+  const cssSrc = readFileSync(cssSrcPath, 'utf8');
+
+  const checks = [
+    // 1. AzimuthStepRun type defined
+    ['AzimuthStepRun type defined', /type AzimuthStepRun\s*=/.test(uiSrc)],
+    // 2. AzimuthStepComparison type defined
+    ['AzimuthStepComparison type defined', /type AzimuthStepComparison\s*=/.test(uiSrc)],
+    // 3. computeAzimuthStepComparison function
+    ['computeAzimuthStepComparison function', /function computeAzimuthStepComparison/.test(uiSrc)],
+    // 4. runs field in ChannelStateBag
+    ['runs field in ChannelStateBag (AzimuthStepRun[])', /runs\s*:\s*AzimuthStepRun\[\]/.test(uiSrc)],
+    // 5. stepLabelInput field in ChannelStateBag
+    ['stepLabelInput field in ChannelStateBag', /stepLabelInput\s*:\s*string/.test(uiSrc)],
+    // 6. stepLabelInput persisted on auto-save (cleared after save)
+    ['stepLabelInput cleared after auto-save', /state\.channel\.stepLabelInput\s*=\s*''/.test(uiSrc)],
+    // 7. Auto-save AzimuthStepRun on right-channel capture done
+    ['AzimuthStepRun auto-save on right capture', /state\.channel\.runs\s*=\s*\[\.\.\.state\.channel\.runs,\s*stepRun\]/.test(uiSrc)],
+    // 8. azimuth_steps in JSON export
+    ['azimuth_steps in JSON export', /azimuth_steps\s*:/.test(uiSrc)],
+    // 9. AZIMUTH STEPS section in text report
+    ['AZIMUTH STEPS section in text report', /AZIMUTH STEPS/.test(uiSrc)],
+    // 10. azimuthStepHistoryMarkup function
+    ['azimuthStepHistoryMarkup function', /function azimuthStepHistoryMarkup/.test(uiSrc)],
+    // 11. azimuthStepComparisonMarkup function
+    ['azimuthStepComparisonMarkup function', /function azimuthStepComparisonMarkup/.test(uiSrc)],
+    // 12. buildAzimuthStepsSection function for web report
+    ['buildAzimuthStepsSection function', /function buildAzimuthStepsSection/.test(uiSrc)],
+    // 13. buildAzimuthStepsSection called in buildChannelSection
+    ['buildAzimuthStepsSection called in buildChannelSection', /buildAzimuthStepsSection\(\)/.test(uiSrc)],
+    // 14. step label input rendered in idle state
+    ['step label input in idle state', /mlab-step-label/.test(uiSrc)],
+    // 15. step label input updates state on input event
+    ['stepLabelInput updated on input event', /state\.channel\.stepLabelInput\s*=\s*\(e\.target/.test(uiSrc)],
+    // 16. history table shown in done state
+    ['azimuthStepHistoryMarkup called in done state', /azimuthStepHistoryMarkup\(ch\.runs\)/.test(uiSrc)],
+    // 17. comparison shown in done/idle states
+    ['azimuthStepComparisonMarkup called for done/idle', /azimuthStepComparisonMarkup\(ch\.runs\)/.test(uiSrc)],
+    // 18. mlab-azimuth-step-history CSS
+    ['mlab-azimuth-step-history CSS class', /\.mlab-azimuth-step-history/.test(cssSrc)],
+    // 19. mlab-azimuth-comparison CSS
+    ['mlab-azimuth-comparison CSS class', /\.mlab-azimuth-comparison/.test(cssSrc)],
+    // 20. S5Q harmonic breakdown still present (regression check)
+    ['S5Q harmonic breakdown still present (regression)', /buildThdDistortionMeta/.test(uiSrc)],
+  ];
+
+  let allPass = true;
+  for (const [label, ok] of checks) {
+    if (!ok) {
+      console.error(`S5R static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S5R static source check (Azimuth Step Workflow Foundation): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS5RAzimuthStepFoundation();

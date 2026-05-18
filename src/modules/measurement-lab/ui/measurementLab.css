@@ -1874,3 +1874,114 @@ button.mlab-coverage-badge--available:focus-visible {
 .mlab-thd-chain-note {
   margin-top: var(--ea-space-2);
 }
+
+/* ── S5R: Azimuth step workflow ────────────────────────────────────────────── */
+
+.mlab-azimuth-label-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ea-space-1);
+  margin-bottom: var(--ea-space-2);
+}
+
+.mlab-azimuth-label-input {
+  max-width: 24rem;
+}
+
+.mlab-azimuth-step-history {
+  margin-top: var(--ea-space-3);
+  padding: var(--ea-space-2) var(--ea-space-3);
+  border-left: 3px solid var(--ea-border-mid, #3a3a3a);
+  border-radius: 0 4px 4px 0;
+  background: var(--ea-surface-raised, rgba(255,255,255,0.03));
+}
+
+.mlab-azimuth-step-history--report {
+  margin: var(--ea-space-2) 0;
+}
+
+.mlab-azimuth-step-history-head {
+  font-weight: 600;
+  color: var(--ea-text-high);
+  margin-bottom: var(--ea-space-1);
+  font-size: var(--ea-text-sm);
+}
+
+.mlab-azimuth-step-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mlab-azimuth-step-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: var(--ea-text-sm);
+  font-variant-numeric: tabular-nums;
+  min-width: 36rem;
+}
+
+.mlab-azimuth-step-table th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--ea-text-mid);
+  padding: 3px var(--ea-space-2) 3px 0;
+  border-bottom: 1px solid var(--ea-border-subtle, rgba(255,255,255,0.08));
+  white-space: nowrap;
+}
+
+.mlab-azimuth-step-table td {
+  padding: 3px var(--ea-space-2) 3px 0;
+  color: var(--ea-text-high);
+  white-space: nowrap;
+}
+
+.mlab-azimuth-comparison {
+  margin-top: var(--ea-space-2);
+  padding: var(--ea-space-2) var(--ea-space-3);
+  border-left: 3px solid var(--ea-color-accent, #5a9fd4);
+  border-radius: 0 4px 4px 0;
+  background: var(--ea-surface-raised, rgba(255,255,255,0.03));
+}
+
+.mlab-azimuth-comparison--warn {
+  border-left-color: var(--ea-color-warn, #e0a030);
+}
+
+.mlab-azimuth-comparison-head {
+  font-weight: 600;
+  color: var(--ea-text-high);
+  margin-bottom: var(--ea-space-1);
+  font-size: var(--ea-text-sm);
+}
+
+.mlab-azimuth-comparison-row {
+  display: flex;
+  gap: var(--ea-space-2);
+  justify-content: space-between;
+  font-size: var(--ea-text-sm);
+  padding: 2px 0;
+}
+
+.mlab-azimuth-comparison-label {
+  color: var(--ea-text-mid);
+}
+
+.mlab-azimuth-comparison-val {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.mlab-azimuth-comparison-note {
+  font-size: var(--ea-text-xs, 0.75rem);
+  color: var(--ea-text-low);
+  margin: var(--ea-space-1) 0 0;
+}
+
+@media print {
+  .mlab-azimuth-step-scroll {
+    overflow-x: visible;
+  }
+  .mlab-azimuth-step-table {
+    min-width: unset;
+  }
+}

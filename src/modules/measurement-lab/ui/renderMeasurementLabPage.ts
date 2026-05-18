@@ -41,7 +41,7 @@ import {
   relativeTo1kHz,
   type CalibrationSetEntry,
 } from '../engine/referenceCalibrationSet';
-import { computeChannelIdentity, type ChannelIdentityResult } from '../engine/channelIdentity';
+import { computeChannelIdentity, type ChannelIdentityResult, type ChannelIdentityStatus } from '../engine/channelIdentity';
 import { loadTestRecordsRuntimeData, getPreferredRecord, type TestRecord, type TestBand, type TestBandPurpose } from '../data/loadTestRecords';
 import { computeAllWorkflowCoverage, MEASUREMENT_WORKFLOWS, type WorkflowAvailability } from '../data/measurementWorkflows';
 
@@ -182,6 +182,73 @@ type ChannelBandMeta = {
 };
 
 type ChannelStep = 'idle' | 'left-recording' | 'left-done' | 'right-recording' | 'done';
+
+// ── S5R: Azimuth step run model ───────────────────────────────────────────────
+type AzimuthStepRun = {
+  readonly id: string;
+  readonly createdAt: string;
+  readonly source: 'live_capture' | 'self_test';
+  readonly label: string | null;
+  readonly leftToRightCrosstalkDb: number;
+  readonly rightToLeftCrosstalkDb: number;
+  readonly crosstalkSymmetryDeltaDb: number | null;
+  readonly wantedBalanceDb: number | null;
+  readonly identity: ChannelIdentityStatus;
+  readonly confidence: 'high' | 'medium' | 'low';
+  readonly leftBandMeta: ChannelBandMeta | null;
+  readonly rightBandMeta: ChannelBandMeta | null;
+  readonly runQuality: MeasurementRunQuality | null;
+  readonly warnings: readonly string[];
+};
+
+type AzimuthStepComparison = {
+  readonly compatible: boolean;
+  readonly runCount: number;
+  readonly ltrRangeDb: { min: number; max: number } | null;
+  readonly rtlRangeDb: { min: number; max: number } | null;
+  readonly lowestLtrRunId: string | null;
+  readonly lowestRtlRunId: string | null;
+  readonly note: string;
+};
+
+function computeAzimuthStepComparison(runs: readonly AzimuthStepRun[]): AzimuthStepComparison | null {
+  if (runs.length < 2) return null;
+  const refLeft = runs[0].leftBandMeta?.index ?? null;
+  const refRight = runs[0].rightBandMeta?.index ?? null;
+  const incompatible = runs.some(r =>
+    (r.leftBandMeta?.index ?? null) !== refLeft ||
+    (r.rightBandMeta?.index ?? null) !== refRight,
+  );
+  if (incompatible) {
+    return {
+      compatible: false,
+      runCount: runs.length,
+      ltrRangeDb: null,
+      rtlRangeDb: null,
+      lowestLtrRunId: null,
+      lowestRtlRunId: null,
+      note: 'Runs used different test record bands and cannot be directly compared.',
+    };
+  }
+  let minLtr = Infinity, maxLtr = -Infinity, lowestLtrRunId: string | null = null;
+  let minRtl = Infinity, maxRtl = -Infinity, lowestRtlRunId: string | null = null;
+  for (const run of runs) {
+    if (run.leftToRightCrosstalkDb < minLtr) { minLtr = run.leftToRightCrosstalkDb; lowestLtrRunId = run.id; }
+    if (run.leftToRightCrosstalkDb > maxLtr) maxLtr = run.leftToRightCrosstalkDb;
+    if (run.rightToLeftCrosstalkDb < minRtl) { minRtl = run.rightToLeftCrosstalkDb; lowestRtlRunId = run.id; }
+    if (run.rightToLeftCrosstalkDb > maxRtl) maxRtl = run.rightToLeftCrosstalkDb;
+  }
+  return {
+    compatible: true,
+    runCount: runs.length,
+    ltrRangeDb: { min: minLtr, max: maxLtr },
+    rtlRangeDb: { min: minRtl, max: maxRtl },
+    lowestLtrRunId,
+    lowestRtlRunId,
+    note: 'Lower crosstalk values (more negative dB) indicate better channel separation. No azimuth setting is recommended — use this data alongside listening tests and your own judgement.',
+  };
+}
+
 type ChannelStateBag = {
   step: ChannelStep;
   elapsedSeconds: number;
@@ -194,6 +261,8 @@ type ChannelStateBag = {
   rightBandIndex: string | null;
   leftBandMeta: ChannelBandMeta | null;
   rightBandMeta: ChannelBandMeta | null;
+  runs: AzimuthStepRun[];
+  stepLabelInput: string;
 };
 
 type FreqBandMeta = {
@@ -479,6 +548,8 @@ const state: LabState = {
     rightBandIndex: null,
     leftBandMeta: null,
     rightBandMeta: null,
+    runs: [],
+    stepLabelInput: '',
   },
   freq: {
     active: false,
@@ -1010,6 +1081,7 @@ type SessionJson = {
   measurements: {
     speed: object | null;
     channel_identity: object | null;
+    azimuth_steps: object | null;
     frequency_response: object | null;
     thd: object | null;
     imd: object | null;
@@ -1283,6 +1355,39 @@ function buildSessionJson(): SessionJson {
         };
       })(),
       channel_identity: channelIdentityResult,
+      azimuth_steps: (() => {
+        const runs = state.channel.runs;
+        if (runs.length === 0) return null;
+        const cmp = computeAzimuthStepComparison(runs);
+        return {
+          run_count: runs.length,
+          runs: runs.map(r => ({
+            id: r.id,
+            created_at: r.createdAt,
+            source: r.source,
+            label: r.label,
+            left_to_right_crosstalk_db: r.leftToRightCrosstalkDb,
+            right_to_left_crosstalk_db: r.rightToLeftCrosstalkDb,
+            crosstalk_symmetry_delta_db: r.crosstalkSymmetryDeltaDb,
+            wanted_balance_db: r.wantedBalanceDb,
+            identity: r.identity,
+            confidence: r.confidence,
+            left_band: r.leftBandMeta ? { index: r.leftBandMeta.index, label: r.leftBandMeta.label, frequency_hz: r.leftBandMeta.frequencyHz } : null,
+            right_band: r.rightBandMeta ? { index: r.rightBandMeta.index, label: r.rightBandMeta.label, frequency_hz: r.rightBandMeta.frequencyHz } : null,
+            run_quality: r.runQuality ? { status: r.runQuality.status, clipping: r.runQuality.clipping, low_signal: r.runQuality.lowSignal, channel_imbalance_db: r.runQuality.channelImbalanceDb, warnings: Array.from(r.runQuality.warnings) } : null,
+            warnings: Array.from(r.warnings),
+          })),
+          comparison: cmp ? {
+            compatible: cmp.compatible,
+            run_count: cmp.runCount,
+            ltr_range_db: cmp.ltrRangeDb,
+            rtl_range_db: cmp.rtlRangeDb,
+            lowest_ltr_run_id: cmp.lowestLtrRunId,
+            lowest_rtl_run_id: cmp.lowestRtlRunId,
+            note: cmp.note,
+          } : null,
+        };
+      })(),
       frequency_response: freqResult
         ? (() => {
             const dev = computeFreqDeviationSummary(freqResult, state.iriaaEnabled);
@@ -1727,6 +1832,27 @@ function buildReportText(): string {
     }
     lines.push('');
   }
+
+  // Azimuth steps
+  lines.push('AZIMUTH STEPS');
+  if (state.channel.runs.length > 0) {
+    lines.push(`  Runs recorded:         ${state.channel.runs.length}`);
+    for (let i = 0; i < state.channel.runs.length; i++) {
+      const r = state.channel.runs[i];
+      lines.push(`  Run ${i + 1} (${r.label ?? '—'}): L→R ${r.leftToRightCrosstalkDb.toFixed(1)} dB  R→L ${r.rightToLeftCrosstalkDb.toFixed(1)} dB  identity: ${r.identity}  quality: ${r.runQuality?.status ?? 'n/a'}`);
+    }
+    const cmp = computeAzimuthStepComparison(state.channel.runs);
+    if (cmp && cmp.compatible && cmp.ltrRangeDb && cmp.rtlRangeDb) {
+      lines.push(`  L→R range:             ${cmp.ltrRangeDb.min.toFixed(1)}–${cmp.ltrRangeDb.max.toFixed(1)} dB`);
+      lines.push(`  R→L range:             ${cmp.rtlRangeDb.min.toFixed(1)}–${cmp.rtlRangeDb.max.toFixed(1)} dB`);
+      lines.push(`  (${cmp.note})`);
+    } else if (cmp && !cmp.compatible) {
+      lines.push(`  (${cmp.note})`);
+    }
+  } else {
+    lines.push('  No azimuth step runs recorded in this session.');
+  }
+  lines.push('');
 
   // Freq response
   const fr = state.freq.result;
@@ -2727,6 +2853,8 @@ function renderChannelPanel(els: Elements): void {
       <div class="mlab-session-controls">
         <button class="ea-button ea-button--ghost" type="button" data-mlab-channel-reset>Start over</button>
       </div>
+      ${azimuthStepHistoryMarkup(ch.runs)}
+      ${azimuthStepComparisonMarkup(ch.runs)}
     `;
     body.querySelector<HTMLButtonElement>('[data-mlab-channel-reset]')?.addEventListener('click', () => {
       resetChannelMeasurement();
@@ -2771,13 +2899,91 @@ function renderChannelPanel(els: Elements): void {
   body.innerHTML = `
     ${leftBandInfo}
     ${selfTestNotice}
+    <div class="mlab-azimuth-label-row">
+      <label class="ea-label" for="mlab-step-label">Step label <span class="ea-muted">(optional)</span></label>
+      <input type="text" id="mlab-step-label" class="ea-input mlab-azimuth-label-input"
+        maxlength="60" placeholder="e.g. Baseline, +2°, Full CW…"
+        value="${renderText(state.channel.stepLabelInput)}">
+    </div>
     <div class="mlab-session-controls">
       <button class="ea-button ea-button--primary" type="button" data-mlab-channel-start-l>Start L-band capture</button>
     </div>
+    ${azimuthStepHistoryMarkup(ch.runs)}
+    ${azimuthStepComparisonMarkup(ch.runs)}
   `;
+  body.querySelector<HTMLInputElement>('#mlab-step-label')?.addEventListener('input', (e) => {
+    state.channel.stepLabelInput = (e.target as HTMLInputElement).value;
+  });
   body.querySelector<HTMLButtonElement>('[data-mlab-channel-start-l]')?.addEventListener('click', () => {
     startChannelCapture(els, 'left');
   });
+}
+
+function azimuthStepHistoryMarkup(runs: readonly AzimuthStepRun[]): string {
+  if (runs.length === 0) return '';
+  const rows = runs.map((r, i) => {
+    const srcLabel = r.source === 'self_test' ? 'Self-test' : 'Live';
+    const ltr = r.leftToRightCrosstalkDb.toFixed(1);
+    const rtl = r.rightToLeftCrosstalkDb.toFixed(1);
+    const quality = r.runQuality?.status ?? 'n/a';
+    return `<tr class="mlab-azimuth-step-row">
+      <td class="mlab-azimuth-step-cell">${i + 1}</td>
+      <td class="mlab-azimuth-step-cell">${renderText(r.label ?? `Step ${i + 1}`)}</td>
+      <td class="mlab-azimuth-step-cell">${renderText(ltr)} dB</td>
+      <td class="mlab-azimuth-step-cell">${renderText(rtl)} dB</td>
+      <td class="mlab-azimuth-step-cell">${renderText(r.identity)}</td>
+      <td class="mlab-azimuth-step-cell">${renderText(quality)}</td>
+      <td class="mlab-azimuth-step-cell">${renderText(srcLabel)}</td>
+    </tr>`;
+  }).join('');
+  return `
+    <div class="mlab-azimuth-step-history">
+      <div class="mlab-azimuth-step-history-head">Azimuth step history (${runs.length} run${runs.length !== 1 ? 's' : ''})</div>
+      <div class="mlab-azimuth-step-scroll">
+        <table class="mlab-azimuth-step-table" aria-label="Azimuth step measurement history">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Label</th>
+              <th>L→R crosstalk</th>
+              <th>R→L crosstalk</th>
+              <th>Identity</th>
+              <th>Quality</th>
+              <th>Source</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function azimuthStepComparisonMarkup(runs: readonly AzimuthStepRun[]): string {
+  const cmp = computeAzimuthStepComparison(runs);
+  if (!cmp) return '';
+  if (!cmp.compatible) {
+    return `<div class="mlab-azimuth-comparison mlab-azimuth-comparison--warn">
+      <div class="mlab-azimuth-comparison-head">Step comparison</div>
+      <p class="mlab-azimuth-comparison-note">${renderText(cmp.note)}</p>
+    </div>`;
+  }
+  const ltrMin = cmp.ltrRangeDb ? cmp.ltrRangeDb.min.toFixed(1) : '—';
+  const ltrMax = cmp.ltrRangeDb ? cmp.ltrRangeDb.max.toFixed(1) : '—';
+  const rtlMin = cmp.rtlRangeDb ? cmp.rtlRangeDb.min.toFixed(1) : '—';
+  const rtlMax = cmp.rtlRangeDb ? cmp.rtlRangeDb.max.toFixed(1) : '—';
+  return `<div class="mlab-azimuth-comparison">
+    <div class="mlab-azimuth-comparison-head">Step comparison (${cmp.runCount} runs)</div>
+    <div class="mlab-azimuth-comparison-row">
+      <span class="mlab-azimuth-comparison-label ea-muted">L→R range</span>
+      <span class="mlab-azimuth-comparison-val">${renderText(ltrMin)} to ${renderText(ltrMax)} dB</span>
+    </div>
+    <div class="mlab-azimuth-comparison-row">
+      <span class="mlab-azimuth-comparison-label ea-muted">R→L range</span>
+      <span class="mlab-azimuth-comparison-val">${renderText(rtlMin)} to ${renderText(rtlMax)} dB</span>
+    </div>
+    <p class="mlab-azimuth-comparison-note">${renderText(cmp.note)}</p>
+  </div>`;
 }
 
 function buildFreqResponseSvg(result: FreqResponseResult, iriaaEnabled: boolean): string {
@@ -5138,14 +5344,40 @@ function startChannelCapture(els: Elements, which: 'left' | 'right'): void {
           state.channel.rightCapture = result;
           state.channel.step = 'done';
           const src = state.channel.source ?? captureSource;
+          let identityResult: ChannelIdentityResult | null = null;
           if (state.channel.leftCapture) {
-            state.channel.identityResult = computeChannelIdentity(
-              state.channel.leftCapture,
-              result,
-              src,
-            );
+            identityResult = computeChannelIdentity(state.channel.leftCapture, result, src);
+            state.channel.identityResult = identityResult;
           }
-          appendLog('Channel identity & crosstalk complete.');
+          // Auto-save azimuth step run
+          const runQuality = deriveMeasurementRunQuality({
+            leftRmsDbfs: state.channelLevels.L.rmsDbFs,
+            rightRmsDbfs: state.channelLevels.R.rmsDbFs,
+            leftPeakDbfs: state.channelLevels.L.peakDbFs,
+            rightPeakDbfs: state.channelLevels.R.peakDbFs,
+            source: src,
+            measurementKind: 'test_tone',
+          });
+          const stepN = state.channel.runs.length + 1;
+          const stepRun: AzimuthStepRun = {
+            id: crypto.randomUUID(),
+            createdAt: new Date().toISOString(),
+            source: src,
+            label: state.channel.stepLabelInput.trim() || `Step ${stepN}`,
+            leftToRightCrosstalkDb: identityResult?.leftToRightCrosstalkDb ?? state.channel.leftCapture?.crosstalkDb ?? 0,
+            rightToLeftCrosstalkDb: identityResult?.rightToLeftCrosstalkDb ?? result.crosstalkDb ?? 0,
+            crosstalkSymmetryDeltaDb: identityResult?.crosstalkSymmetryDeltaDb ?? null,
+            wantedBalanceDb: identityResult?.wantedBalanceDb ?? null,
+            identity: identityResult?.identity ?? 'inconclusive',
+            confidence: identityResult?.confidence ?? 'low',
+            leftBandMeta: state.channel.leftBandMeta,
+            rightBandMeta: state.channel.rightBandMeta,
+            runQuality,
+            warnings: identityResult ? Array.from(identityResult.warnings) : [],
+          };
+          state.channel.runs = [...state.channel.runs, stepRun];
+          state.channel.stepLabelInput = '';
+          appendLog(`Channel identity & crosstalk complete. Step ${stepN} saved.`);
         }
         renderChannelPanel(els);
       },
@@ -6561,10 +6793,82 @@ function buildNoiseFloorSection(): WebReportSection {
   return { id: 'noise-floor', title: 'Noise Floor / Rig Baseline', html: latestHtml + historyHtml };
 }
 
+function buildAzimuthStepsSection(): string {
+  const { runs } = state.channel;
+  if (runs.length === 0) {
+    return wrPlaceholder('No azimuth step runs recorded in this session. Complete multiple channel captures to build a step history.');
+  }
+  const cmp = computeAzimuthStepComparison(runs);
+  const rows = runs.map((r, i) => {
+    const srcLabel = r.source === 'self_test' ? 'Self-test' : 'Live';
+    return `<tr class="mlab-azimuth-step-row">
+      <td class="mlab-azimuth-step-cell">${i + 1}</td>
+      <td class="mlab-azimuth-step-cell">${renderText(r.label ?? `Step ${i + 1}`)}</td>
+      <td class="mlab-azimuth-step-cell">${r.leftToRightCrosstalkDb.toFixed(1)} dB</td>
+      <td class="mlab-azimuth-step-cell">${r.rightToLeftCrosstalkDb.toFixed(1)} dB</td>
+      <td class="mlab-azimuth-step-cell">${renderText(r.identity)}</td>
+      <td class="mlab-azimuth-step-cell">${renderText(r.runQuality?.status ?? 'n/a')}</td>
+      <td class="mlab-azimuth-step-cell">${renderText(srcLabel)}</td>
+    </tr>`;
+  }).join('');
+  const tableHtml = `
+    <div class="mlab-azimuth-step-history mlab-azimuth-step-history--report">
+      <div class="mlab-azimuth-step-history-head">Azimuth step history (${runs.length} run${runs.length !== 1 ? 's' : ''})</div>
+      <div class="mlab-azimuth-step-scroll">
+        <table class="mlab-azimuth-step-table" aria-label="Azimuth step measurement history">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Label</th>
+              <th>L→R crosstalk</th>
+              <th>R→L crosstalk</th>
+              <th>Identity</th>
+              <th>Quality</th>
+              <th>Source</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  let cmpHtml = '';
+  if (cmp) {
+    if (!cmp.compatible) {
+      cmpHtml = `<div class="mlab-azimuth-comparison mlab-azimuth-comparison--warn">
+        <div class="mlab-azimuth-comparison-head">Step comparison</div>
+        <p class="mlab-azimuth-comparison-note">${renderText(cmp.note)}</p>
+      </div>`;
+    } else {
+      const ltrMin = cmp.ltrRangeDb ? cmp.ltrRangeDb.min.toFixed(1) : '—';
+      const ltrMax = cmp.ltrRangeDb ? cmp.ltrRangeDb.max.toFixed(1) : '—';
+      const rtlMin = cmp.rtlRangeDb ? cmp.rtlRangeDb.min.toFixed(1) : '—';
+      const rtlMax = cmp.rtlRangeDb ? cmp.rtlRangeDb.max.toFixed(1) : '—';
+      cmpHtml = `<div class="mlab-azimuth-comparison">
+        <div class="mlab-azimuth-comparison-head">Step comparison (${cmp.runCount} runs)</div>
+        <div class="mlab-azimuth-comparison-row">
+          <span class="mlab-azimuth-comparison-label">L→R range</span>
+          <span class="mlab-azimuth-comparison-val">${renderText(ltrMin)} to ${renderText(ltrMax)} dB</span>
+        </div>
+        <div class="mlab-azimuth-comparison-row">
+          <span class="mlab-azimuth-comparison-label">R→L range</span>
+          <span class="mlab-azimuth-comparison-val">${renderText(rtlMin)} to ${renderText(rtlMax)} dB</span>
+        </div>
+        <p class="mlab-azimuth-comparison-note">${renderText(cmp.note)}</p>
+      </div>`;
+    }
+  }
+  return tableHtml + cmpHtml;
+}
+
 function buildChannelSection(): WebReportSection {
   const { leftCapture, rightCapture, identityResult, source, leftBandMeta, rightBandMeta } = state.channel;
   if (!leftCapture && !rightCapture) {
-    return { id: 'channel', title: 'Channel Identity / Crosstalk', html: wrEmpty() };
+    return {
+      id: 'channel',
+      title: 'Channel Identity / Crosstalk',
+      html: wrEmpty() + buildAzimuthStepsSection(),
+    };
   }
 
   const pairs: [string, string][] = [
@@ -6586,7 +6890,11 @@ function buildChannelSection(): WebReportSection {
       ['L→R crosstalk', `${identityResult.leftToRightCrosstalkDb.toFixed(1)} dB`],
       ['R→L crosstalk', `${identityResult.rightToLeftCrosstalkDb.toFixed(1)} dB`],
     );
-    return { id: 'channel', title: 'Channel Identity / Crosstalk', html: wrKVs(pairs) + wrWarnings(identityResult.warnings) };
+    return {
+      id: 'channel',
+      title: 'Channel Identity / Crosstalk',
+      html: wrKVs(pairs) + wrWarnings(identityResult.warnings) + buildAzimuthStepsSection(),
+    };
   }
   if (leftCapture && rightCapture) {
     pairs.push(
@@ -6596,7 +6904,11 @@ function buildChannelSection(): WebReportSection {
       ['R→L crosstalk', `${rightCapture.crosstalkDb.toFixed(1)} dB`],
     );
   }
-  return { id: 'channel', title: 'Channel Identity / Crosstalk', html: wrKVs(pairs) };
+  return {
+    id: 'channel',
+    title: 'Channel Identity / Crosstalk',
+    html: wrKVs(pairs) + buildAzimuthStepsSection(),
+  };
 }
 
 function buildFreqSection(): WebReportSection {
