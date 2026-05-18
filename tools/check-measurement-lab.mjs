@@ -1459,7 +1459,7 @@ function checkS5AAdvancedAnalyzers() {
     // 7a. f1 metadata rendered from band.f1Hz
     ['VTA metadata: f1Hz rendered', /function renderAdvancedPanel[\s\S]{0,2200}band\.f1Hz/],
     // 7b. f2 metadata rendered from band.f2Hz
-    ['VTA metadata: f2Hz rendered', /function renderAdvancedPanel[\s\S]{0,2200}band\.f2Hz/],
+    ['VTA metadata: f2Hz rendered', /function renderAdvancedPanel[\s\S]{0,2300}band\.f2Hz/],
     // 7c. ratio rendered from band.ratio
     ['VTA metadata: ratio rendered', /function renderAdvancedPanel[\s\S]{0,2500}band\.ratio/],
     // 7d. standard rendered from band.standard
@@ -1553,7 +1553,7 @@ function checkS5BVtaRunModel() {
     // 15. imd_percent: r.imdPercent in VTA export (S5C: real value or null per run)
     ['imd_percent uses run value in VTA export', /imd_percent\s*:\s*r\.imdPercent/],
     // 16. warnings array in VTA export
-    ['warnings array in VTA export', /vta_imd_optimizer[\s\S]{0,1500}warnings\s*:\s*\[/],
+    ['warnings array in VTA export', /vta_imd_optimizer[\s\S]{0,2400}warnings\s*:\s*\[/],
     // 17. VTA workflow remains planned (not supported)
     ['VTA still planned in measurementWorkflows (not supported)',
       !/vta_imd_optimizer[\s\S]{0,200}implementationStatus\s*:\s*'supported'/.test(workflowsSrc)],
@@ -1646,7 +1646,7 @@ function checkS5CVtaCapture() {
     // 14. data-mlab-vta-measure button wiring present
     ['data-mlab-vta-measure button wiring', /data-mlab-vta-measure/],
     // 15. warnings array in VTA export still present
-    ['warnings array in VTA export', /vta_imd_optimizer[\s\S]{0,1500}warnings\s*:\s*\[/],
+    ['warnings array in VTA export', /vta_imd_optimizer[\s\S]{0,2400}warnings\s*:\s*\[/],
   ];
 
   let allPass = true;
@@ -2141,6 +2141,86 @@ function checkS5EVtaConfidence() {
 }
 
 checkS5EVtaConfidence();
+
+function checkS5FVtaSupportedGate() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const workflowsSrcPath = join(repoRoot, 'src/modules/measurement-lab/data/measurementWorkflows.ts');
+  if (!existsSync(renderSrcPath) || !existsSync(workflowsSrcPath)) {
+    console.error('S5F static check: source file(s) not found');
+    process.exitCode = 1;
+    return;
+  }
+  const src = readFileSync(renderSrcPath, 'utf8');
+  const workflowsSrc = readFileSync(workflowsSrcPath, 'utf8');
+
+  const checks = [
+    // 1. VtaSupportedGateStatus type defined
+    ['VtaSupportedGateStatus type defined', /type VtaSupportedGateStatus\s*=/],
+    // 2. VtaSupportedGate type defined
+    ['VtaSupportedGate type defined', /type VtaSupportedGate\s*=/],
+    // 3. deriveVtaSupportedGate function defined
+    ['deriveVtaSupportedGate function defined', /function deriveVtaSupportedGate\s*\(/],
+    // 4. ready_for_supported_review status value
+    ['ready_for_supported_review status value', /ready_for_supported_review/],
+    // 5. candidate_ready status value
+    ['candidate_ready status value', /candidate_ready/],
+    // 6. not_ready status value
+    ['not_ready status value', /'not_ready'/],
+    // 7. at least three measured runs criterion
+    ['three_measured_runs criterion id',
+      /id\s*:\s*'three_measured_runs'/],
+    // 8. comparison confidence criterion
+    ['comparison_confidence criterion id',
+      /id\s*:\s*'comparison_confidence'/],
+    // 9. no_active_capture criterion
+    ['no_active_capture criterion id',
+      /id\s*:\s*'no_active_capture'/],
+    // 10. Supported readiness gate UI text
+    ['Supported readiness gate UI text', /Supported readiness gate/],
+    // 11. supported_gate in JSON export
+    ['supported_gate in JSON export', /supported_gate\s*:/],
+    // 12. passed_count in export
+    ['passed_count in export', /passed_count\s*:\s*sg\.passedCount/],
+    // 13. total_count in export
+    ['total_count in export', /total_count\s*:\s*sg\.totalCount/],
+    // 14. VTA top-level status still planned in render source
+    ['VTA top-level status planned in export', /status\s*:\s*'planned'\s*as\s*const/],
+    // 15. VTA workflow not supported in workflows file
+    ['VTA workflow not supported', (() => {
+      const vtaStart = workflowsSrc.indexOf("id: 'vta_imd_optimizer'");
+      if (vtaStart === -1) return false;
+      const blockEnd = workflowsSrc.indexOf('},', vtaStart);
+      if (blockEnd === -1) return false;
+      const block = workflowsSrc.slice(vtaStart, blockEnd + 2);
+      return /implementationStatus:\s*'planned'/.test(block)
+        && !/implementationStatus:\s*'supported'/.test(block);
+    })()],
+    // 16. No final-claim fields
+    ['No final-claim fields', !/best_setting|bestSetting|recommended_height|optimal_height/.test(src)],
+    // 17. Gate does not change workflow status (disclaimer present)
+    ['Gate workflow disclaimer present',
+      /Gate does not change VTA workflow|Supported review gate does not change/],
+    // 18. gate rendered in renderAdvancedPanel
+    ['deriveVtaSupportedGate called in renderAdvancedPanel',
+      /function renderAdvancedPanel[\s\S]{0,800}deriveVtaSupportedGate/],
+  ];
+
+  let allPass = true;
+  for (const [label, result] of checks) {
+    const ok = typeof result === 'boolean' ? result : result.test(src);
+    if (!ok) {
+      console.error(`S5F static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S5F static source check (VTA Supported-Gate Review & Experimental-to-Supported Criteria): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS5FVtaSupportedGate();
 
 try {
   await runChecks();

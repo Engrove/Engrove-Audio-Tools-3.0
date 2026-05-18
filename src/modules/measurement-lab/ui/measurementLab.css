@@ -1073,6 +1073,90 @@ button.mlab-coverage-badge--available:focus-visible {
   margin-left: var(--ea-space-1);
 }
 
+.mlab-vta-gate {
+  margin-top: var(--ea-space-4);
+  padding: var(--ea-space-3);
+  border-left: 2px solid var(--ea-border-subtle, var(--ea-border-primary));
+  background: var(--ea-bg-panel-alt);
+  border-radius: 0 var(--ea-radius-sm) var(--ea-radius-sm) 0;
+}
+
+.mlab-vta-gate-head {
+  font-size: var(--ea-font-size-small);
+  margin-bottom: var(--ea-space-1);
+}
+
+.mlab-vta-gate-summary {
+  font-size: var(--ea-font-size-small);
+  color: var(--ea-text-low);
+  margin-bottom: var(--ea-space-1);
+}
+
+.mlab-vta-gate-status {
+  font-weight: 700;
+  font-size: var(--ea-font-size-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--ea-letter-label);
+  padding: 1px var(--ea-space-2);
+  border-radius: var(--ea-radius-pill);
+  display: inline-block;
+}
+
+.mlab-vta-gate-status--not-ready {
+  background: var(--ea-bg-input);
+  color: var(--ea-text-low);
+  opacity: 0.8;
+}
+
+.mlab-vta-gate-status--candidate {
+  background: var(--ea-bg-input);
+  color: var(--ea-text-high);
+}
+
+.mlab-vta-gate-status--review {
+  background: var(--ea-bg-panel-alt);
+  color: var(--ea-text-high);
+}
+
+.mlab-vta-gate-msg {
+  font-size: var(--ea-font-size-micro);
+  margin-bottom: var(--ea-space-2);
+}
+
+.mlab-vta-gate-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--ea-font-size-micro);
+}
+
+.mlab-vta-gate-row {
+  border-top: 1px solid var(--ea-border-subtle, var(--ea-border-primary));
+}
+
+.mlab-vta-gate-pass {
+  padding: 3px var(--ea-space-2) 3px 0;
+  white-space: nowrap;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--ea-letter-label);
+}
+
+.mlab-vta-gate-pass--ok {
+  color: var(--ea-text-high);
+}
+
+.mlab-vta-gate-pass--fail {
+  color: var(--ea-text-low);
+}
+
+.mlab-vta-gate-label {
+  padding: 3px var(--ea-space-2);
+}
+
+.mlab-vta-gate-detail {
+  padding: 3px 0;
+}
+
 @media (max-width: 1180px) {
   .mlab-workbench-grid {
     grid-template-columns: 1fr;

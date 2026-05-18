@@ -245,7 +245,7 @@ type LabState = {
  * site below; it has no runtime effect.
  */
 const tokenLayoutGeneratedClassNames =
-  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured mlab-vta-candidate-badge mlab-vta-comparison mlab-vta-comparison-candidate mlab-vta-comparison-meta mlab-vta-comparison-warning mlab-vta-comparison-status mlab-vta-comparison-confidence mlab-vta-confidence-level mlab-vta-confidence-level--insufficient mlab-vta-confidence-level--low mlab-vta-confidence-level--medium mlab-vta-confidence-level--high mlab-vta-confidence-reason';
+  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured mlab-vta-candidate-badge mlab-vta-comparison mlab-vta-comparison-candidate mlab-vta-comparison-meta mlab-vta-comparison-warning mlab-vta-comparison-status mlab-vta-comparison-confidence mlab-vta-confidence-level mlab-vta-confidence-level--insufficient mlab-vta-confidence-level--low mlab-vta-confidence-level--medium mlab-vta-confidence-level--high mlab-vta-confidence-reason mlab-vta-gate mlab-vta-gate-head mlab-vta-gate-summary mlab-vta-gate-status mlab-vta-gate-status--not-ready mlab-vta-gate-status--candidate mlab-vta-gate-status--review mlab-vta-gate-msg mlab-vta-gate-table mlab-vta-gate-row mlab-vta-gate-pass mlab-vta-gate-pass--ok mlab-vta-gate-pass--fail mlab-vta-gate-label mlab-vta-gate-detail';
 void tokenLayoutGeneratedClassNames;
 
 const speedMeasurementDurationSeconds = 30;
@@ -953,6 +953,29 @@ function buildSessionJson(): SessionJson {
               warnings: cmp.warnings,
             };
           })(),
+          supported_gate: (() => {
+            const record = selectedRecord();
+            const vtaBands = getVtaImdBands(record);
+            const cmp = deriveVtaImdComparison(state.vta.runs);
+            const sg = deriveVtaSupportedGate({
+              runs: state.vta.runs,
+              comparison: cmp,
+              hasVtaBand: vtaBands.length > 0,
+              capturingRunId: state.vta.capturingRunId,
+            });
+            return {
+              status: sg.status,
+              passed_count: sg.passedCount,
+              total_count: sg.totalCount,
+              criteria: sg.criteria.map(c => ({
+                id: c.id,
+                label: c.label,
+                passed: c.passed,
+                detail: c.detail,
+              })),
+              warnings: sg.warnings,
+            };
+          })(),
           warnings: [
             'VTA IMD capture gateway preview. Results are experimental and have not been validated.',
             'Full VTA optimizer validation and final recommendation flow are not implemented yet.',
@@ -1239,6 +1262,24 @@ function buildReportText(): string {
     }
     vtaCmp.warnings.forEach(w => lines.push(`    Warning: ${w}`));
     lines.push('  Note: Experimental candidate only — not a final VTA recommendation.');
+    // Supported readiness gate
+    const vtaRecord = selectedRecord();
+    const vtaBandsR = getVtaImdBands(vtaRecord);
+    const vtaGate = deriveVtaSupportedGate({
+      runs: state.vta.runs,
+      comparison: vtaCmp,
+      hasVtaBand: vtaBandsR.length > 0,
+      capturingRunId: state.vta.capturingRunId,
+    });
+    const gateLabel = vtaGate.status === 'ready_for_supported_review' ? 'Ready for supported review'
+      : vtaGate.status === 'candidate_ready' ? 'Candidate ready'
+      : 'Not ready';
+    lines.push(`  Supported readiness gate: ${gateLabel}`);
+    lines.push(`  Passed: ${vtaGate.passedCount} / ${vtaGate.totalCount}`);
+    vtaGate.criteria.forEach(c => {
+      lines.push(`    [${c.passed ? 'PASS' : 'FAIL'}] ${c.label}: ${c.detail}`);
+    });
+    lines.push('  Gate does not change VTA workflow status — remains Planned until formally reviewed.');
     lines.push('');
   }
 
@@ -3287,6 +3328,119 @@ function deriveVtaImdComparison(runs: readonly VtaImdRun[]): VtaImdComparison {
   };
 }
 
+type VtaSupportedGateStatus = 'not_ready' | 'candidate_ready' | 'ready_for_supported_review';
+
+type VtaSupportedGateCriterion = {
+  readonly id: string;
+  readonly label: string;
+  readonly passed: boolean;
+  readonly detail: string;
+};
+
+type VtaSupportedGate = {
+  readonly status: VtaSupportedGateStatus;
+  readonly criteria: readonly VtaSupportedGateCriterion[];
+  readonly passedCount: number;
+  readonly totalCount: number;
+  readonly warnings: readonly string[];
+};
+
+function deriveVtaSupportedGate(args: {
+  readonly runs: readonly VtaImdRun[];
+  readonly comparison: VtaImdComparison;
+  readonly hasVtaBand: boolean;
+  readonly capturingRunId: string | null;
+}): VtaSupportedGate {
+  const { runs, comparison, hasVtaBand, capturingRunId } = args;
+
+  const measuredRuns = runs.filter(
+    r => r.source === 'live_capture' && typeof r.imdPercent === 'number' && Number.isFinite(r.imdPercent),
+  );
+  const hasRunsWithMetadata = measuredRuns.length > 0 && measuredRuns.every(
+    r => r.measuredAt !== null && r.sampleCount !== null,
+  );
+
+  const criteria: VtaSupportedGateCriterion[] = [
+    {
+      id: 'vta_band',
+      label: 'VTA band exists',
+      passed: hasVtaBand,
+      detail: hasVtaBand
+        ? 'VTA/SRA dual-tone IMD band found on selected test record.'
+        : 'No VTA/SRA IMD band found on selected test record.',
+    },
+    {
+      id: 'three_measured_runs',
+      label: 'At least three measured runs',
+      passed: measuredRuns.length >= 3,
+      detail: measuredRuns.length >= 3
+        ? `${measuredRuns.length} measured runs available.`
+        : `Only ${measuredRuns.length} measured run(s). At least 3 required.`,
+    },
+    {
+      id: 'candidate_exists',
+      label: 'Comparison candidate exists',
+      passed: comparison.status === 'experimental_candidate',
+      detail: comparison.status === 'experimental_candidate'
+        ? 'Experimental candidate identified from measured runs.'
+        : 'Not enough measured runs for comparison candidate.',
+    },
+    {
+      id: 'comparison_confidence',
+      label: 'Comparison confidence at least medium',
+      passed: comparison.confidence === 'medium' || comparison.confidence === 'high',
+      detail: comparison.confidence === 'medium' || comparison.confidence === 'high'
+        ? `Comparison confidence is ${comparison.confidence}.`
+        : `Comparison confidence is ${comparison.confidence} — medium or higher required.`,
+    },
+    {
+      id: 'no_active_capture',
+      label: 'No active VTA capture',
+      passed: capturingRunId === null,
+      detail: capturingRunId === null
+        ? 'No capture in progress.'
+        : 'A VTA capture is currently running.',
+    },
+    {
+      id: 'experimental_warning',
+      label: 'Experimental warning present',
+      passed: comparison.warnings.length > 0 &&
+        comparison.warnings.some(w => /experimental|final recommendation/i.test(w)),
+      detail: 'Comparison warnings include experimental/not-final-recommendation notice.',
+    },
+    {
+      id: 'run_metadata',
+      label: 'Measured runs have provenance metadata',
+      passed: hasRunsWithMetadata,
+      detail: hasRunsWithMetadata
+        ? 'All measured runs have measuredAt and sampleCount.'
+        : measuredRuns.length === 0
+          ? 'No measured runs yet.'
+          : 'Some measured runs are missing measuredAt or sampleCount.',
+    },
+  ];
+
+  const passedCount = criteria.filter(c => c.passed).length;
+  const totalCount = criteria.length;
+
+  let status: VtaSupportedGateStatus;
+  if (passedCount === totalCount) {
+    status = 'ready_for_supported_review';
+  } else if (comparison.status === 'experimental_candidate') {
+    status = 'candidate_ready';
+  } else {
+    status = 'not_ready';
+  }
+
+  return {
+    status,
+    criteria,
+    passedCount,
+    totalCount,
+    warnings: ['Supported review gate does not change VTA workflow status — remains Planned until formally reviewed.'],
+  };
+}
+
 function vtaRunTableMarkup(
   runs: readonly VtaImdRun[],
   opts: { canCapture: boolean; capturingRunId: string | null; captureElapsed: number; candidateRunId: string | null },
@@ -3384,6 +3538,12 @@ function renderAdvancedPanel(els: Elements): void {
     && vtaBand.f2Hz != null
     && state.vta.capturingRunId === null;
   const comparison = deriveVtaImdComparison(state.vta.runs);
+  const gate = deriveVtaSupportedGate({
+    runs: state.vta.runs,
+    comparison,
+    hasVtaBand,
+    capturingRunId: state.vta.capturingRunId,
+  });
   const vtaOpts = {
     canCapture,
     capturingRunId: state.vta.capturingRunId,
@@ -3574,6 +3734,45 @@ function renderAdvancedPanel(els: Elements): void {
               </div>
             `;
           })()}
+
+          ${(() => {
+            const gateStatusLabel = gate.status === 'ready_for_supported_review'
+              ? 'Ready for supported review'
+              : gate.status === 'candidate_ready'
+              ? 'Candidate ready'
+              : 'Not ready';
+            const gateStatusClass = gate.status === 'ready_for_supported_review'
+              ? 'mlab-vta-gate-status--review'
+              : gate.status === 'candidate_ready'
+              ? 'mlab-vta-gate-status--candidate'
+              : 'mlab-vta-gate-status--not-ready';
+            const statusMsg = gate.status === 'ready_for_supported_review'
+              ? 'Ready for supported review &#8212; workflow remains Planned until reviewed.'
+              : gate.status === 'candidate_ready'
+              ? 'Candidate found. Some criteria still needed before supported review.'
+              : 'More measured runs or criteria needed.';
+            const criteriaHtml = gate.criteria.map(c => `
+              <tr class="mlab-vta-gate-row">
+                <td class="mlab-vta-gate-pass ${c.passed ? 'mlab-vta-gate-pass--ok' : 'mlab-vta-gate-pass--fail'}">${c.passed ? 'Pass' : 'Needs work'}</td>
+                <td class="mlab-vta-gate-label">${renderText(c.label)}</td>
+                <td class="mlab-vta-gate-detail ea-muted">${renderText(c.detail)}</td>
+              </tr>
+            `).join('');
+            return `
+              <div class="mlab-vta-gate">
+                <div class="mlab-vta-gate-head">
+                  <strong>Supported readiness gate</strong>
+                </div>
+                <div class="mlab-vta-gate-summary">
+                  Status: <span class="mlab-vta-gate-status ${gateStatusClass}">${gateStatusLabel}</span>
+                  &middot; Passed: ${gate.passedCount} / ${gate.totalCount}
+                </div>
+                <p class="mlab-vta-gate-msg ea-muted">${statusMsg}</p>
+                <table class="mlab-vta-gate-table" aria-label="Supported readiness criteria">
+                  <tbody>${criteriaHtml}</tbody>
+                </table>
+              </div>
+            `;
           })()}
         </div>
       </div>

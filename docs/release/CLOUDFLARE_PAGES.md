@@ -132,3 +132,13 @@ After Cloudflare deploy, verify at `https://test-record-coverage.pages.dev/measu
 36. Coverage panel badge for VTA / IMD Optimizer links to the Advanced analyzers panel (not the THD panel).
 37. VTA / IMD Optimizer coverage badge remains **Planned**, not **Available**.
 38. All S4 MVP measurement flows (speed, channel, freq, THD/IMD, ref level) remain functional.
+
+## S5F Supported readiness gate (S5F)
+
+39. The **Supported readiness gate** section is visible in the VTA panel when a VTA band is available.
+40. Gate status can show: **Not ready** / **Candidate ready** / **Ready for supported review**.
+41. Gate displays pass/fail for each criterion with detail text.
+42. Gate status `Ready for supported review` does not change the VTA workflow status — it remains **Planned**.
+43. JSON export contains a `supported_gate` key with `status`, `passed_count`, `total_count`, `criteria`, `warnings`.
+44. Export `vta_imd_optimizer.status` is still `"planned"`.
+45. No `best_setting`, `bestSetting`, `recommended_height`, or `optimal_height` fields in export.
