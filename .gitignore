@@ -33,3 +33,6 @@ pnpm-debug.log*
 Thumbs.db
 
 tools/apply-*.mjs
+
+# Claude Code internal state
+.claude/
