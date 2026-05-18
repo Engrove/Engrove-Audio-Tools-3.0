@@ -156,3 +156,22 @@ After Cloudflare deploy, verify at `https://test-record-coverage.pages.dev/measu
 54. Text report includes **Workflow status policy:** line and **Required before a supported lift:** list.
 55. Export `vta_imd_optimizer.status` remains `"planned"` regardless of policy status.
 56. No `workflowStatus: "supported"` value anywhere in export or source.
+
+## S5H Guided order, 45 RPM speed context & run history (S5H)
+
+57. **Recommended measurement order** panel is visible on the Measurement Lab page.
+58. Track 1 is listed as **Recommended first** for Reference Level.
+59. Tracks 2–3 map to Channel Identity / Crosstalk.
+60. Tracks 4–6 are labelled **Guidance only** (RIAA HF — no automatic EQ adjustment).
+61. Tracks 7–8 are labelled **Guidance only** (RIAA LF — no automatic EQ adjustment).
+62. Track 10 shows both **33⅓ RPM** (nominal 3,150 Hz) and **45 RPM** (nominal approx. 4,253 Hz) context.
+63. Speed / Wow & Flutter panel shows a **33⅓ RPM / 45 RPM** toggle.
+64. At 45 RPM, the panel displays: "At 45 RPM, the 3150 Hz track should read approximately 4253 Hz."
+65. Speed measurement results are labelled with the active speed context and nominal frequency.
+66. Completed speed measurements are appended to a **Speed run history** table below the latest result.
+67. Both 33⅓ and 45 RPM runs can appear in the same session history.
+68. **Clear speed run history** button removes all speed runs from the current session.
+69. Changing test record clears speed run history (logged: "Speed run history cleared after test record change.").
+70. JSON export `measurements.speed.runs` array contains all session speed runs with `speed_context`, `rpm`, `nominal_frequency_hz`, `measured_frequency_hz`, `speed_error_percent`, `wow_flutter_percent`.
+71. Text report **SPEED & WOW·FLUTTER** section shows latest result and all speed runs.
+72. VTA workflow status remains **Planned** — no `best_setting`, `recommended_height`, or `optimal_height` in export.

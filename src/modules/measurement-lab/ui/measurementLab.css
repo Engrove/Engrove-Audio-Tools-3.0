@@ -1206,6 +1206,147 @@ button.mlab-coverage-badge--available:focus-visible {
   color: var(--ea-text-low);
 }
 
+/* Guided measurement order */
+.mlab-guided-order-body {
+  padding: var(--ea-space-3) var(--ea-space-4);
+}
+
+.mlab-guided-order-intro {
+  margin-bottom: var(--ea-space-3);
+  font-size: var(--ea-text-sm);
+}
+
+.mlab-guided-order-list {
+  margin: 0;
+  padding: 0 0 0 var(--ea-space-5);
+}
+
+.mlab-guided-order-item {
+  margin-bottom: var(--ea-space-4);
+  padding-left: var(--ea-space-2);
+}
+
+.mlab-guided-order-item--first {
+  border-left: 2px solid var(--ea-border-low);
+  padding-left: var(--ea-space-3);
+}
+
+.mlab-guided-order-step-head {
+  display: flex;
+  align-items: center;
+  gap: var(--ea-space-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--ea-space-1);
+}
+
+.mlab-guided-order-track {
+  font-weight: 600;
+  font-size: var(--ea-text-sm);
+  color: var(--ea-text-low);
+  white-space: nowrap;
+}
+
+.mlab-guided-order-name {
+  font-weight: 600;
+}
+
+.mlab-guided-order-first-badge {
+  background: var(--ea-surface-raised);
+  font-size: var(--ea-text-xs);
+}
+
+.mlab-guided-order-detail {
+  font-size: var(--ea-text-sm);
+  margin-bottom: var(--ea-space-1);
+}
+
+.mlab-guided-order-workflow {
+  font-size: var(--ea-text-sm);
+}
+
+/* Speed context toggle and history */
+.mlab-speed-ctx-row {
+  display: flex;
+  align-items: center;
+  gap: var(--ea-space-2);
+  margin-bottom: var(--ea-space-3);
+  flex-wrap: wrap;
+}
+
+.mlab-speed-ctx-label {
+  font-size: var(--ea-text-sm);
+  white-space: nowrap;
+}
+
+.mlab-speed-ctx-btn {
+  font-size: var(--ea-text-sm);
+  padding: var(--ea-space-1) var(--ea-space-3);
+}
+
+.mlab-speed-ctx-btn--active {
+  background: var(--ea-surface-raised);
+  font-weight: 600;
+}
+
+.mlab-speed-ctx-note {
+  margin-bottom: var(--ea-space-3);
+  font-size: var(--ea-text-sm);
+}
+
+.mlab-speed-ctx-badge {
+  font-size: var(--ea-text-sm);
+}
+
+.mlab-speed-history {
+  margin-top: var(--ea-space-5);
+  border-top: 1px solid var(--ea-border-low);
+  padding-top: var(--ea-space-3);
+}
+
+.mlab-speed-history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--ea-space-2);
+  flex-wrap: wrap;
+  gap: var(--ea-space-2);
+}
+
+.mlab-speed-history-clear {
+  font-size: var(--ea-text-sm);
+}
+
+.mlab-speed-history-empty {
+  font-size: var(--ea-text-sm);
+}
+
+.mlab-speed-history-scroll {
+  overflow-x: auto;
+}
+
+.mlab-speed-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--ea-text-sm);
+}
+
+.mlab-speed-history-table th {
+  text-align: left;
+  padding: var(--ea-space-1) var(--ea-space-2);
+  border-bottom: 1px solid var(--ea-border-low);
+  color: var(--ea-text-low);
+  white-space: nowrap;
+}
+
+.mlab-speed-history-row {
+  border-bottom: 1px solid var(--ea-border-lowest);
+}
+
+.mlab-speed-history-cell {
+  padding: var(--ea-space-1) var(--ea-space-2);
+  white-space: nowrap;
+}
+
 @media (max-width: 1180px) {
   .mlab-workbench-grid {
     grid-template-columns: 1fr;

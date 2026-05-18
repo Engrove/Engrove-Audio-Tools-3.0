@@ -1384,10 +1384,10 @@ function checkS4GFinal() {
     // Part A — Speed result UI: source badge
     ['Speed result: source badge class present', /mlab-result-source-row[\s\S]{0,400}ea-badge.*srcBadgeClass|srcBadgeClass[\s\S]{0,400}mlab-result-source-row/],
     ['Speed result: Self-test \/ Simulated badge label', /Self-test \/ Simulated/],
-    ['Speed result: Live capture badge label in speed result', /function renderSpeedPanel[\s\S]{0,3000}Live capture/],
+    ['Speed result: Live capture badge label in speed result', /function renderSpeedPanel[\s\S]{0,4000}Live capture/],
     // Part A — Speed result UI: band row
-    ['Speed result: band meta label rendered', /function renderSpeedPanel[\s\S]{0,3000}state\.speed\.bandMeta[\s\S]{0,400}\.label/],
-    ['Speed result: band meta frequencyHz rendered', /function renderSpeedPanel[\s\S]{0,3000}state\.speed\.bandMeta[\s\S]{0,400}frequencyHz/],
+    ['Speed result: band meta label rendered', /function renderSpeedPanel[\s\S]{0,4000}state\.speed\.bandMeta[\s\S]{0,400}\.label/],
+    ['Speed result: band meta frequencyHz rendered', /function renderSpeedPanel[\s\S]{0,4000}state\.speed\.bandMeta[\s\S]{0,400}frequencyHz/],
     // Part A — Speed result UI: chain-honesty text
     ['Speed result: chain-honesty paragraph', /These readings measure playback\/capture speed stability and are affected by the test record/],
     // Part C — buildReportText: Speed source + band
@@ -2358,6 +2358,86 @@ function checkS5GVtaStatusPolicy() {
 }
 
 checkS5GVtaStatusPolicy();
+
+function checkS5HGuidedOrderAndSpeed() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  if (!existsSync(renderSrcPath)) {
+    console.error('S5H static check: source file not found');
+    process.exitCode = 1;
+    return;
+  }
+  const src = readFileSync(renderSrcPath, 'utf8');
+
+  const checks = [
+    // 1. Recommended measurement order section present
+    ['Recommended measurement order present',
+      /Recommended measurement order/],
+    // 2. Track 1 as Reference Level + recommended first
+    ['Track 1 Reference Level recommended first',
+      /Track[\s\S]{0,10}1[\s\S]{0,400}[Rr]ecommended first/],
+    // 3. Tracks 2-3 Channel Identity / Crosstalk
+    ['Tracks 2-3 Channel Identity',
+      /Tracks[\s\S]{0,15}2[\s\S]{0,150}[Cc]hannel [Ii]dentity/],
+    // 4. Tracks 4-6 RIAA HF guidance
+    ['Tracks 4-6 RIAA HF guidance',
+      /Tracks[\s\S]{0,15}4[\s\S]{0,200}(?:RIAA HF|HF frequency)/],
+    // 5. Tracks 7-8 RIAA LF guidance
+    ['Tracks 7-8 RIAA LF guidance',
+      /Tracks[\s\S]{0,15}7[\s\S]{0,200}(?:RIAA LF|LF frequency)/],
+    // 6. Track 10 shows both 33⅓ and 45 RPM
+    ['Track 10 shows 33 and 45 RPM',
+      /Track[\s\S]{0,10}10[\s\S]{0,300}45/],
+    // 7. 4253 Hz appears for 45 RPM
+    ['4253 Hz nominal for 45 RPM', /4[,.]?253/],
+    // 8. SpeedContext type defined
+    ['SpeedContext type defined',
+      /type SpeedContext\s*=\s*'33_33'\s*\|\s*'45'/],
+    // 9. SpeedMeasurementRun type defined
+    ['SpeedMeasurementRun type defined',
+      /type SpeedMeasurementRun\s*=/],
+    // 10. speedContext field in SpeedMeasurementRun
+    ['speedContext in SpeedMeasurementRun',
+      /type SpeedMeasurementRun[\s\S]{0,400}speedContext\s*:/],
+    // 11. nominalFrequencyHz field in SpeedMeasurementRun
+    ['nominalFrequencyHz in SpeedMeasurementRun',
+      /type SpeedMeasurementRun[\s\S]{0,400}nominalFrequencyHz\s*:/],
+    // 12. Clear speed run history button present
+    ['Clear speed run history button',
+      /Clear speed run history/],
+    // 13. runs in speed export
+    ['runs key in speed export', /speed_error_percent|nominal_frequency_hz/],
+    // 14. nominal_frequency_hz in export
+    ['nominal_frequency_hz in export', /nominal_frequency_hz/],
+    // 15. Speed run history section in report text
+    ['Speed run history in report text',
+      /Speed run history/],
+    // 16. VTA workflow still planned (not supported)
+    ['VTA workflow still planned not supported',
+      !/vta_imd_optimizer[\s\S]{0,200}implementationStatus\s*:\s*'supported'/.test(
+        existsSync(join(repoRoot, 'src/modules/measurement-lab/data/measurementWorkflows.ts'))
+          ? readFileSync(join(repoRoot, 'src/modules/measurement-lab/data/measurementWorkflows.ts'), 'utf8')
+          : '')],
+    // 17. No final VTA claims
+    ['No final VTA claims in render source',
+      !/best_setting|bestSetting|recommended_height|optimal_height/.test(src)],
+  ];
+
+  let allPass = true;
+  for (const [label, result] of checks) {
+    const ok = typeof result === 'boolean' ? result : result.test(src);
+    if (!ok) {
+      console.error(`S5H static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S5H static source check (Guided Order, 45 RPM Speed Context & Run History): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS5HGuidedOrderAndSpeed();
 
 try {
   await runChecks();

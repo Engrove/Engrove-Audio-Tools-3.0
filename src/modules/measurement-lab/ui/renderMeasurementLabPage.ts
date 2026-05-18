@@ -71,14 +71,33 @@ type SpeedBandMeta = {
   readonly frequencyHz: number | null;
   readonly levelDb: number | null;
 };
+
+type SpeedContext = '33_33' | '45';
+
+type SpeedMeasurementRun = {
+  readonly id: string;
+  readonly createdAt: string;
+  readonly source: 'live_capture' | 'self_test';
+  readonly speedContext: SpeedContext;
+  readonly rpm: number;
+  readonly nominalFrequencyHz: number;
+  readonly measuredFrequencyHz: number | null;
+  readonly speedErrorPercent: number | null;
+  readonly wowFlutterPercent: number | null;
+  readonly band: SpeedBandMeta | null;
+  readonly warnings: readonly string[];
+};
+
 type SpeedState = {
   referenceHz: number;
+  speedContext: SpeedContext;
   active: boolean;
   elapsedSeconds: number;
   result: SpeedFlutterResult | null;
   resultSource: 'live_capture' | 'self_test' | null;
   bandMeta: SpeedBandMeta | null;
   capture: SpeedFlutterCapture | null;
+  runs: SpeedMeasurementRun[];
 };
 
 type ChannelBandMeta = {
@@ -245,11 +264,12 @@ type LabState = {
  * site below; it has no runtime effect.
  */
 const tokenLayoutGeneratedClassNames =
-  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured mlab-vta-candidate-badge mlab-vta-comparison mlab-vta-comparison-candidate mlab-vta-comparison-meta mlab-vta-comparison-warning mlab-vta-comparison-status mlab-vta-comparison-confidence mlab-vta-confidence-level mlab-vta-confidence-level--insufficient mlab-vta-confidence-level--low mlab-vta-confidence-level--medium mlab-vta-confidence-level--high mlab-vta-confidence-reason mlab-vta-gate mlab-vta-gate-head mlab-vta-gate-summary mlab-vta-gate-status mlab-vta-gate-status--not-ready mlab-vta-gate-status--candidate mlab-vta-gate-status--review mlab-vta-gate-msg mlab-vta-gate-table mlab-vta-gate-row mlab-vta-gate-pass mlab-vta-gate-pass--ok mlab-vta-gate-pass--fail mlab-vta-gate-label mlab-vta-gate-detail mlab-vta-policy mlab-vta-policy-head mlab-vta-policy-status-row mlab-vta-policy-status mlab-vta-policy-status--experimental mlab-vta-policy-status--review-not-supported mlab-vta-policy-reason mlab-vta-policy-req-head mlab-vta-policy-req-list mlab-vta-policy-req';
+  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured mlab-vta-candidate-badge mlab-vta-comparison mlab-vta-comparison-candidate mlab-vta-comparison-meta mlab-vta-comparison-warning mlab-vta-comparison-status mlab-vta-comparison-confidence mlab-vta-confidence-level mlab-vta-confidence-level--insufficient mlab-vta-confidence-level--low mlab-vta-confidence-level--medium mlab-vta-confidence-level--high mlab-vta-confidence-reason mlab-vta-gate mlab-vta-gate-head mlab-vta-gate-summary mlab-vta-gate-status mlab-vta-gate-status--not-ready mlab-vta-gate-status--candidate mlab-vta-gate-status--review mlab-vta-gate-msg mlab-vta-gate-table mlab-vta-gate-row mlab-vta-gate-pass mlab-vta-gate-pass--ok mlab-vta-gate-pass--fail mlab-vta-gate-label mlab-vta-gate-detail mlab-vta-policy mlab-vta-policy-head mlab-vta-policy-status-row mlab-vta-policy-status mlab-vta-policy-status--experimental mlab-vta-policy-status--review-not-supported mlab-vta-policy-reason mlab-vta-policy-req-head mlab-vta-policy-req-list mlab-vta-policy-req mlab-guided-order-panel mlab-guided-order-body mlab-guided-order-intro mlab-guided-order-list mlab-guided-order-item mlab-guided-order-item--first mlab-guided-order-step-head mlab-guided-order-track mlab-guided-order-name mlab-guided-order-first-badge mlab-guided-order-detail mlab-guided-order-workflow mlab-speed-ctx-row mlab-speed-ctx-label mlab-speed-ctx-btn mlab-speed-ctx-btn--active mlab-speed-ctx-note mlab-speed-ctx-badge mlab-speed-history mlab-speed-history-head mlab-speed-history-clear mlab-speed-history-empty mlab-speed-history-scroll mlab-speed-history-table mlab-speed-history-row mlab-speed-history-cell';
 void tokenLayoutGeneratedClassNames;
 
 const speedMeasurementDurationSeconds = 30;
 const defaultSpeedReferenceHz = 3150;
+const nominalFrequencyHz33: Record<SpeedContext, number> = { '33_33': 3150, '45': Math.round((45 / 33.333) * 3150) };
 const channelMeasurementDurationSeconds = 10;
 const freqMeasurementDurationSeconds = 10;
 const refLevelMeasurementDurationSeconds = 5;
@@ -294,12 +314,14 @@ const state: LabState = {
   channelCount: 0,
   speed: {
     referenceHz: defaultSpeedReferenceHz,
+    speedContext: '33_33' as SpeedContext,
     active: false,
     elapsedSeconds: 0,
     result: null,
     resultSource: null,
     bandMeta: null,
     capture: null,
+    runs: [],
   },
   channel: {
     step: 'idle',
@@ -538,6 +560,77 @@ function audioSourcePanelMarkup(): string {
           <button class="ea-button ea-button--secondary" type="button" data-mlab-run-self-test>Run self-test</button>
         </div>
         <p class="ea-muted mlab-honesty" data-mlab-honesty>Sample-rate honesty report will appear after the audio context is running.</p>
+      </div>
+    </section>
+  `;
+}
+
+function guidedMeasurementOrderMarkup(): string {
+  return `
+    <section id="mlab-guided-order-panel" class="ea-panel mlab-guided-order-panel" aria-labelledby="mlab-guided-order-title">
+      <div class="ea-panel-header">
+        <span class="ea-panel-header-id">&#9776;</span>
+        <span id="mlab-guided-order-title">Recommended measurement order</span>
+        <span class="ea-panel-header-spacer"></span>
+        <span class="ea-badge">Guidance</span>
+      </div>
+      <div class="ea-panel-body mlab-guided-order-body">
+        <p class="ea-muted mlab-guided-order-intro">Based on Ultimate Analogue Test LP track order. Not a wizard — use any order that suits your session.</p>
+        <ol class="mlab-guided-order-list">
+          <li class="mlab-guided-order-item mlab-guided-order-item--first">
+            <div class="mlab-guided-order-step-head">
+              <span class="mlab-guided-order-track">Track&nbsp;1</span>
+              <span class="mlab-guided-order-name">Reference Level</span>
+              <span class="ea-badge mlab-guided-order-first-badge">Recommended first</span>
+            </div>
+            <div class="mlab-guided-order-detail ea-muted">1&thinsp;kHz reference tone — establish base level and channel balance.</div>
+            <div class="mlab-guided-order-workflow ea-muted">Workflow: <strong>Reference Level Calibration</strong></div>
+          </li>
+          <li class="mlab-guided-order-item">
+            <div class="mlab-guided-order-step-head">
+              <span class="mlab-guided-order-track">Tracks&nbsp;2&ndash;3</span>
+              <span class="mlab-guided-order-name">Channel Identity / Crosstalk</span>
+            </div>
+            <div class="mlab-guided-order-detail ea-muted">L-only / R-only 1&thinsp;kHz tone — verify stereo wiring and measure crosstalk.</div>
+            <div class="mlab-guided-order-workflow ea-muted">Workflow: <strong>Channel Identity &amp; Crosstalk</strong></div>
+          </li>
+          <li class="mlab-guided-order-item">
+            <div class="mlab-guided-order-step-head">
+              <span class="mlab-guided-order-track">Tracks&nbsp;4&ndash;6</span>
+              <span class="mlab-guided-order-name">RIAA HF frequency-response guidance</span>
+              <span class="ea-badge">Guidance only</span>
+            </div>
+            <div class="mlab-guided-order-detail ea-muted">Track&nbsp;4: 1&thinsp;kHz &minus;20&thinsp;dB reference &middot; Track&nbsp;5: 10&thinsp;kHz &minus;20&thinsp;dB comparison &middot; Track&nbsp;6: 1&ndash;20&thinsp;kHz sweep. No automatic EQ adjustment.</div>
+          </li>
+          <li class="mlab-guided-order-item">
+            <div class="mlab-guided-order-step-head">
+              <span class="mlab-guided-order-track">Tracks&nbsp;7&ndash;8</span>
+              <span class="mlab-guided-order-name">RIAA LF frequency-response guidance</span>
+              <span class="ea-badge">Guidance only</span>
+            </div>
+            <div class="mlab-guided-order-detail ea-muted">Track&nbsp;7: 1&thinsp;kHz&ndash;20&thinsp;Hz downsweep &middot; Track&nbsp;8: 100&thinsp;Hz reference. No automatic EQ adjustment.</div>
+          </li>
+          <li class="mlab-guided-order-item">
+            <div class="mlab-guided-order-step-head">
+              <span class="mlab-guided-order-track">Track&nbsp;10</span>
+              <span class="mlab-guided-order-name">Speed / Wow &amp; Flutter</span>
+            </div>
+            <div class="mlab-guided-order-detail ea-muted">
+              33&frac13;&thinsp;RPM: nominal 3,150&thinsp;Hz &middot; 45&thinsp;RPM: nominal approx. 4,253&thinsp;Hz.
+              At 45&thinsp;RPM, the 3150&thinsp;Hz track should read approximately 4253&thinsp;Hz.
+            </div>
+            <div class="mlab-guided-order-workflow ea-muted">Workflow: <strong>Speed / Wow &amp; Flutter</strong></div>
+          </li>
+          <li class="mlab-guided-order-item">
+            <div class="mlab-guided-order-step-head">
+              <span class="mlab-guided-order-track">Track&nbsp;9</span>
+              <span class="mlab-guided-order-name">VTA / IMD</span>
+              <span class="ea-badge">Experimental</span>
+            </div>
+            <div class="mlab-guided-order-detail ea-muted">60&thinsp;Hz + 4&thinsp;kHz, 4:1, IEC_IMD — measure IMD at multiple arm heights.</div>
+            <div class="mlab-guided-order-workflow ea-muted">Workflow: <strong>VTA IMD optimizer</strong> (experimental / planned)</div>
+          </li>
+        </ol>
       </div>
     </section>
   `;
@@ -843,16 +936,33 @@ function buildSessionJson(): SessionJson {
     },
     selection: { cartridge: null, tonearm: null, test_record: state.selectedTestRecordId },
     measurements: {
-      speed: speedResult
-        ? {
-            source: state.speed.resultSource ?? 'live_capture',
-            band: serializeSpeedBandMeta(state.speed.bandMeta),
-            speed_deviation_percent: speedResult.speedDeviationPercent,
-            unweighted_wf_percent: speedResult.unweightedWfPercent,
-            weighted_wf_percent: speedResult.weightedWfPercent,
-            classification: classifyWf(speedResult.unweightedWfPercent).label,
-          }
-        : null,
+      speed: (() => {
+        const runs = state.speed.runs.map(r => ({
+          created_at: r.createdAt,
+          source: r.source,
+          speed_context: r.speedContext,
+          rpm: r.rpm,
+          nominal_frequency_hz: r.nominalFrequencyHz,
+          measured_frequency_hz: r.measuredFrequencyHz,
+          speed_error_percent: r.speedErrorPercent,
+          wow_flutter_percent: r.wowFlutterPercent,
+          band: r.band ? serializeSpeedBandMeta(r.band) : null,
+          warnings: r.warnings,
+        }));
+        const latest = speedResult ? {
+          source: state.speed.resultSource ?? 'live_capture',
+          speed_context: state.speed.speedContext,
+          rpm: state.speed.speedContext === '45' ? 45 : 33.333,
+          nominal_frequency_hz: nominalFrequencyHz33[state.speed.speedContext],
+          band: serializeSpeedBandMeta(state.speed.bandMeta),
+          speed_deviation_percent: speedResult.speedDeviationPercent,
+          unweighted_wf_percent: speedResult.unweightedWfPercent,
+          weighted_wf_percent: speedResult.weightedWfPercent,
+          classification: classifyWf(speedResult.unweightedWfPercent).label,
+        } : null;
+        if (latest === null && runs.length === 0) return null;
+        return { latest, runs };
+      })(),
       channel_identity: channelIdentityResult,
       frequency_response: freqResult
         ? {
@@ -1091,18 +1201,33 @@ function buildReportText(): string {
 
   // Speed
   const sr = state.speed.result;
-  if (sr) {
+  if (sr || state.speed.runs.length > 0) {
     lines.push('SPEED & WOW·FLUTTER');
-    lines.push(`  Source:                ${state.speed.resultSource ?? 'live_capture'}`);
-    if (state.speed.bandMeta) {
-      const sbm = state.speed.bandMeta;
-      const freq = sbm.frequencyHz != null ? ` · ${sbm.frequencyHz.toLocaleString('en-US')} Hz` : '';
-      lines.push(`  Band:                  ${sbm.label}${freq}`);
+    if (sr) {
+      lines.push(`  Latest result:`);
+      lines.push(`    Source:                ${state.speed.resultSource ?? 'live_capture'}`);
+      lines.push(`    Speed context:         ${state.speed.speedContext === '45' ? '45 RPM' : '33⅓ RPM'}`);
+      lines.push(`    Nominal frequency:     ${nominalFrequencyHz33[state.speed.speedContext].toLocaleString('en-US')} Hz`);
+      if (state.speed.bandMeta) {
+        const sbm = state.speed.bandMeta;
+        const freq = sbm.frequencyHz != null ? ` · ${sbm.frequencyHz.toLocaleString('en-US')} Hz` : '';
+        lines.push(`    Band:                  ${sbm.label}${freq}`);
+      }
+      lines.push(`    Speed deviation:       ${sr.speedDeviationPercent.toFixed(3)} %`);
+      lines.push(`    Unweighted W&F (AES6): ${sr.unweightedWfPercent.toFixed(3)} %`);
+      lines.push(`    IEC-weighted W&F:      ${sr.weightedWfPercent.toFixed(3)} %`);
+      lines.push(`    Classification:        ${classifyWf(sr.unweightedWfPercent).label}`);
     }
-    lines.push(`  Speed deviation:       ${sr.speedDeviationPercent.toFixed(3)} %`);
-    lines.push(`  Unweighted W&F (AES6): ${sr.unweightedWfPercent.toFixed(3)} %`);
-    lines.push(`  IEC-weighted W&F:      ${sr.weightedWfPercent.toFixed(3)} %`);
-    lines.push(`  Classification:        ${classifyWf(sr.unweightedWfPercent).label}`);
+    if (state.speed.runs.length > 0) {
+      lines.push(`  Speed run history (${state.speed.runs.length} run${state.speed.runs.length === 1 ? '' : 's'}):`);
+      for (const run of state.speed.runs) {
+        const rpmLabel = run.speedContext === '45' ? '45 RPM' : '33⅓ RPM';
+        const measHz = run.measuredFrequencyHz !== null ? `${run.measuredFrequencyHz.toFixed(2)} Hz` : '—';
+        const err = run.speedErrorPercent !== null ? `${run.speedErrorPercent.toFixed(3)} %` : '—';
+        const wf = run.wowFlutterPercent !== null ? `${run.wowFlutterPercent.toFixed(3)} %` : '—';
+        lines.push(`    [${run.createdAt}] ${rpmLabel} | Nominal: ${run.nominalFrequencyHz} Hz | Measured: ${measHz} | Speed error: ${err} | W&F: ${wf} | ${run.source}`);
+      }
+    }
     lines.push('');
   }
 
@@ -1368,6 +1493,7 @@ export function renderMeasurementLabPage(): string {
           <div class="mlab-workbench-main">
             ${audioSourcePanelMarkup()}
             ${coveragePanelMarkup()}
+            ${guidedMeasurementOrderMarkup()}
             ${speedPanelMarkup()}
             ${channelPanelMarkup()}
             ${freqPanelMarkup()}
@@ -1443,12 +1569,56 @@ function classifyWf(wfPercent: number): WfGrade {
   return { label: 'Poor', cssClass: 'mlab-wf-grade--poor' };
 }
 
+function speedRunHistoryMarkup(runs: readonly SpeedMeasurementRun[]): string {
+  if (runs.length === 0) {
+    return '<p class="ea-muted mlab-speed-history-empty">No speed runs captured yet.</p>';
+  }
+  const rows = runs.map(r => {
+    const time = r.createdAt.replace('T', ' ').replace(/\.\d+Z$/, ' UTC');
+    const rpmLabel = r.speedContext === '45' ? '45' : '33⅓';
+    const nomHz = r.nominalFrequencyHz.toLocaleString('en-US');
+    const measHz = r.measuredFrequencyHz !== null ? r.measuredFrequencyHz.toFixed(2) : '—';
+    const err = r.speedErrorPercent !== null ? `${r.speedErrorPercent >= 0 ? '+' : ''}${r.speedErrorPercent.toFixed(3)} %` : '—';
+    const wf = r.wowFlutterPercent !== null ? `${r.wowFlutterPercent.toFixed(3)} %` : '—';
+    const src = r.source === 'self_test' ? 'Self-test' : 'Live';
+    return `<tr class="mlab-speed-history-row">
+      <td class="mlab-speed-history-cell">${renderText(time)}</td>
+      <td class="mlab-speed-history-cell">${renderText(rpmLabel)}</td>
+      <td class="mlab-speed-history-cell">${renderText(nomHz)}</td>
+      <td class="mlab-speed-history-cell">${renderText(measHz)}</td>
+      <td class="mlab-speed-history-cell">${renderText(err)}</td>
+      <td class="mlab-speed-history-cell">${renderText(wf)}</td>
+      <td class="mlab-speed-history-cell">${renderText(src)}</td>
+    </tr>`;
+  }).join('');
+  return `
+    <div class="mlab-speed-history-scroll">
+      <table class="mlab-speed-history-table" aria-label="Speed run history">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>RPM</th>
+            <th>Nominal Hz</th>
+            <th>Measured Hz</th>
+            <th>Speed error</th>
+            <th>Wow/flutter</th>
+            <th>Source</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
 function renderSpeedPanel(els: Elements): void {
   const body = els.speedBody;
   if (!body) return;
 
   const speedRecord = selectedRecord();
   const speedBands = getWowFlutterBands(speedRecord);
+  const ctx = state.speed.speedContext;
+  const nomHz = nominalFrequencyHz33[ctx];
 
   if (!speedRecord) {
     body.innerHTML = '<p class="ea-muted">Select a test record with a speed / wow &amp; flutter band.</p>';
@@ -1468,11 +1638,21 @@ function renderSpeedPanel(els: Elements): void {
     return;
   }
 
+  const ctxToggleHtml = `
+    <div class="mlab-speed-ctx-row">
+      <span class="mlab-speed-ctx-label ea-muted">Speed context:</span>
+      <button class="ea-button ea-button--ghost mlab-speed-ctx-btn${ctx === '33_33' ? ' mlab-speed-ctx-btn--active' : ''}" type="button" data-mlab-speed-ctx="33_33">33&frac13;&thinsp;RPM</button>
+      <button class="ea-button ea-button--ghost mlab-speed-ctx-btn${ctx === '45' ? ' mlab-speed-ctx-btn--active' : ''}" type="button" data-mlab-speed-ctx="45">45&thinsp;RPM</button>
+    </div>
+    ${ctx === '45' ? `<p class="ea-muted mlab-speed-ctx-note">At 45&thinsp;RPM, the 3150&thinsp;Hz track should read approximately 4,253&thinsp;Hz. Nominal: ${nomHz.toLocaleString('en-US')}&thinsp;Hz.</p>` : ''}
+  `;
+
   if (state.speed.active) {
     const pct = Math.min(100, (state.speed.elapsedSeconds / speedMeasurementDurationSeconds) * 100);
     const remaining = Math.max(0, speedMeasurementDurationSeconds - state.speed.elapsedSeconds);
     body.innerHTML = `
-      <p class="ea-muted">Recording ${state.speed.referenceHz} Hz reference tone&hellip;</p>
+      ${ctxToggleHtml}
+      <p class="ea-muted">Recording ${state.speed.referenceHz}&thinsp;Hz reference tone&hellip;</p>
       <div class="mlab-progress-track" role="progressbar" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100" aria-label="Recording progress">
         <div class="mlab-progress-fill" style="width:${pct.toFixed(1)}%"></div>
       </div>
@@ -1488,6 +1668,17 @@ function renderSpeedPanel(els: Elements): void {
     return;
   }
 
+  const historyMarkup = state.speed.runs.length > 0
+    ? `
+      <div class="mlab-speed-history">
+        <div class="mlab-speed-history-head">
+          <strong>Speed run history</strong>
+          <button class="ea-button ea-button--ghost mlab-speed-history-clear" type="button" data-mlab-speed-clear-history>Clear speed run history</button>
+        </div>
+        ${speedRunHistoryMarkup(state.speed.runs)}
+      </div>`
+    : '';
+
   if (state.speed.result) {
     const r = state.speed.result;
     const grade = classifyWf(r.unweightedWfPercent);
@@ -1499,9 +1690,12 @@ function renderSpeedPanel(els: Elements): void {
           <span class="mlab-wf-result-value">${renderText(state.speed.bandMeta.label)}${state.speed.bandMeta.frequencyHz != null ? ` &middot; ${state.speed.bandMeta.frequencyHz.toLocaleString('en-US')}&nbsp;Hz` : ''}</span>
         </div>`
       : '';
+    const ctxLabel = ctx === '45' ? '45 RPM' : '33⅓ RPM';
     body.innerHTML = `
+      ${ctxToggleHtml}
       <div class="mlab-result-source-row">
         <span class="ea-badge ${srcBadgeClass}">${srcBadgeLabel}</span>
+        <span class="mlab-speed-ctx-badge ea-muted">${renderText(ctxLabel)} &middot; nominal ${nomHz.toLocaleString('en-US')}&thinsp;Hz</span>
       </div>
       <div class="mlab-wf-result">
         ${bandRow}
@@ -1527,10 +1721,22 @@ function renderSpeedPanel(els: Elements): void {
       <div class="mlab-session-controls">
         <button class="ea-button ea-button--primary" type="button" data-mlab-speed-start>Measure again</button>
       </div>
+      ${historyMarkup}
     `;
     body.querySelector<HTMLButtonElement>('[data-mlab-speed-start]')?.addEventListener('click', () => {
       state.speed.result = null;
       startSpeedMeasurement(els);
+    });
+    body.querySelector<HTMLButtonElement>('[data-mlab-speed-clear-history]')?.addEventListener('click', () => {
+      state.speed.runs = [];
+      renderSpeedPanel(els);
+    });
+    body.querySelectorAll<HTMLButtonElement>('[data-mlab-speed-ctx]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const val = btn.dataset.mlabSpeedCtx as SpeedContext;
+        if (val === '33_33' || val === '45') { state.speed.speedContext = val; }
+        renderSpeedPanel(els);
+      });
     });
     return;
   }
@@ -1575,6 +1781,7 @@ function renderSpeedPanel(els: Elements): void {
 
   body.innerHTML = `
     ${selfTestNote}
+    ${ctxToggleHtml}
     <table class="ea-form-table" aria-label="Speed and W&F setup">
       <tbody>
         ${bandRow}
@@ -1589,6 +1796,7 @@ function renderSpeedPanel(els: Elements): void {
     <div class="mlab-session-controls">
       <button class="ea-button ea-button--primary" type="button" data-mlab-speed-start>Start measurement</button>
     </div>
+    ${historyMarkup}
   `;
   if (speedBands.length > 1) {
     body.querySelector<HTMLSelectElement>('[data-mlab-speed-band]')?.addEventListener('change', (event) => {
@@ -1601,6 +1809,17 @@ function renderSpeedPanel(els: Elements): void {
   }
   body.querySelector<HTMLButtonElement>('[data-mlab-speed-start]')?.addEventListener('click', () => {
     startSpeedMeasurement(els);
+  });
+  body.querySelector<HTMLButtonElement>('[data-mlab-speed-clear-history]')?.addEventListener('click', () => {
+    state.speed.runs = [];
+    renderSpeedPanel(els);
+  });
+  body.querySelectorAll<HTMLButtonElement>('[data-mlab-speed-ctx]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const val = btn.dataset.mlabSpeedCtx as SpeedContext;
+      if (val === '33_33' || val === '45') { state.speed.speedContext = val; }
+      renderSpeedPanel(els);
+    });
   });
 }
 
@@ -4397,6 +4616,22 @@ function startSpeedMeasurement(els: Elements): void {
         state.speed.active = false;
         state.speed.result = result;
         state.speed.capture = null;
+        const ctx = state.speed.speedContext;
+        const nomHz = nominalFrequencyHz33[ctx];
+        const run: SpeedMeasurementRun = {
+          id: crypto.randomUUID(),
+          createdAt: new Date().toISOString(),
+          source: state.speed.resultSource ?? 'live_capture',
+          speedContext: ctx,
+          rpm: ctx === '45' ? 45 : 33.333,
+          nominalFrequencyHz: nomHz,
+          measuredFrequencyHz: result.meanFrequencyHz,
+          speedErrorPercent: result.speedDeviationPercent,
+          wowFlutterPercent: result.unweightedWfPercent,
+          band: state.speed.bandMeta,
+          warnings: [],
+        };
+        state.speed.runs = [...state.speed.runs, run];
         renderSpeedPanel(els);
         appendLog(`Speed & W&F complete — deviation ${result.speedDeviationPercent.toFixed(3)} %, unweighted W&F ${result.unweightedWfPercent.toFixed(3)} %`);
       },
@@ -4727,6 +4962,10 @@ export function enableMeasurementLabInteractions(): void {
       stopVtaCapture();
       state.vta.runs = [];
       appendLog('VTA IMD run markers cleared after test record change.');
+    }
+    if (state.speed.runs.length > 0) {
+      state.speed.runs = [];
+      appendLog('Speed run history cleared after test record change.');
     }
     renderRecordSelector(els);
     renderCoveragePanel(els);
