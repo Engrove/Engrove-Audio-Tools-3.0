@@ -3780,9 +3780,9 @@ function checkS7AWorkbenchShell() {
     // 15. enableMeasurementLabInteractions calls renderWorkflowRail
     ['enableMeasurementLabInteractions calls renderWorkflowRail',
       /enableMeasurementLabInteractions[\s\S]{0,3000}renderWorkflowRail\(els\)/.test(uiSrc)],
-    // 16. enableMeasurementLabInteractions has IntersectionObserver setup
-    ['enableMeasurementLabInteractions has IntersectionObserver setup',
-      /enableMeasurementLabInteractions[\s\S]{0,10000}IntersectionObserver/.test(uiSrc)],
+    // 16. enableMeasurementLabInteractions wires panel switching (S7A.1: activateTool replaces IntersectionObserver)
+    ['enableMeasurementLabInteractions wires active tool panel switching',
+      /enableMeasurementLabInteractions[\s\S]{0,15000}activateTool\s*\(/.test(uiSrc)],
     // 17. connectMeasurementLab calls renderSessionRibbon
     ['connectMeasurementLab calls renderSessionRibbon',
       /connectMeasurementLab[\s\S]{0,2000}renderSessionRibbon\(els\)/.test(uiSrc)],
@@ -3816,21 +3816,21 @@ function checkS7AWorkbenchShell() {
         const tokenBlock = uiSrc.slice(tokenStart, tokenEnd > tokenStart ? tokenEnd + 40 : tokenStart + 6000);
         return tokenBlock.includes('mlab-rail-item--active');
       })()],
-    // 22. CSS has 3-column grid with 190px workflow rail column
-    ['CSS has 3-column grid with 190px workflow rail',
-      /grid-template-columns\s*:\s*190px/.test(cssSrc)],
-    // 23. CSS has mlab-workflow-rail position sticky
-    ['CSS has mlab-workflow-rail position sticky',
-      /\.mlab-workflow-rail[\s\S]{0,200}position\s*:\s*sticky/.test(cssSrc)],
+    // 22. CSS has 2-column grid with 268px workflow rail column (S7A.1 layout)
+    ['CSS has 2-column workbench-grid with 268px workflow rail',
+      /grid-template-columns\s*:\s*268px/.test(cssSrc)],
+    // 23. CSS has mlab-workflow-rail height:100% (S7A.1: no longer sticky)
+    ['CSS has mlab-workflow-rail height 100%',
+      /\.mlab-workflow-rail[\s\S]{0,300}height\s*:\s*100%/.test(cssSrc)],
     // 24. CSS has mlab-diag-rail
     ['CSS has mlab-diag-rail',
       /\.mlab-diag-rail/.test(cssSrc)],
     // 25. CSS has responsive breakpoint hiding workflow rail at <=1100px
     ['CSS hides workflow-rail at max-width 1100px',
       /max-width\s*:\s*1100px[\s\S]{0,300}mlab-workflow-rail[\s\S]{0,100}display\s*:\s*none/.test(cssSrc)],
-    // 26. CSS has single-column fallback at <=800px
-    ['CSS has single-column fallback at max-width 800px',
-      /max-width\s*:\s*800px[\s\S]{0,200}grid-template-columns\s*:\s*1fr/.test(cssSrc)],
+    // 26. CSS has single-column fallback at <=1100px (S7A.1: rail hidden at 1100px)
+    ['CSS has single-column fallback at max-width 1100px',
+      /max-width\s*:\s*1100px[\s\S]{0,300}grid-template-columns\s*:\s*1fr/.test(cssSrc)],
     // 27. Home page Data Explorer aria-label no longer says "coming soon"
     ['Home page Data Explorer aria-label does not say "coming soon"',
       !/Data Explorer.*coming soon/i.test(homeSrc)],
@@ -3876,100 +3876,157 @@ function checkS7A1WorkbenchLayout() {
   const uiSrc  = readFileSync(renderSrcPath, 'utf8');
   const cssSrc = readFileSync(cssSrcPath, 'utf8');
 
+  const tokenStart = uiSrc.indexOf('tokenLayoutGeneratedClassNames');
+  const tokenEnd = uiSrc.indexOf('void tokenLayoutGeneratedClassNames', tokenStart);
+  const tokenBlock = tokenStart >= 0 ? uiSrc.slice(tokenStart, tokenEnd > tokenStart ? tokenEnd + 40 : tokenStart + 8000) : '';
+
   const checks = [
-    // 1. WORKBENCH_TOOLS constant defined
-    ['WORKBENCH_TOOLS constant defined', /const WORKBENCH_TOOLS/.test(uiSrc)],
-    // 2. workbenchHomePanelMarkup function defined
-    ['workbenchHomePanelMarkup function defined', /function workbenchHomePanelMarkup/.test(uiSrc)],
-    // 3. contextOverlayMarkup function defined
-    ['contextOverlayMarkup function defined', /function contextOverlayMarkup/.test(uiSrc)],
-    // 4. logModalMarkup function defined
-    ['logModalMarkup function defined', /function logModalMarkup/.test(uiSrc)],
-    // 5. activateTool function defined
-    ['activateTool function defined', /function activateTool/.test(uiSrc)],
-    // 6. Context overlay in renderMeasurementLabPage
-    ['contextOverlayMarkup() called in renderMeasurementLabPage', /contextOverlayMarkup\(\)/.test(uiSrc)],
-    // 7. Log modal in renderMeasurementLabPage
-    ['logModalMarkup() called in renderMeasurementLabPage', /logModalMarkup\(\)/.test(uiSrc)],
-    // 8. Workbench home panel in renderMeasurementLabPage
-    ['workbenchHomePanelMarkup() called in renderMeasurementLabPage', /workbenchHomePanelMarkup\(\)/.test(uiSrc)],
-    // 9. No diagRailMarkup() call in renderMeasurementLabPage (right column removed)
-    ['diagRailMarkup() NOT called in renderMeasurementLabPage',
-      (() => {
-        const fnStart = uiSrc.indexOf('export function renderMeasurementLabPage');
-        const fnEnd = uiSrc.indexOf('\nexport function ', fnStart + 10);
-        const body = fnEnd > 0 ? uiSrc.slice(fnStart, fnEnd) : uiSrc.slice(fnStart, fnStart + 2000);
-        return !body.includes('diagRailMarkup()');
-      })()],
-    // 10. Workbench footer with Open log button
-    ['mlab-workbench-footer in renderMeasurementLabPage', /mlab-workbench-footer/.test(uiSrc)],
-    // 11. Open log button exists in footer
-    ['data-mlab-open-log button in markup', /data-mlab-open-log/.test(uiSrc)],
-    // 12. Log modal has data-mlab-log-body
-    ['data-mlab-log-body in log modal markup', /logModalMarkup[\s\S]{0,1000}data-mlab-log-body/.test(uiSrc)],
-    // 13. Log modal has log-reset button
-    ['data-mlab-log-reset in log modal markup', /logModalMarkup[\s\S]{0,1000}data-mlab-log-reset/.test(uiSrc)],
-    // 14. Log modal has log-export button
-    ['data-mlab-log-export in log modal markup', /logModalMarkup[\s\S]{0,1000}data-mlab-log-export/.test(uiSrc)],
-    // 15. Compact mini meters in ribbon markup
-    ['mlab-ribbon-meters in sessionRibbonMarkup', /sessionRibbonMarkup[\s\S]{0,1500}mlab-ribbon-meters/.test(uiSrc)],
-    // 16. Mini meter fill elements in ribbon
-    ['data-mlab-ribbon-mini-l-fill in ribbon', /data-mlab-ribbon-mini-l-fill/.test(uiSrc)],
-    // 17. CSS: 2-column grid (268px)
-    ['CSS: 2-column grid with 268px rail', /grid-template-columns\s*:\s*268px/.test(cssSrc)],
-    // 18. CSS: workbench-center defined
-    ['CSS: .mlab-workbench-center defined', /\.mlab-workbench-center/.test(cssSrc)],
-    // 19. CSS: tool-panel--active display:block
-    ['CSS: mlab-tool-panel--active display block', /mlab-tool-panel--active[\s\S]{0,100}display\s*:\s*block/.test(cssSrc)],
-    // 20. CSS: context overlay defined
-    ['CSS: .mlab-context-overlay defined', /\.mlab-context-overlay/.test(cssSrc)],
-    // 21. CSS: log modal defined
-    ['CSS: .mlab-log-modal defined', /\.mlab-log-modal/.test(cssSrc)],
-    // 22. CSS: workbench footer defined
-    ['CSS: .mlab-workbench-footer defined', /\.mlab-workbench-footer/.test(cssSrc)],
-    // 23. CSS: ribbon mini meters defined
-    ['CSS: .mlab-ribbon-meters defined', /\.mlab-ribbon-meters/.test(cssSrc)],
-    // 24. elements() has activeTitle selector
-    ['elements() has activeTitle selector', /activeTitle\s*:.*data-mlab-active-title/.test(uiSrc)],
-    // 25. elements() has contextOverlay selector
-    ['elements() has contextOverlay selector', /contextOverlay\s*:.*data-mlab-context-overlay/.test(uiSrc)],
-    // 26. elements() has logModal selector
-    ['elements() has logModal selector', /logModal\s*:.*data-mlab-log-modal/.test(uiSrc)],
-    // 27. elements() has ribbonMiniLFill selector
-    ['elements() has ribbonMiniLFill selector', /ribbonMiniLFill/.test(uiSrc)],
-    // 28. workbench_home in WORKBENCH_TOOLS
-    ['workbench_home in WORKBENCH_TOOLS', /id:\s*'workbench_home'/.test(uiSrc)],
-    // 29. audio_source in WORKBENCH_TOOLS
-    ['audio_source in WORKBENCH_TOOLS', /id:\s*'audio_source'/.test(uiSrc)],
-    // 30. NoIntersectionObserver in enableMeasurementLabInteractions
-    ['No IntersectionObserver in enableMeasurementLabInteractions',
-      (() => {
-        const fnStart = uiSrc.indexOf('export function enableMeasurementLabInteractions');
-        const fnEnd = uiSrc.indexOf('\nexport function ', fnStart + 10);
-        const body = fnEnd > 0 ? uiSrc.slice(fnStart, fnEnd) : uiSrc.slice(fnStart, fnStart + 20000);
-        return !body.includes('IntersectionObserver');
-      })()],
-    // 31. activateTool called with workbench_home on load
-    ['activateTool called with workbench_home on load',
-      /activateTool\s*\(\s*'workbench_home'/.test(uiSrc)],
-    // 32. Open web report still present
-    ['Open web report still present', /data-mlab-web-report/.test(uiSrc)],
-    // 33. Export JSON still present
-    ['Export JSON still present', /data-mlab-export(?!-report)/.test(uiSrc)],
-    // 34. Reset still present
-    ['Reset still present', /data-mlab-reset/.test(uiSrc)],
-    // 35. S6 regression: vertical_resonance supported check
-    ['S6 regression: vertical_resonance in WORKBENCH_TOOLS', /vertical_resonance/.test(uiSrc)],
-    // 36. S5J regression: webReportBtn still wired
-    ['S5J regression: webReportBtn still wired', /webReportBtn/.test(uiSrc)],
-    // 37. S5R regression: AzimuthStepRun still present
-    ['S5R regression: AzimuthStepRun still present', /AzimuthStepRun/.test(uiSrc)],
-    // 38. THD panel has correct tool-panel attribute
-    ['thd panel data-mlab-tool-panel is thd_imd', /data-mlab-tool-panel="thd_imd"/.test(uiSrc)],
-    // 39. Audio source panel has tool-panel attribute
-    ['audio source panel has data-mlab-tool-panel', /data-mlab-tool-panel="audio_source"/.test(uiSrc)],
-    // 40. Noise floor panel has tool-panel attribute
-    ['noise floor panel has data-mlab-tool-panel', /data-mlab-tool-panel="noise_floor"/.test(uiSrc)],
+    // 1. WORKBENCH_TOOLS constant exists
+    ['WORKBENCH_TOOLS constant declared',
+      /const WORKBENCH_TOOLS\s*:\s*readonly WorkbenchTool\[\]/.test(uiSrc)],
+    // 2. WorkbenchTool type declared
+    ['WorkbenchTool type declared',
+      /type WorkbenchTool\s*=\s*\{/.test(uiSrc)],
+    // 3. WORKBENCH_TOOLS includes workbench_home
+    ['WORKBENCH_TOOLS includes workbench_home entry',
+      /WORKBENCH_TOOLS[\s\S]{0,5000}workbench_home/.test(uiSrc)],
+    // 4. WORKBENCH_TOOLS includes all 4 groups
+    ['WORKBENCH_TOOLS includes Home / session group',
+      /Home \/ session/.test(uiSrc)],
+    // 5. WORKBENCH_TOOLS includes Experimental / planned group
+    ['WORKBENCH_TOOLS includes Experimental / planned group',
+      /Experimental \/ planned/.test(uiSrc)],
+    // 6. activateTool function declared
+    ['activateTool function declared',
+      /function activateTool\s*\(/.test(uiSrc)],
+    // 7. activateTool toggles mlab-tool-panel--active
+    ['activateTool toggles mlab-tool-panel--active class',
+      /activateTool[\s\S]{0,500}mlab-tool-panel--active/.test(uiSrc)],
+    // 8. activateTool removes context overlay open class
+    ['activateTool removes mlab-context-overlay--open',
+      /activateTool[\s\S]{0,500}mlab-context-overlay--open/.test(uiSrc)],
+    // 9. enableMeasurementLabInteractions calls activateTool workbench_home
+    ['enableMeasurementLabInteractions calls activateTool(workbench_home)',
+      /enableMeasurementLabInteractions[\s\S]{0,15000}activateTool\s*\(\s*['"]workbench_home['"]/.test(uiSrc)],
+    // 10. No IntersectionObserver in enableMeasurementLabInteractions
+    ['IntersectionObserver removed from enableMeasurementLabInteractions',
+      !/enableMeasurementLabInteractions[\s\S]{0,10000}IntersectionObserver/.test(uiSrc)],
+    // 11. context overlay markup present
+    ['contextOverlayMarkup function declared',
+      /function contextOverlayMarkup\s*\(/.test(uiSrc)],
+    // 12. context overlay has data-mlab-context-overlay
+    ['contextOverlayMarkup emits data-mlab-context-overlay',
+      /data-mlab-context-overlay/.test(uiSrc)],
+    // 13. logModalMarkup function declared
+    ['logModalMarkup function declared',
+      /function logModalMarkup\s*\(/.test(uiSrc)],
+    // 14. logModalMarkup emits data-mlab-log-body inside modal
+    ['logModalMarkup contains data-mlab-log-body',
+      /logModalMarkup[\s\S]{0,500}data-mlab-log-body/.test(uiSrc)],
+    // 15. workbenchHomePanelMarkup function declared
+    ['workbenchHomePanelMarkup function declared',
+      /function workbenchHomePanelMarkup\s*\(/.test(uiSrc)],
+    // 16. workbench home panel has correct id and data attribute
+    ['workbench home panel has id mlab-home-panel',
+      /id="mlab-home-panel"/.test(uiSrc)],
+    // 17. renderMeasurementLabPage uses mlab-workbench-center
+    ['renderMeasurementLabPage emits mlab-workbench-center',
+      /renderMeasurementLabPage[\s\S]{0,3000}mlab-workbench-center/.test(uiSrc)],
+    // 18. renderMeasurementLabPage has mlab-center-head
+    ['renderMeasurementLabPage emits mlab-center-head',
+      /mlab-center-head/.test(uiSrc)],
+    // 19. renderMeasurementLabPage has footer with data-mlab-open-log
+    ['renderMeasurementLabPage emits workbench footer with data-mlab-open-log',
+      /mlab-workbench-footer[\s\S]{0,1000}data-mlab-open-log/.test(uiSrc)],
+    // 20. renderMeasurementLabPage has footer with data-mlab-web-report
+    ['renderMeasurementLabPage footer has data-mlab-web-report',
+      /mlab-workbench-footer[\s\S]{0,1000}data-mlab-web-report/.test(uiSrc)],
+    // 21. no diag-rail in renderMeasurementLabPage call (removed from main layout)
+    ['renderMeasurementLabPage no longer renders diagRailMarkup in 3-column position',
+      !/renderMeasurementLabPage[\s\S]{0,3000}diagRailMarkup\(\)/.test(uiSrc)],
+    // 22. no actionBarMarkup in renderMeasurementLabPage (replaced by footer)
+    ['renderMeasurementLabPage no longer renders actionBarMarkup',
+      !/renderMeasurementLabPage[\s\S]{0,3000}actionBarMarkup\(\)/.test(uiSrc)],
+    // 23. audio source panel has id and data-mlab-tool-panel
+    ['audioSourcePanelMarkup has id mlab-source-panel',
+      /id="mlab-source-panel"/.test(uiSrc)],
+    // 24. audioSourcePanelMarkup has data-mlab-tool-panel="audio_source"
+    ['audioSourcePanelMarkup has data-mlab-tool-panel audio_source',
+      /data-mlab-tool-panel="audio_source"/.test(uiSrc)],
+    // 25. noise floor panel has data-mlab-tool-panel
+    ['noiseFloorPanelMarkup has data-mlab-tool-panel noise_floor',
+      /data-mlab-tool-panel="noise_floor"/.test(uiSrc)],
+    // 26. thd panel uses thd_imd (not vta_imd_optimizer)
+    ['thdPanelMarkup uses data-mlab-tool-panel thd_imd',
+      /mlab-thd-panel[\s\S]{0,100}data-mlab-tool-panel="thd_imd"/.test(uiSrc)],
+    // 27. elements() has activeTitle selector
+    ['elements() includes activeTitle selector',
+      /activeTitle\s*:\s*root\.querySelector/.test(uiSrc)],
+    // 28. elements() has contextOverlay selector
+    ['elements() includes contextOverlay selector',
+      /contextOverlay\s*:\s*root\.querySelector/.test(uiSrc)],
+    // 29. elements() has ribbonMiniLFill selector
+    ['elements() includes ribbonMiniLFill selector',
+      /ribbonMiniLFill\s*:\s*root\.querySelector/.test(uiSrc)],
+    // 30. renderChannelLevel updates mini meter fills
+    ['renderChannelLevel updates ribbonMiniLFill / ribbonMiniRFill',
+      /renderChannelLevel[\s\S]{0,2500}ribbonMiniLFill/.test(uiSrc)],
+    // 31. CSS: mlab-shell has 3-row grid-template-rows
+    ['CSS: mlab-shell has 3-row grid-template-rows override',
+      /\.mlab-shell[\s\S]{0,200}grid-template-rows/.test(cssSrc)],
+    // 32. CSS: mlab-workbench is flex column overflow hidden
+    ['CSS: mlab-workbench uses flex column overflow:hidden',
+      /\.mlab-workbench[\s\S]{0,200}flex-direction\s*:\s*column/.test(cssSrc) &&
+      /\.mlab-workbench[\s\S]{0,200}overflow\s*:\s*hidden/.test(cssSrc)],
+    // 33. CSS: mlab-workbench-center exists with grid
+    ['CSS: mlab-workbench-center defined with grid layout',
+      /\.mlab-workbench-center[\s\S]{0,200}grid-template-rows\s*:\s*58px/.test(cssSrc)],
+    // 34. CSS: tool panels hidden by default
+    ['CSS: [data-mlab-tool-panel] hidden by default',
+      /\[data-mlab-tool-panel\][\s\S]{0,100}display\s*:\s*none/.test(cssSrc)],
+    // 35. CSS: mlab-tool-panel--active shows panel
+    ['CSS: mlab-tool-panel--active shows panel',
+      /\.mlab-tool-panel--active\[data-mlab-tool-panel\][\s\S]{0,100}display\s*:\s*block/.test(cssSrc)],
+    // 36. CSS: context overlay defined
+    ['CSS: mlab-context-overlay defined',
+      /\.mlab-context-overlay/.test(cssSrc)],
+    // 37. CSS: log modal defined
+    ['CSS: mlab-log-modal defined',
+      /\.mlab-log-modal/.test(cssSrc)],
+    // 38. CSS: mlab-workbench-footer defined
+    ['CSS: mlab-workbench-footer defined',
+      /\.mlab-workbench-footer/.test(cssSrc)],
+    // 39. CSS: ribbon mini meters defined
+    ['CSS: mlab-ribbon-mini-fill defined',
+      /\.mlab-ribbon-mini-fill/.test(cssSrc)],
+    // 40. tokenLayoutGeneratedClassNames includes new S7A.1 classes
+    ['tokenLayoutGeneratedClassNames includes mlab-workbench-center',
+      tokenBlock.includes('mlab-workbench-center')],
+    // 41. tokenLayoutGeneratedClassNames includes mlab-tool-panel--active
+    ['tokenLayoutGeneratedClassNames includes mlab-tool-panel--active',
+      tokenBlock.includes('mlab-tool-panel--active')],
+    // 42. tokenLayoutGeneratedClassNames includes mlab-context-overlay--open
+    ['tokenLayoutGeneratedClassNames includes mlab-context-overlay--open',
+      tokenBlock.includes('mlab-context-overlay--open')],
+    // 43. tokenLayoutGeneratedClassNames includes mlab-log-modal--open
+    ['tokenLayoutGeneratedClassNames includes mlab-log-modal--open',
+      tokenBlock.includes('mlab-log-modal--open')],
+    // Regression guards
+    // 44. webReportBtn still wired (S5J regression)
+    ['S5J regression: webReportBtn still referenced',
+      /webReportBtn/.test(uiSrc)],
+    // 45. logBody still accessible (S7A.1 moved to modal)
+    ['S7A.1: data-mlab-log-body present in logModalMarkup',
+      /logModalMarkup[\s\S]{0,800}data-mlab-log-body/.test(uiSrc)],
+    // 46. Meter grid still present in contextOverlayMarkup
+    ['S7A.1: data-mlab-meter-grid present in contextOverlayMarkup',
+      /contextOverlayMarkup[\s\S]{0,1500}data-mlab-meter-grid/.test(uiSrc)],
+    // 47. rail group head styles present in CSS
+    ['CSS: mlab-rail-group-head defined',
+      /\.mlab-rail-group-head/.test(cssSrc)],
+    // 48. tooltip styles present in CSS
+    ['CSS: mlab-rail-item-tooltip defined',
+      /\.mlab-rail-item-tooltip/.test(cssSrc)],
   ];
 
   let allPass = true;

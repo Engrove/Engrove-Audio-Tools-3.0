@@ -804,7 +804,7 @@ function contextOverlayMarkup(): string {
           </div>
           <aside class="ea-panel mlab-viz-panel" aria-labelledby="mlab-ctx-viz-title">
             <div class="ea-panel-header">
-              <span class="ea-panel-header-id" aria-hidden="true">M</span>
+              <span class="ea-panel-header-id">09</span>
               <span id="mlab-ctx-viz-title">Level meter</span>
             </div>
             <div class="ea-panel-body mlab-viz-body">
@@ -812,7 +812,10 @@ function contextOverlayMarkup(): string {
                 ${meterChannelMarkup('L', 'L channel')}
                 ${meterChannelMarkup('R', 'R channel')}
               </div>
-              <p class="ea-muted mlab-meter-help">Peak bar tracks maximum instantaneous sample magnitude; held line shows the most recent peak, decaying at ${peakHoldDecayDbPerSecond}&nbsp;dB/s. Anything at 0&nbsp;dBFS clips.</p>
+              <p class="ea-muted mlab-meter-help">
+                Peak bar tracks maximum instantaneous magnitude; held line shows most recent peak,
+                decaying at ${peakHoldDecayDbPerSecond}&nbsp;dB/s.
+              </p>
             </div>
           </aside>
         </div>
@@ -4080,12 +4083,11 @@ function renderRefLevelPanel(els: Elements): void {
 function highlightTargetPanel(panelId: string): void {
   const panel = document.getElementById(panelId);
   if (!panel) return;
-  // Activate the tool panel that contains this element
   const toolPanelEl = panel.closest<HTMLElement>('[data-mlab-tool-panel]') ?? panel;
   if (toolPanelEl.dataset.mlabToolPanel) {
     const toolId = toolPanelEl.dataset.mlabToolPanel;
-    const els = elements(document);
-    activateTool(toolId, els);
+    const panelEls = elements(document);
+    activateTool(toolId, panelEls);
   }
   panel.classList.remove('mlab-panel--target-highlight');
   void panel.offsetHeight;
@@ -5725,32 +5727,32 @@ function renderSessionStatus(els: Elements): void {
 }
 
 function clearMeterDom(els: Elements): void {
-  if (!els.meterGrid) return;
-  (['L', 'R'] as ChannelKey[]).forEach((channel) => {
-    const readout = els.meterGrid?.querySelector<HTMLElement>(`[data-mlab-meter-readout="${channel}"]`);
-    const peakValue = els.meterGrid?.querySelector<HTMLElement>(`[data-mlab-meter-peak-value="${channel}"]`);
-    const rmsBar = els.meterGrid?.querySelector<HTMLElement>(`[data-mlab-meter-rms="${channel}"]`);
-    const peakBar = els.meterGrid?.querySelector<HTMLElement>(`[data-mlab-meter-peak="${channel}"]`);
-    const holdBar = els.meterGrid?.querySelector<HTMLElement>(`[data-mlab-meter-hold="${channel}"]`);
-    const clip = els.meterGrid?.querySelector<HTMLElement>(`[data-mlab-meter-clip="${channel}"]`);
-    if (readout) readout.textContent = '— dBFS';
-    if (peakValue) peakValue.textContent = 'peak —';
-    if (rmsBar) rmsBar.style.setProperty('--mlab-bar', '0%');
-    if (peakBar) peakBar.style.setProperty('--mlab-bar', '0%');
-    if (holdBar) holdBar.style.setProperty('--mlab-bar', '0%');
-    if (clip) {
-      clip.textContent = 'no clip';
-      clip.classList.remove('mlab-meter-clip--active');
-    }
-  });
-  for (const canvas of [els.waveformL, els.waveformR]) {
-    if (canvas) canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height);
+  if (els.meterGrid) {
+    (['L', 'R'] as ChannelKey[]).forEach((channel) => {
+      const readout = els.meterGrid?.querySelector<HTMLElement>(`[data-mlab-meter-readout="${channel}"]`);
+      const peakValue = els.meterGrid?.querySelector<HTMLElement>(`[data-mlab-meter-peak-value="${channel}"]`);
+      const rmsBar = els.meterGrid?.querySelector<HTMLElement>(`[data-mlab-meter-rms="${channel}"]`);
+      const peakBar = els.meterGrid?.querySelector<HTMLElement>(`[data-mlab-meter-peak="${channel}"]`);
+      const holdBar = els.meterGrid?.querySelector<HTMLElement>(`[data-mlab-meter-hold="${channel}"]`);
+      const clip = els.meterGrid?.querySelector<HTMLElement>(`[data-mlab-meter-clip="${channel}"]`);
+      if (readout) readout.textContent = '— dBFS';
+      if (peakValue) peakValue.textContent = 'peak —';
+      if (rmsBar) rmsBar.style.setProperty('--mlab-bar', '0%');
+      if (peakBar) peakBar.style.setProperty('--mlab-bar', '0%');
+      if (holdBar) holdBar.style.setProperty('--mlab-bar', '0%');
+      if (clip) {
+        clip.textContent = 'no clip';
+        clip.classList.remove('mlab-meter-clip--active');
+      }
+    });
   }
-  // Clear ribbon mini meters
   if (els.ribbonMiniLFill) els.ribbonMiniLFill.style.setProperty('--p', '0%');
   if (els.ribbonMiniRFill) els.ribbonMiniRFill.style.setProperty('--p', '0%');
   if (els.ribbonMiniLDb) els.ribbonMiniLDb.textContent = '—';
   if (els.ribbonMiniRDb) els.ribbonMiniRDb.textContent = '—';
+  for (const canvas of [els.waveformL, els.waveformR]) {
+    if (canvas) canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height);
+  }
 }
 
 function levelPercentFromDb(db: number): number {
@@ -5793,7 +5795,7 @@ function renderChannelLevel(els: Elements, channel: ChannelKey): void {
 
   // Update ribbon mini meters
   const pct = `${levelPercentFromDb(level.peakDbFs)}%`;
-  const dbText = !Number.isFinite(level.peakDbFs) || level.peakDbFs <= -90 ? '—' : `${level.peakDbFs.toFixed(0)}`;
+  const dbText = `${level.peakDbFs.toFixed(1)}`;
   if (channel === 'L') {
     if (els.ribbonMiniLFill) els.ribbonMiniLFill.style.setProperty('--p', pct);
     if (els.ribbonMiniLDb) els.ribbonMiniLDb.textContent = dbText;
@@ -7515,6 +7517,38 @@ function renderSessionRibbon(els: Elements): void {
   }
 }
 
+function activateTool(toolId: string, els: Elements): void {
+  const tool = WORKBENCH_TOOLS.find(t => t.id === toolId);
+  if (!tool || !tool.panelId) return;
+  document.querySelectorAll<HTMLElement>('[data-mlab-tool-panel]').forEach(p => {
+    p.classList.toggle('mlab-tool-panel--active', p.id === tool.panelId);
+  });
+  const overlay = els.contextOverlay;
+  if (overlay) overlay.classList.remove('mlab-context-overlay--open');
+  state.activeWorkflowId = toolId;
+  if (els.activeTitle) els.activeTitle.textContent = tool.label;
+  if (els.centerStatus) {
+    const wfId = tool.workflowId;
+    if (!wfId) {
+      els.centerStatus.textContent = '';
+      els.centerStatus.className = 'ea-badge mlab-center-status-pill';
+    } else {
+      const record = selectedRecord();
+      const coverageList = record ? computeAllWorkflowCoverage(record) : [];
+      const cov = coverageList.find(c => c.workflowId === wfId);
+      const avail = cov?.availability ?? (record ? 'unavailable' : 'planned');
+      const label = avail === 'available' ? 'Available'
+        : avail === 'planned' ? 'Planned'
+        : avail === 'partial' ? 'Partial'
+        : 'Not available';
+      els.centerStatus.textContent = label;
+      els.centerStatus.className = `ea-badge mlab-center-status-pill mlab-rail-item--${avail}`;
+    }
+  }
+  updateActiveRailItem(els, toolId);
+  renderSessionRibbon(els);
+}
+
 function renderWorkflowRail(els: Elements): void {
   if (!els.railItems) return;
   const record = selectedRecord();
@@ -7522,47 +7556,54 @@ function renderWorkflowRail(els: Elements): void {
   const coverageMap = new Map(coverageList.map(c => [c.workflowId, c]));
 
   let currentGroup = '';
-  const items = WORKBENCH_TOOLS.map(tool => {
-    const groupHead = tool.group !== currentGroup
-      ? (() => { currentGroup = tool.group; return `<div class="mlab-rail-group-head">${renderText(tool.group)}</div>`; })()
-      : '';
+  const parts: string[] = [];
 
+  for (const tool of WORKBENCH_TOOLS) {
+    const wfId = tool.workflowId;
+    const cov = wfId ? coverageMap.get(wfId) : null;
     let avail: string;
-    let availCss: string;
-    if (!tool.panelId) {
-      const wfEntry = MEASUREMENT_WORKFLOWS.find(w => w.id === tool.workflowId);
-      const isPlanned = wfEntry?.implementationStatus === 'planned';
-      avail = isPlanned ? 'Planned' : 'Not available';
-      availCss = 'unavailable';
-    } else if (tool.workflowId) {
-      const cov = coverageMap.get(tool.workflowId);
-      const a = cov?.availability ?? (record ? 'unavailable' : 'planned');
-      avail = a === 'available' ? 'Available' : a === 'planned' ? 'Planned' : a === 'partial' ? 'Partial' : 'Not available';
-      availCss = a;
+    if (!wfId) {
+      avail = tool.panelId ? 'available' : 'unavailable';
     } else {
-      avail = 'Available';
-      availCss = 'available';
+      const c = cov?.availability ?? (record ? 'unavailable' : 'planned');
+      avail = c;
     }
-
     const isActive = state.activeWorkflowId === tool.id;
-    const itemClass = `mlab-rail-item mlab-rail-item--${availCss}${isActive ? ' mlab-rail-item--active' : ''}`;
-    const tooltip = `<span class="mlab-rail-item-tooltip"><span class="mlab-rail-item-tooltip-name">${renderText(tool.label)}</span>${renderText(tool.description)}<span class="mlab-rail-item-tooltip-status">${renderText(avail)}</span></span>`;
+    const availLabel = avail === 'available' ? 'Available'
+      : avail === 'planned' ? 'Planned'
+      : avail === 'partial' ? 'Partial'
+      : 'Not available';
+    const itemClass = `mlab-rail-item mlab-rail-item--${avail}${isActive ? ' mlab-rail-item--active' : ''}`;
+
+    if (tool.group !== currentGroup) {
+      currentGroup = tool.group;
+      parts.push(`<div class="mlab-rail-group-head">${renderText(tool.group)}</div>`);
+    }
 
     if (tool.panelId) {
-      return `${groupHead}<button class="${itemClass}" type="button" data-mlab-rail-item="${renderText(tool.id)}">
+      parts.push(`<button class="${itemClass}" type="button" data-mlab-rail-item="${renderText(tool.id)}">
         <span class="mlab-rail-item-label">${renderText(tool.label)}</span>
-        <span class="mlab-rail-item-status">${renderText(avail)}</span>
-        ${tooltip}
-      </button>`;
+        <span class="mlab-rail-item-status">${renderText(availLabel)}</span>
+        <span class="mlab-rail-item-tooltip" aria-hidden="true">
+          <span class="mlab-rail-item-tooltip-name">${renderText(tool.label)}</span>
+          <span>${renderText(tool.description)}</span>
+          <span class="mlab-rail-item-tooltip-status mlab-rail-item--${avail}">${renderText(availLabel)}</span>
+        </span>
+      </button>`);
+    } else {
+      parts.push(`<div class="${itemClass}">
+        <span class="mlab-rail-item-label">${renderText(tool.label)}</span>
+        <span class="mlab-rail-item-status">${renderText(availLabel)}</span>
+        <span class="mlab-rail-item-tooltip" aria-hidden="true">
+          <span class="mlab-rail-item-tooltip-name">${renderText(tool.label)}</span>
+          <span>${renderText(tool.description)}</span>
+          <span class="mlab-rail-item-tooltip-status mlab-rail-item--${avail}">${renderText(availLabel)}</span>
+        </span>
+      </div>`);
     }
-    return `${groupHead}<div class="${itemClass}">
-      <span class="mlab-rail-item-label">${renderText(tool.label)}</span>
-      <span class="mlab-rail-item-status">${renderText(avail)}</span>
-      ${tooltip}
-    </div>`;
-  }).join('');
+  }
 
-  els.railItems.innerHTML = items;
+  els.railItems.innerHTML = parts.join('');
 
   els.railItems.querySelectorAll<HTMLButtonElement>('[data-mlab-rail-item]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -7577,45 +7618,6 @@ function updateActiveRailItem(els: Elements, wfId: string | null): void {
   els.railItems.querySelectorAll<HTMLElement>('[data-mlab-rail-item]').forEach(item => {
     item.classList.toggle('mlab-rail-item--active', item.dataset.mlabRailItem === wfId);
   });
-}
-
-function activateTool(toolId: string, els: Elements): void {
-  const tool = WORKBENCH_TOOLS.find(t => t.id === toolId);
-  if (!tool || !tool.panelId) return;
-
-  // Hide all tool panels, show target
-  document.querySelectorAll<HTMLElement>('[data-mlab-tool-panel]').forEach(p => {
-    p.classList.toggle('mlab-tool-panel--active', p.id === tool.panelId);
-  });
-
-  // Close context overlay if open
-  const overlay = els.contextOverlay;
-  if (overlay) overlay.classList.remove('mlab-context-overlay--open');
-
-  state.activeWorkflowId = toolId;
-
-  if (els.activeTitle) els.activeTitle.textContent = tool.label;
-
-  // Update status pill
-  if (els.centerStatus) {
-    const record = selectedRecord();
-    if (tool.workflowId && record) {
-      const coverageList = computeAllWorkflowCoverage(record);
-      const cov = coverageList.find(c => c.workflowId === tool.workflowId);
-      const avail = cov?.availability ?? 'unavailable';
-      const label = avail === 'available' ? 'Available' : avail === 'planned' ? 'Planned' : avail === 'partial' ? 'Partial' : 'Not available';
-      els.centerStatus.textContent = label;
-      els.centerStatus.dataset.avail = avail;
-    } else if (!tool.workflowId) {
-      els.centerStatus.textContent = 'Available';
-      els.centerStatus.dataset.avail = 'available';
-    } else {
-      els.centerStatus.textContent = '';
-    }
-  }
-
-  updateActiveRailItem(els, toolId);
-  renderSessionRibbon(els);
 }
 
 function renderDiagSignalPanel(els: Elements): void {
@@ -7765,7 +7767,6 @@ export function enableMeasurementLabInteractions(): void {
   renderDiagSignalPanel(els);
   renderLogPanel(els);
   clearMeterDom(els);
-  // Activate home panel on initial load
   activateTool('workbench_home', els);
 
   void refreshDeviceList(els);
@@ -7935,11 +7936,7 @@ export function enableMeasurementLabInteractions(): void {
 
   // Context overlay open/close
   els.contextOpenBtn?.addEventListener('click', () => {
-    if (els.contextOverlay) {
-      els.contextOverlay.classList.add('mlab-context-overlay--open');
-      renderChainReadinessPanel(els);
-      renderDiagSignalPanel(els);
-    }
+    els.contextOverlay?.classList.add('mlab-context-overlay--open');
   });
   document.querySelectorAll<HTMLButtonElement>('[data-mlab-context-close]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -7948,28 +7945,27 @@ export function enableMeasurementLabInteractions(): void {
   });
 
   // Log modal open/close
+  const openLogModal = (): void => {
+    els.contextOverlay?.classList.remove('mlab-context-overlay--open');
+    els.logModal?.classList.add('mlab-log-modal--open');
+  };
   document.querySelectorAll<HTMLButtonElement>('[data-mlab-open-log]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (els.logModal) {
-        els.logModal.classList.add('mlab-log-modal--open');
-        renderLogPanel(els);
-      }
-    });
+    btn.addEventListener('click', openLogModal);
   });
   document.querySelectorAll<HTMLButtonElement>('[data-mlab-log-modal-close]').forEach(btn => {
     btn.addEventListener('click', () => {
       els.logModal?.classList.remove('mlab-log-modal--open');
     });
   });
-  els.logModal?.addEventListener('click', (e) => {
-    if (e.target === els.logModal) els.logModal?.classList.remove('mlab-log-modal--open');
-  });
 
-  // Keyboard: Escape closes any open overlay
+  // Escape key closes overlays
   document.addEventListener('keydown', (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
-      els.contextOverlay?.classList.remove('mlab-context-overlay--open');
-      els.logModal?.classList.remove('mlab-log-modal--open');
+      if (els.logModal?.classList.contains('mlab-log-modal--open')) {
+        els.logModal.classList.remove('mlab-log-modal--open');
+      } else if (els.contextOverlay?.classList.contains('mlab-context-overlay--open')) {
+        els.contextOverlay.classList.remove('mlab-context-overlay--open');
+      }
     }
   });
 }
