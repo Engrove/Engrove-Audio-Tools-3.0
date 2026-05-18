@@ -957,10 +957,12 @@ function buildSessionJson(): SessionJson {
             const record = selectedRecord();
             const vtaBands = getVtaImdBands(record);
             const cmp = deriveVtaImdComparison(state.vta.runs);
+            const vtaBandForExport = vtaBands[0] ?? null;
             const sg = deriveVtaSupportedGate({
               runs: state.vta.runs,
               comparison: cmp,
-              hasVtaBand: vtaBands.length > 0,
+              hasUsableVtaBand: hasUsableVtaImdBand(vtaBandForExport),
+              hasVtaBandAtAll: vtaBands.length > 0,
               capturingRunId: state.vta.capturingRunId,
             });
             return {
@@ -1265,10 +1267,12 @@ function buildReportText(): string {
     // Supported readiness gate
     const vtaRecord = selectedRecord();
     const vtaBandsR = getVtaImdBands(vtaRecord);
+    const vtaBandForReport = vtaBandsR[0] ?? null;
     const vtaGate = deriveVtaSupportedGate({
       runs: state.vta.runs,
       comparison: vtaCmp,
-      hasVtaBand: vtaBandsR.length > 0,
+      hasUsableVtaBand: hasUsableVtaImdBand(vtaBandForReport),
+      hasVtaBandAtAll: vtaBandsR.length > 0,
       capturingRunId: state.vta.capturingRunId,
     });
     const gateLabel = vtaGate.status === 'ready_for_supported_review' ? 'Ready for supported review'
@@ -3345,13 +3349,22 @@ type VtaSupportedGate = {
   readonly warnings: readonly string[];
 };
 
+function hasUsableVtaImdBand(band: TestBand | null): boolean {
+  return band !== null
+    && typeof band.f1Hz === 'number'
+    && Number.isFinite(band.f1Hz)
+    && typeof band.f2Hz === 'number'
+    && Number.isFinite(band.f2Hz);
+}
+
 function deriveVtaSupportedGate(args: {
   readonly runs: readonly VtaImdRun[];
   readonly comparison: VtaImdComparison;
-  readonly hasVtaBand: boolean;
+  readonly hasUsableVtaBand: boolean;
+  readonly hasVtaBandAtAll: boolean;
   readonly capturingRunId: string | null;
 }): VtaSupportedGate {
-  const { runs, comparison, hasVtaBand, capturingRunId } = args;
+  const { runs, comparison, hasUsableVtaBand, hasVtaBandAtAll, capturingRunId } = args;
 
   const measuredRuns = runs.filter(
     r => r.source === 'live_capture' && typeof r.imdPercent === 'number' && Number.isFinite(r.imdPercent),
@@ -3363,11 +3376,13 @@ function deriveVtaSupportedGate(args: {
   const criteria: VtaSupportedGateCriterion[] = [
     {
       id: 'vta_band',
-      label: 'VTA band exists',
-      passed: hasVtaBand,
-      detail: hasVtaBand
-        ? 'VTA/SRA dual-tone IMD band found on selected test record.'
-        : 'No VTA/SRA IMD band found on selected test record.',
+      label: 'VTA band with f1/f2 metadata',
+      passed: hasUsableVtaBand,
+      detail: hasUsableVtaBand
+        ? 'VTA/SRA dual-tone IMD band with f1/f2 metadata found.'
+        : hasVtaBandAtAll
+          ? 'VTA/SRA band found, but f1/f2 metadata is missing.'
+          : 'No VTA/SRA IMD band found on selected test record.',
     },
     {
       id: 'three_measured_runs',
@@ -3529,6 +3544,8 @@ function renderAdvancedPanel(els: Elements): void {
   const record = selectedRecord();
   const vtaBands = getVtaImdBands(record);
   const hasVtaBand = vtaBands.length > 0;
+  const vtaBandForGate = vtaBands[0] ?? null;
+  const hasUsableVtaBand = hasUsableVtaImdBand(vtaBandForGate);
 
   // VTA IMD Optimizer — capture gateway
   const vtaBand = vtaBands.length > 0 ? vtaBands[0]! : null;
@@ -3541,7 +3558,8 @@ function renderAdvancedPanel(els: Elements): void {
   const gate = deriveVtaSupportedGate({
     runs: state.vta.runs,
     comparison,
-    hasVtaBand,
+    hasUsableVtaBand,
+    hasVtaBandAtAll: hasVtaBand,
     capturingRunId: state.vta.capturingRunId,
   });
   const vtaOpts = {

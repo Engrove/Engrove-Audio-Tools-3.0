@@ -1457,13 +1457,13 @@ function checkS5AAdvancedAnalyzers() {
     // 6. VTA status disclaimer text (S5C: "Capture gateway preview" replaces skeleton disclaimer)
     ['VTA status disclaimer present', /[Cc]apture gateway preview|Analyzer skeleton only/],
     // 7a. f1 metadata rendered from band.f1Hz
-    ['VTA metadata: f1Hz rendered', /function renderAdvancedPanel[\s\S]{0,2200}band\.f1Hz/],
+    ['VTA metadata: f1Hz rendered', /function renderAdvancedPanel[\s\S]{0,2400}band\.f1Hz/],
     // 7b. f2 metadata rendered from band.f2Hz
-    ['VTA metadata: f2Hz rendered', /function renderAdvancedPanel[\s\S]{0,2300}band\.f2Hz/],
+    ['VTA metadata: f2Hz rendered', /function renderAdvancedPanel[\s\S]{0,2500}band\.f2Hz/],
     // 7c. ratio rendered from band.ratio
     ['VTA metadata: ratio rendered', /function renderAdvancedPanel[\s\S]{0,2500}band\.ratio/],
     // 7d. standard rendered from band.standard
-    ['VTA metadata: standard rendered', /function renderAdvancedPanel[\s\S]{0,2500}band\.standard/],
+    ['VTA metadata: standard rendered', /function renderAdvancedPanel[\s\S]{0,2650}band\.standard/],
     // 8. Empty-state run table message (S5B updated wording)
     ['VTA run table empty-state message',
       /No VTA IMD run markers added yet|No VTA IMD runs captured yet/],
@@ -1553,7 +1553,7 @@ function checkS5BVtaRunModel() {
     // 15. imd_percent: r.imdPercent in VTA export (S5C: real value or null per run)
     ['imd_percent uses run value in VTA export', /imd_percent\s*:\s*r\.imdPercent/],
     // 16. warnings array in VTA export
-    ['warnings array in VTA export', /vta_imd_optimizer[\s\S]{0,2400}warnings\s*:\s*\[/],
+    ['warnings array in VTA export', /vta_imd_optimizer[\s\S]{0,2600}warnings\s*:\s*\[/],
     // 17. VTA workflow remains planned (not supported)
     ['VTA still planned in measurementWorkflows (not supported)',
       !/vta_imd_optimizer[\s\S]{0,200}implementationStatus\s*:\s*'supported'/.test(workflowsSrc)],
@@ -1646,7 +1646,7 @@ function checkS5CVtaCapture() {
     // 14. data-mlab-vta-measure button wiring present
     ['data-mlab-vta-measure button wiring', /data-mlab-vta-measure/],
     // 15. warnings array in VTA export still present
-    ['warnings array in VTA export', /vta_imd_optimizer[\s\S]{0,2400}warnings\s*:\s*\[/],
+    ['warnings array in VTA export', /vta_imd_optimizer[\s\S]{0,2600}warnings\s*:\s*\[/],
   ];
 
   let allPass = true;
@@ -1880,7 +1880,7 @@ function checkS5DVtaComparison() {
       /function vtaRunTableMarkup[\s\S]{0,900}mlab-vta-candidate-badge/],
     // 9. deriveVtaImdComparison called in renderAdvancedPanel
     ['deriveVtaImdComparison called in renderAdvancedPanel',
-      /function renderAdvancedPanel[\s\S]{0,600}deriveVtaImdComparison/],
+      /function renderAdvancedPanel[\s\S]{0,700}deriveVtaImdComparison/],
     // 10. candidateRunId: comparison.candidateRunId in vtaOpts
     ['candidateRunId: comparison.candidateRunId in vtaOpts',
       /candidateRunId\s*:\s*comparison\.candidateRunId/],
@@ -2221,6 +2221,72 @@ function checkS5FVtaSupportedGate() {
 }
 
 checkS5FVtaSupportedGate();
+
+function checkS5F1UsableBand() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  if (!existsSync(renderSrcPath)) {
+    console.error('S5F.1 static check: source file not found');
+    process.exitCode = 1;
+    return;
+  }
+  const src = readFileSync(renderSrcPath, 'utf8');
+
+  const checks = [
+    // 1. hasVtaBand is not the gate parameter (old param gone)
+    ['hasVtaBand not a deriveVtaSupportedGate parameter',
+      !(/function deriveVtaSupportedGate[\s\S]{0,200}readonly hasVtaBand\s*:/.test(src))],
+    // 2. hasUsableVtaBand is the new gate parameter
+    ['hasUsableVtaBand is deriveVtaSupportedGate parameter',
+      /function deriveVtaSupportedGate[\s\S]{0,200}readonly hasUsableVtaBand\s*:/],
+    // 3. hasUsableVtaImdBand helper defined
+    ['hasUsableVtaImdBand helper defined', /function hasUsableVtaImdBand\s*\(/],
+    // 4. f1Hz used in usable band helper
+    ['f1Hz checked in hasUsableVtaImdBand',
+      /function hasUsableVtaImdBand[\s\S]{0,200}f1Hz/],
+    // 5. f2Hz used in usable band helper
+    ['f2Hz checked in hasUsableVtaImdBand',
+      /function hasUsableVtaImdBand[\s\S]{0,200}f2Hz/],
+    // 6. criterion label contains metadata/f1/f2
+    ['criterion label mentions f1/f2 or metadata',
+      /label\s*:\s*'VTA band with f1\/f2 metadata'|label\s*:\s*'Usable VTA IMD band/],
+    // 7. missing f1/f2 detail text present
+    ['missing f1/f2 detail message present',
+      /f1\/f2 metadata is missing/],
+    // 8. no-band detail text present
+    ['no-band detail message present',
+      /No VTA\/SRA IMD band found on selected test record\./],
+    // 9. usable metadata detail text present
+    ['usable metadata detail message present',
+      /dual-tone IMD band with f1\/f2 metadata found\./],
+    // 10. hasUsableVtaImdBand called at all call-sites (≥3 times)
+    ['hasUsableVtaImdBand called at multiple call-sites', (() => {
+      const count = (src.match(/hasUsableVtaImdBand\s*\(/g) || []).length;
+      return count >= 3;
+    })()],
+    // 11. supported_gate still in export
+    ['supported_gate still in export', /supported_gate\s*:/],
+    // 12. VTA status still planned
+    ['VTA top-level status still planned', /status\s*:\s*'planned'\s*as\s*const/],
+    // 13. no final-claim fields
+    ['No final-claim fields', !/best_setting|bestSetting|recommended_height|optimal_height/.test(src)],
+  ];
+
+  let allPass = true;
+  for (const [label, result] of checks) {
+    const ok = typeof result === 'boolean' ? result : result.test(src);
+    if (!ok) {
+      console.error(`S5F.1 static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S5F.1 static source check (VTA Supported-Gate Usable Band Metadata Hardening): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS5F1UsableBand();
 
 try {
   await runChecks();
