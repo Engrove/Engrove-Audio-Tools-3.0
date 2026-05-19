@@ -4189,3 +4189,207 @@ function checkS7A2VisualPolish() {
 }
 
 checkS7A2VisualPolish();
+
+function checkS7B() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const cssSrcPath    = join(repoRoot, 'src/modules/measurement-lab/ui/measurementLab.css');
+  const engineSrcPath = join(repoRoot, 'src/modules/measurement-lab/engine/trackRecognition.ts');
+
+  for (const p of [renderSrcPath, cssSrcPath, engineSrcPath]) {
+    if (!existsSync(p)) {
+      console.error(`S7B static check FAIL: required file not found: ${p}`);
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const uiSrc     = readFileSync(renderSrcPath, 'utf8');
+  const cssSrc    = readFileSync(cssSrcPath, 'utf8');
+  const engineSrc = readFileSync(engineSrcPath, 'utf8');
+
+  const tokenStart = uiSrc.indexOf('tokenLayoutGeneratedClassNames');
+  const tokenEnd   = uiSrc.indexOf('void tokenLayoutGeneratedClassNames', tokenStart);
+  const tokenBlock = tokenStart >= 0 ? uiSrc.slice(tokenStart, tokenEnd > tokenStart ? tokenEnd + 40 : tokenStart + 8000) : '';
+
+  const checks = [
+    // ── Engine: trackRecognition.ts ────────────────────────────────────────
+    // 1. Recognition state type includes all required phases
+    ['Engine: TrackRecognitionPhase includes disabled/armed/locked/recording',
+      /TrackRecognitionPhase\s*=[\s\S]{0,200}'disabled'[\s\S]{0,400}'armed'[\s\S]{0,400}'locked'[\s\S]{0,400}'recording'/.test(engineSrc)],
+    // 2. Engine: waiting_for_signal and candidate_detected phases exist
+    ['Engine: TrackRecognitionPhase includes waiting_for_signal and candidate_detected',
+      /waiting_for_signal/.test(engineSrc) && /candidate_detected/.test(engineSrc)],
+    // 3. Engine: ambiguous / rejected / timeout phases exist
+    ['Engine: TrackRecognitionPhase includes ambiguous/rejected/timeout',
+      /ambiguous/.test(engineSrc) && /rejected/.test(engineSrc) && /timeout/.test(engineSrc)],
+    // 4. Engine: manual_override phase exists
+    ['Engine: TrackRecognitionPhase includes manual_override',
+      /manual_override/.test(engineSrc)],
+    // 5. Engine: BandDetectorType includes single_tone_exact and not_supported_for_autodetect
+    ['Engine: BandDetectorType includes single_tone_exact and not_supported_for_autodetect',
+      /single_tone_exact/.test(engineSrc) && /not_supported_for_autodetect/.test(engineSrc)],
+    // 6. Engine: classifyBandDetector() function defined
+    ['Engine: classifyBandDetector() function defined',
+      /function classifyBandDetector\(/.test(engineSrc)],
+    // 7. Engine: matchSingleToneFrequency() function defined
+    ['Engine: matchSingleToneFrequency() function defined',
+      /function matchSingleToneFrequency\(/.test(engineSrc)],
+    // 8. Engine: extractDominantFrequency() function defined
+    ['Engine: extractDominantFrequency() function defined',
+      /function extractDominantFrequency\(/.test(engineSrc)],
+    // 9. Engine: armTrackRecognition() function defined
+    ['Engine: armTrackRecognition() function defined',
+      /function armTrackRecognition\(/.test(engineSrc)],
+    // 10. Engine: disarmTrackRecognition() function defined
+    ['Engine: disarmTrackRecognition() function defined',
+      /function disarmTrackRecognition\(/.test(engineSrc)],
+    // 11. Engine: ingestSignal() function defined
+    ['Engine: ingestSignal() function defined',
+      /function ingestSignal\(/.test(engineSrc)],
+    // 12. Engine: evaluateAutostartEligibility() function defined
+    ['Engine: evaluateAutostartEligibility() function defined',
+      /function evaluateAutostartEligibility\(/.test(engineSrc)],
+    // 13. Engine: buildTrackRecognitionProvenance() function defined
+    ['Engine: buildTrackRecognitionProvenance() function defined',
+      /function buildTrackRecognitionProvenance\(/.test(engineSrc)],
+    // 14. Engine: pre-roll status is always 'not_available' (no fake pre-roll)
+    ['Engine: preRollStatus type is not_available only',
+      /PreRollStatus\s*=\s*'not_available'/.test(engineSrc)],
+    // 15. Engine: autostart refused for planned workflow
+    ['Engine: evaluateAutostartEligibility blocks planned availability',
+      /evaluateAutostartEligibility[\s\S]{0,800}planned/.test(engineSrc)],
+    // 16. Engine: no automatic start when chain is invalid
+    ['Engine: evaluateAutostartEligibility blocks invalid chainReadiness',
+      /evaluateAutostartEligibility[\s\S]{0,500}chainReadiness/.test(engineSrc)],
+    // 17. Engine: sweep/noise unsupported for autodetect
+    ['Engine: sweep signal type is unsupported for autodetect',
+      /AUTODETECT_UNSUPPORTED_SIGNAL_TYPES[\s\S]{0,500}'sweep'/.test(engineSrc)],
+    // 18. Engine: noise signal type is unsupported for autodetect
+    ['Engine: noise signal type is unsupported for autodetect',
+      /AUTODETECT_UNSUPPORTED_SIGNAL_TYPES[\s\S]{0,500}'noise'/.test(engineSrc)],
+    // 19. Engine: initial state phase is 'disabled'
+    ['Engine: initialTrackRecognitionState returns disabled phase',
+      /initialTrackRecognitionState[\s\S]{0,300}phase:\s*'disabled'/.test(engineSrc)],
+    // 20. Engine: TRACK_RECOGNITION_PHASE_LABELS exported
+    ['Engine: TRACK_RECOGNITION_PHASE_LABELS exported',
+      /export const TRACK_RECOGNITION_PHASE_LABELS/.test(engineSrc)],
+
+    // ── TS UI integration ─────────────────────────────────────────────────
+    // 21. TS: trackRecognition imported from engine
+    ['TS: trackRecognition engine imported in renderMeasurementLabPage',
+      /from '\.\.\/engine\/trackRecognition'/.test(uiSrc)],
+    // 22. TS: LabState includes trackRecognition field
+    ['TS: LabState includes trackRecognition field',
+      /trackRecognition:\s*TrackRecognitionState/.test(uiSrc)],
+    // 23. TS: initialTrackRecognitionState() called in state init
+    ['TS: initialTrackRecognitionState() called in state initialiser',
+      /trackRecognition:\s*initialTrackRecognitionState\(\)/.test(uiSrc)],
+    // 24. TS: renderTrackRecognition() function defined
+    ['TS: renderTrackRecognition() function defined',
+      /function renderTrackRecognition\(/.test(uiSrc)],
+    // 25. TS: tickTrackRecognition() function defined
+    ['TS: tickTrackRecognition() function defined',
+      /function tickTrackRecognition\(/.test(uiSrc)],
+    // 26. TS: tickTrackRecognition called inside meter loop
+    ['TS: tickTrackRecognition called inside startMeterLoop',
+      /startMeterLoop[\s\S]{0,1600}tickTrackRecognition\(els\)/.test(uiSrc)],
+    // 27. TS: arm button wired in enableMeasurementLabInteractions
+    ['TS: recogArmBtn event listener wired',
+      /recogArmBtn[\s\S]{0,100}addEventListener/.test(uiSrc)],
+    // 28. TS: disarm button wired in enableMeasurementLabInteractions
+    ['TS: recogDisarmBtn event listener wired',
+      /recogDisarmBtn[\s\S]{0,100}addEventListener/.test(uiSrc)],
+    // 29. TS: disarmTrackRecognition called on disconnect
+    ['TS: disarmTrackRecognition() called in disconnectMeasurementLab',
+      /disconnectMeasurementLab[\s\S]{0,500}disarmTrackRecognition\(\)/.test(uiSrc)],
+    // 30. TS: buildTrackRecognitionProvenance included in session JSON
+    ['TS: buildTrackRecognitionProvenance called in buildSessionJson',
+      /buildTrackRecognitionProvenance[\s\S]{0,100}state\.trackRecognition/.test(uiSrc)],
+    // 31. TS: track_recognition field in SessionJson type
+    ['TS: SessionJson type includes track_recognition field',
+      /SessionJson[\s\S]{0,1300}track_recognition/.test(uiSrc)],
+    // 32. TS: ribbon has recognition badge element
+    ['TS: session ribbon markup includes data-mlab-recog-badge',
+      /sessionRibbonMarkup[\s\S]{0,1200}data-mlab-recog-badge/.test(uiSrc)],
+    // 33. TS: audio source panel has arm section
+    ['TS: audioSourcePanelMarkup includes mlab-recog-arm-section',
+      /audioSourcePanelMarkup[\s\S]{0,6000}mlab-recog-arm-section/.test(uiSrc)],
+    // 34. TS: arm button in source panel
+    ['TS: audioSourcePanelMarkup includes data-mlab-recog-arm button',
+      /audioSourcePanelMarkup[\s\S]{0,6000}data-mlab-recog-arm/.test(uiSrc)],
+    // 35. TS: disarm button in source panel
+    ['TS: audioSourcePanelMarkup includes data-mlab-recog-disarm button',
+      /audioSourcePanelMarkup[\s\S]{0,6500}data-mlab-recog-disarm/.test(uiSrc)],
+    // 36. TS: manual start always possible (arm section does not disable manual start buttons)
+    ['TS: manual start buttons not disabled by recognition state',
+      !(/recogArmBtn[\s\S]{0,1000}data-mlab-connect/.test(uiSrc))],
+    // 37. TS: recognition status visible as text (badge has textContent assignment)
+    ['TS: applyRecogBadge sets textContent (status visible as text)',
+      /applyRecogBadge[\s\S]{0,400}textContent\s*=/.test(uiSrc)],
+    // 38. tokenLayoutGeneratedClassNames includes mlab-recog-badge
+    ['tokenLayoutGeneratedClassNames includes mlab-recog-badge',
+      tokenBlock.includes('mlab-recog-badge')],
+    // 39. tokenLayoutGeneratedClassNames includes mlab-recog-arm-section
+    ['tokenLayoutGeneratedClassNames includes mlab-recog-arm-section',
+      tokenBlock.includes('mlab-recog-arm-section')],
+    // 40. tokenLayoutGeneratedClassNames includes mlab-recog-badge--locked
+    ['tokenLayoutGeneratedClassNames includes mlab-recog-badge--locked',
+      tokenBlock.includes('mlab-recog-badge--locked')],
+
+    // ── CSS ───────────────────────────────────────────────────────────────
+    // 41. CSS: mlab-recog-badge defined
+    ['CSS: mlab-recog-badge defined',
+      /\.mlab-recog-badge/.test(cssSrc)],
+    // 42. CSS: mlab-recog-badge--disabled defined
+    ['CSS: mlab-recog-badge--disabled defined',
+      /\.mlab-recog-badge--disabled/.test(cssSrc)],
+    // 43. CSS: mlab-recog-badge--armed defined
+    ['CSS: mlab-recog-badge--armed defined',
+      /\.mlab-recog-badge--armed/.test(cssSrc)],
+    // 44. CSS: mlab-recog-badge--locked defined
+    ['CSS: mlab-recog-badge--locked defined',
+      /\.mlab-recog-badge--locked/.test(cssSrc)],
+    // 45. CSS: mlab-recog-badge--rejected defined
+    ['CSS: mlab-recog-badge--rejected defined',
+      /\.mlab-recog-badge--rejected/.test(cssSrc)],
+    // 46. CSS: mlab-recog-arm-section defined
+    ['CSS: mlab-recog-arm-section defined',
+      /\.mlab-recog-arm-section/.test(cssSrc)],
+    // 47. CSS: mlab-recog-arm-actions defined
+    ['CSS: mlab-recog-arm-actions defined',
+      /\.mlab-recog-arm-actions/.test(cssSrc)],
+
+    // ── VTA / planned workflow regression guards ───────────────────────────
+    // 48. VTA remains planned — vta_imd_optimizer still 'planned' in engine data
+    ['Regression: vta_imd_optimizer implementationStatus still planned',
+      /vta_imd_optimizer[\s\S]{0,300}implementationStatus:\s*'planned'/.test(uiSrc) ||
+      /implementationStatus:\s*'planned'[\s\S]{0,1000}vta_imd_optimizer/.test(uiSrc) ||
+      /MEASUREMENT_WORKFLOWS[\s\S]{0,3000}vta_imd_optimizer[\s\S]{0,200}planned/.test(
+        readFileSync(join(repoRoot, 'src/modules/measurement-lab/data/measurementWorkflows.ts'), 'utf8'),
+      )],
+    // 49. No fake autostart (autostart is only triggered after lock)
+    ['Engine: ingestSignal does not set recording phase directly',
+      !/ingestSignal[\s\S]{0,3000}phase:\s*'recording'/.test(engineSrc)],
+    // 50. S7A.2 regression: renderTrackRecognition called in connectMeasurementLab
+    ['S7A regression: renderTrackRecognition called after connect',
+      /connectMeasurementLab[\s\S]{0,2000}renderTrackRecognition\(els\)/.test(uiSrc)],
+    // 51. S7A regression: renderTrackRecognition called after disconnect
+    ['S7A regression: renderTrackRecognition called after disconnect',
+      /disconnectMeasurementLab[\s\S]{0,2000}renderTrackRecognition\(els\)/.test(uiSrc)],
+  ];
+
+  let allPass = true;
+  for (const [label, ok] of checks) {
+    if (!ok) {
+      console.error(`S7B static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S7B static source check (Track Recognition & Armed Autostart Foundation): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS7B();

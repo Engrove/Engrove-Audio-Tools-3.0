@@ -2762,3 +2762,97 @@ button.mlab-coverage-badge--available:focus-visible {
     grid-template-columns: 1fr;
   }
 }
+
+/* ── S7B: Track recognition badge ─────────────────────────────────────────── */
+
+.mlab-recog-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.45em;
+  height: 1.3em;
+  font-size: var(--ea-font-size-small, 0.75rem);
+  font-weight: 600;
+  font-family: var(--ea-font-data, monospace);
+  border-radius: 3px;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  text-transform: uppercase;
+  vertical-align: middle;
+  border: 1px solid transparent;
+}
+
+.mlab-recog-badge--disabled {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ea-text-low, #888);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mlab-recog-badge--armed {
+  background: rgba(242, 184, 55, 0.15);
+  color: #f2b837;
+  border-color: rgba(242, 184, 55, 0.3);
+}
+
+.mlab-recog-badge--waiting {
+  background: rgba(242, 184, 55, 0.08);
+  color: #d4a017;
+  border-color: rgba(242, 184, 55, 0.18);
+}
+
+.mlab-recog-badge--detecting {
+  background: rgba(99, 172, 255, 0.13);
+  color: #63acff;
+  border-color: rgba(99, 172, 255, 0.25);
+}
+
+.mlab-recog-badge--locked {
+  background: rgba(34, 197, 94, 0.13);
+  color: #22c55e;
+  border-color: rgba(34, 197, 94, 0.28);
+}
+
+.mlab-recog-badge--recording {
+  background: rgba(34, 197, 94, 0.22);
+  color: #16a34a;
+  border-color: rgba(34, 197, 94, 0.4);
+}
+
+.mlab-recog-badge--rejected,
+.mlab-recog-badge--timeout,
+.mlab-recog-badge--ambiguous {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.24);
+}
+
+.mlab-recog-badge--manual {
+  background: rgba(99, 172, 255, 0.08);
+  color: var(--ea-text-medium, #bbb);
+  border-color: rgba(99, 172, 255, 0.14);
+}
+
+/* ── S7B: Arm section in Audio Source panel ───────────────────────────────── */
+
+.mlab-recog-arm-section {
+  border-top: 1px solid var(--ea-border-soft, rgba(255, 255, 255, 0.07));
+}
+
+.mlab-recog-arm-row {
+  display: flex;
+  align-items: center;
+  gap: var(--ea-space-3, 0.75rem);
+  margin-bottom: var(--ea-space-2, 0.5rem);
+}
+
+.mlab-recog-arm-reason {
+  margin-bottom: var(--ea-space-2, 0.5rem);
+  font-size: var(--ea-font-size-small, 0.75rem);
+  color: var(--ea-text-low, #888);
+  line-height: 1.5;
+}
+
+.mlab-recog-arm-actions {
+  display: flex;
+  gap: var(--ea-space-2, 0.5rem);
+  flex-wrap: wrap;
+}

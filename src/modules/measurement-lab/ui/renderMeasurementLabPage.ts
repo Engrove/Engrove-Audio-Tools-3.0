@@ -44,6 +44,19 @@ import {
 import { computeChannelIdentity, type ChannelIdentityResult, type ChannelIdentityStatus } from '../engine/channelIdentity';
 import { loadTestRecordsRuntimeData, getPreferredRecord, type TestRecord, type TestBand, type TestBandPurpose } from '../data/loadTestRecords';
 import { computeAllWorkflowCoverage, MEASUREMENT_WORKFLOWS, type WorkflowAvailability } from '../data/measurementWorkflows';
+import {
+  initialTrackRecognitionState,
+  armTrackRecognition,
+  disarmTrackRecognition,
+  buildTrackRecognitionProvenance,
+  buildRecognitionCandidates,
+  extractDominantFrequency,
+  ingestSignal,
+  evaluateAutostartEligibility,
+  TRACK_RECOGNITION_PHASE_LABELS,
+  type TrackRecognitionState,
+  type AutostartChainReadiness,
+} from '../engine/trackRecognition';
 
 const WORKFLOW_PANEL_TARGETS: Readonly<Record<string, string>> = {
   wow_flutter: 'mlab-speed-panel',
@@ -429,6 +442,7 @@ type LabState = {
   refLevel: RefLevelStateBag;
   vta: VtaStateBag;
   noiseFloor: NoiseFloorState;
+  trackRecognition: TrackRecognitionState;
 };
 
 /*
@@ -439,7 +453,7 @@ type LabState = {
  * site below; it has no runtime effect.
  */
 const tokenLayoutGeneratedClassNames =
-  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured mlab-vta-candidate-badge mlab-vta-comparison mlab-vta-comparison-candidate mlab-vta-comparison-meta mlab-vta-comparison-warning mlab-vta-comparison-status mlab-vta-comparison-confidence mlab-vta-confidence-level mlab-vta-confidence-level--insufficient mlab-vta-confidence-level--low mlab-vta-confidence-level--medium mlab-vta-confidence-level--high mlab-vta-confidence-reason mlab-vta-gate mlab-vta-gate-head mlab-vta-gate-summary mlab-vta-gate-status mlab-vta-gate-status--not-ready mlab-vta-gate-status--candidate mlab-vta-gate-status--review mlab-vta-gate-msg mlab-vta-gate-table mlab-vta-gate-row mlab-vta-gate-pass mlab-vta-gate-pass--ok mlab-vta-gate-pass--fail mlab-vta-gate-label mlab-vta-gate-detail mlab-vta-policy mlab-vta-policy-head mlab-vta-policy-status-row mlab-vta-policy-status mlab-vta-policy-status--experimental mlab-vta-policy-status--review-not-supported mlab-vta-policy-reason mlab-vta-policy-req-head mlab-vta-policy-req-list mlab-vta-policy-req mlab-guided-order-panel mlab-guided-order-body mlab-guided-order-intro mlab-guided-order-list mlab-guided-order-item mlab-guided-order-item--first mlab-guided-order-step-head mlab-guided-order-track mlab-guided-order-name mlab-guided-order-first-badge mlab-guided-order-detail mlab-guided-order-workflow mlab-speed-ctx-row mlab-speed-ctx-label mlab-speed-ctx-btn mlab-speed-ctx-btn--active mlab-speed-ctx-note mlab-speed-ctx-badge mlab-speed-history mlab-speed-history-head mlab-speed-history-clear mlab-speed-history-empty mlab-speed-history-scroll mlab-speed-history-table mlab-speed-history-row mlab-speed-history-cell mlab-speed-settings mlab-speed-settings--result mlab-speed-settings-head mlab-speed-settings-hint mlab-speed-settings-row mlab-speed-settings-label mlab-speed-settings-value mlab-speed-settings-input-group mlab-speed-settings-input mlab-speed-settings-unit mlab-speed-settings-src mlab-speed-settings-reset mlab-nf-intro mlab-nf-guidance mlab-nf-settings mlab-nf-settings-row mlab-nf-settings-label mlab-nf-settings-select mlab-nf-settings-input mlab-nf-settings-input--wide mlab-nf-settings-input-group mlab-nf-settings-unit mlab-nf-settings-src mlab-nf-result mlab-nf-history mlab-nf-history-head mlab-nf-history-clear mlab-nf-history-scroll mlab-nf-history-table mlab-nf-history-row mlab-nf-history-cell mlab-chain-readiness mlab-chain-readiness--ready mlab-chain-readiness--warning mlab-chain-readiness--blocked mlab-chain-readiness--not-checked mlab-chain-readiness-row mlab-chain-readiness-key mlab-chain-readiness-val mlab-chain-readiness-warning mlab-chain-readiness-note mlab-run-quality mlab-run-quality--ok mlab-run-quality--warning mlab-run-quality--invalid mlab-run-quality-label mlab-run-quality-warnings mlab-session-ribbon mlab-ribbon-group mlab-ribbon-group--active mlab-ribbon-label mlab-ribbon-value mlab-ribbon-sep mlab-ribbon-sep--flex mlab-ribbon-active-tool mlab-workflow-rail mlab-rail-head mlab-rail-items mlab-rail-loading mlab-rail-item mlab-rail-item--available mlab-rail-item--planned mlab-rail-item--partial mlab-rail-item--unavailable mlab-rail-item--active mlab-rail-item-label mlab-rail-item-status mlab-diag-rail mlab-diag-signal-panel mlab-diag-signal-body mlab-diag-signal-status mlab-diag-signal-status--ready mlab-diag-signal-status--blocked mlab-diag-signal-status--warning mlab-diag-signal-status--not_checked mlab-diag-signal-row mlab-diag-signal-key mlab-diag-signal-val mlab-diag-signal-clip mlab-workbench-center mlab-center-head mlab-center-title mlab-center-title-pre mlab-center-title-h mlab-center-actions mlab-center-body mlab-center-status-pill mlab-tool-panel--active mlab-context-overlay mlab-context-overlay--open mlab-context-head mlab-context-body mlab-context-foot mlab-log-modal mlab-log-modal--open mlab-log-modal-dialog mlab-log-modal-head mlab-log-modal-body mlab-log-modal-foot mlab-workbench-footer mlab-footer-status mlab-footer-actions mlab-ribbon-meters mlab-ribbon-mini-meter mlab-ribbon-mini-label mlab-ribbon-mini-bar-wrap mlab-ribbon-mini-fill mlab-ribbon-mini-db mlab-rail-group-head mlab-rail-item-tooltip mlab-rail-item-tooltip-name mlab-rail-item-tooltip-status mlab-home-prereqs mlab-context-home-section mlab-rail-tooltip-portal--visible mlab-rail-item--source-inactive mlab-source-controls-head mlab-source-viz mlab-source-meter-grid mlab-source-freq-canvas mlab-ribbon-group--wide mlab-source-meter-channel';
+  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured mlab-vta-candidate-badge mlab-vta-comparison mlab-vta-comparison-candidate mlab-vta-comparison-meta mlab-vta-comparison-warning mlab-vta-comparison-status mlab-vta-comparison-confidence mlab-vta-confidence-level mlab-vta-confidence-level--insufficient mlab-vta-confidence-level--low mlab-vta-confidence-level--medium mlab-vta-confidence-level--high mlab-vta-confidence-reason mlab-vta-gate mlab-vta-gate-head mlab-vta-gate-summary mlab-vta-gate-status mlab-vta-gate-status--not-ready mlab-vta-gate-status--candidate mlab-vta-gate-status--review mlab-vta-gate-msg mlab-vta-gate-table mlab-vta-gate-row mlab-vta-gate-pass mlab-vta-gate-pass--ok mlab-vta-gate-pass--fail mlab-vta-gate-label mlab-vta-gate-detail mlab-vta-policy mlab-vta-policy-head mlab-vta-policy-status-row mlab-vta-policy-status mlab-vta-policy-status--experimental mlab-vta-policy-status--review-not-supported mlab-vta-policy-reason mlab-vta-policy-req-head mlab-vta-policy-req-list mlab-vta-policy-req mlab-guided-order-panel mlab-guided-order-body mlab-guided-order-intro mlab-guided-order-list mlab-guided-order-item mlab-guided-order-item--first mlab-guided-order-step-head mlab-guided-order-track mlab-guided-order-name mlab-guided-order-first-badge mlab-guided-order-detail mlab-guided-order-workflow mlab-speed-ctx-row mlab-speed-ctx-label mlab-speed-ctx-btn mlab-speed-ctx-btn--active mlab-speed-ctx-note mlab-speed-ctx-badge mlab-speed-history mlab-speed-history-head mlab-speed-history-clear mlab-speed-history-empty mlab-speed-history-scroll mlab-speed-history-table mlab-speed-history-row mlab-speed-history-cell mlab-speed-settings mlab-speed-settings--result mlab-speed-settings-head mlab-speed-settings-hint mlab-speed-settings-row mlab-speed-settings-label mlab-speed-settings-value mlab-speed-settings-input-group mlab-speed-settings-input mlab-speed-settings-unit mlab-speed-settings-src mlab-speed-settings-reset mlab-nf-intro mlab-nf-guidance mlab-nf-settings mlab-nf-settings-row mlab-nf-settings-label mlab-nf-settings-select mlab-nf-settings-input mlab-nf-settings-input--wide mlab-nf-settings-input-group mlab-nf-settings-unit mlab-nf-settings-src mlab-nf-result mlab-nf-history mlab-nf-history-head mlab-nf-history-clear mlab-nf-history-scroll mlab-nf-history-table mlab-nf-history-row mlab-nf-history-cell mlab-chain-readiness mlab-chain-readiness--ready mlab-chain-readiness--warning mlab-chain-readiness--blocked mlab-chain-readiness--not-checked mlab-chain-readiness-row mlab-chain-readiness-key mlab-chain-readiness-val mlab-chain-readiness-warning mlab-chain-readiness-note mlab-run-quality mlab-run-quality--ok mlab-run-quality--warning mlab-run-quality--invalid mlab-run-quality-label mlab-run-quality-warnings mlab-session-ribbon mlab-ribbon-group mlab-ribbon-group--active mlab-ribbon-label mlab-ribbon-value mlab-ribbon-sep mlab-ribbon-sep--flex mlab-ribbon-active-tool mlab-workflow-rail mlab-rail-head mlab-rail-items mlab-rail-loading mlab-rail-item mlab-rail-item--available mlab-rail-item--planned mlab-rail-item--partial mlab-rail-item--unavailable mlab-rail-item--active mlab-rail-item-label mlab-rail-item-status mlab-diag-rail mlab-diag-signal-panel mlab-diag-signal-body mlab-diag-signal-status mlab-diag-signal-status--ready mlab-diag-signal-status--blocked mlab-diag-signal-status--warning mlab-diag-signal-status--not_checked mlab-diag-signal-row mlab-diag-signal-key mlab-diag-signal-val mlab-diag-signal-clip mlab-workbench-center mlab-center-head mlab-center-title mlab-center-title-pre mlab-center-title-h mlab-center-actions mlab-center-body mlab-center-status-pill mlab-tool-panel--active mlab-context-overlay mlab-context-overlay--open mlab-context-head mlab-context-body mlab-context-foot mlab-log-modal mlab-log-modal--open mlab-log-modal-dialog mlab-log-modal-head mlab-log-modal-body mlab-log-modal-foot mlab-workbench-footer mlab-footer-status mlab-footer-actions mlab-ribbon-meters mlab-ribbon-mini-meter mlab-ribbon-mini-label mlab-ribbon-mini-bar-wrap mlab-ribbon-mini-fill mlab-ribbon-mini-db mlab-rail-group-head mlab-rail-item-tooltip mlab-rail-item-tooltip-name mlab-rail-item-tooltip-status mlab-home-prereqs mlab-context-home-section mlab-rail-tooltip-portal--visible mlab-rail-item--source-inactive mlab-source-controls-head mlab-source-viz mlab-source-meter-grid mlab-source-freq-canvas mlab-ribbon-group--wide mlab-source-meter-channel mlab-recog-badge mlab-recog-badge--disabled mlab-recog-badge--armed mlab-recog-badge--waiting mlab-recog-badge--detecting mlab-recog-badge--locked mlab-recog-badge--recording mlab-recog-badge--rejected mlab-recog-badge--timeout mlab-recog-badge--ambiguous mlab-recog-badge--manual mlab-recog-arm-section mlab-recog-arm-row mlab-recog-arm-status mlab-recog-arm-actions mlab-recog-arm-reason';
 void tokenLayoutGeneratedClassNames;
 
 const speedMeasurementDurationSeconds = 30;
@@ -650,6 +664,7 @@ const state: LabState = {
     latest: null,
     runs: [],
   },
+  trackRecognition: initialTrackRecognitionState(),
 };
 
 // ── S7A.2: Tooltip portal state ───────────────────────────────────────────────
@@ -770,6 +785,11 @@ function sessionRibbonMarkup(): string {
       <div class="mlab-ribbon-group">
         <span class="mlab-ribbon-label">Chain</span>
         <span class="mlab-ribbon-value" data-mlab-ribbon-chain data-chain-status="not_checked">Not checked</span>
+      </div>
+      <span class="mlab-ribbon-sep" aria-hidden="true"></span>
+      <div class="mlab-ribbon-group">
+        <span class="mlab-ribbon-label">Detect</span>
+        <span class="mlab-recog-badge mlab-recog-badge--disabled" data-mlab-recog-badge aria-label="Track recognition: Off">Off</span>
       </div>
       <span class="mlab-ribbon-sep mlab-ribbon-sep--flex" aria-hidden="true"></span>
       <div class="mlab-ribbon-group mlab-ribbon-group--active">
@@ -1024,6 +1044,17 @@ function audioSourcePanelMarkup(): string {
             ${sourceMeterChannelMarkup('R', 'R channel')}
           </div>
           <canvas class="mlab-source-freq-canvas" data-mlab-source-freq-canvas width="600" height="140" aria-hidden="true"></canvas>
+        </div>
+      </div>
+      <div class="ea-panel-body mlab-recog-arm-section" data-mlab-recog-arm-section>
+        <div class="mlab-recog-arm-row">
+          <span class="mlab-ribbon-label">Track recognition</span>
+          <span class="mlab-recog-badge mlab-recog-badge--disabled" data-mlab-recog-panel-badge>Off</span>
+        </div>
+        <p class="ea-muted mlab-recog-arm-reason" data-mlab-recog-arm-reason>Select a test record and connect a source, then arm a workflow for automatic band detection.</p>
+        <div class="mlab-recog-arm-actions">
+          <button class="ea-button ea-button--ghost" type="button" data-mlab-recog-arm disabled>Arm autostart</button>
+          <button class="ea-button ea-button--ghost" type="button" data-mlab-recog-disarm style="display:none">Disarm</button>
         </div>
       </div>
     </section>
@@ -1340,6 +1371,7 @@ type SessionJson = {
     right_peak_dbfs: number | null;
     warnings: readonly string[];
   };
+  track_recognition: import('../engine/trackRecognition').TrackRecognitionProvenance;
   selection: { cartridge: null; tonearm: null; test_record: string | null };
   measurements: {
     speed: object | null;
@@ -1551,6 +1583,12 @@ function buildSessionJson(): SessionJson {
         warnings: Array.from(snap.warnings),
       };
     })(),
+    track_recognition: buildTrackRecognitionProvenance(
+      state.trackRecognition,
+      state.trackRecognition.phase === 'recording' ? 'auto'
+        : state.trackRecognition.phase === 'manual_override' ? 'manual'
+        : 'not_started',
+    ),
     selection: { cartridge: null, tonearm: null, test_record: state.selectedTestRecordId },
     measurements: {
       speed: (() => {
@@ -2567,6 +2605,11 @@ function elements(root: ParentNode) {
     ribbonMiniRFill: root.querySelector<HTMLElement>('[data-mlab-ribbon-mini-r-fill]'),
     ribbonMiniLDb: root.querySelector<HTMLElement>('[data-mlab-ribbon-mini-l-db]'),
     ribbonMiniRDb: root.querySelector<HTMLElement>('[data-mlab-ribbon-mini-r-db]'),
+    recogRibbonBadge: root.querySelector<HTMLElement>('[data-mlab-recog-badge]'),
+    recogPanelBadge: root.querySelector<HTMLElement>('[data-mlab-recog-panel-badge]'),
+    recogArmReason: root.querySelector<HTMLElement>('[data-mlab-recog-arm-reason]'),
+    recogArmBtn: root.querySelector<HTMLButtonElement>('[data-mlab-recog-arm]'),
+    recogDisarmBtn: root.querySelector<HTMLButtonElement>('[data-mlab-recog-disarm]'),
   };
 }
 
@@ -6079,6 +6122,8 @@ function startMeterLoop(els: Elements): void {
       renderSourcePanelLevel(els, 'R');
       drawSourceSpectrum(els.sourceFreqCanvas, state.analysers.L, spectrumScratch);
     }
+    // Track recognition: poll every frame when armed
+    tickTrackRecognition(els);
     state.meterFrame = requestAnimationFrame(step);
   };
   state.meterFrame = requestAnimationFrame(step);
@@ -6399,11 +6444,14 @@ async function connectMeasurementLab(els: Elements): Promise<void> {
   renderSessionRibbon(els);
   renderDiagSignalPanel(els);
   renderWorkflowRail(els);
+  renderTrackRecognition(els);
 }
 
 async function disconnectMeasurementLab(els: Elements): Promise<void> {
   await teardownAudio();
   state.captureState = 'idle';
+  // Disarm recognition on disconnect — source is no longer live
+  state.trackRecognition = disarmTrackRecognition();
   appendLog('Disconnected.');
   clearMeterDom(els);
   renderConnectionButtons(els);
@@ -6422,6 +6470,7 @@ async function disconnectMeasurementLab(els: Elements): Promise<void> {
   renderSessionRibbon(els);
   renderDiagSignalPanel(els);
   renderWorkflowRail(els);
+  renderTrackRecognition(els);
 }
 
 async function refreshDeviceList(els: Elements): Promise<void> {
@@ -7671,6 +7720,89 @@ export function buildMeasurementLabWebReport(): WebReportPayload {
 
 // ── End S5J ──────────────────────────────────────────────────────────────────
 
+// ── S7B: Track recognition UI rendering ──────────────────────────────────────
+
+function phaseToBadgeModifier(phase: TrackRecognitionState['phase']): string {
+  switch (phase) {
+    case 'disabled': return 'disabled';
+    case 'armed': return 'armed';
+    case 'waiting_for_signal': return 'waiting';
+    case 'candidate_detected': return 'detecting';
+    case 'locked': return 'locked';
+    case 'recording': return 'recording';
+    case 'ambiguous': return 'ambiguous';
+    case 'rejected': return 'rejected';
+    case 'timeout': return 'timeout';
+    case 'manual_override': return 'manual';
+    default: return 'disabled';
+  }
+}
+
+function applyRecogBadge(el: HTMLElement | null, recog: TrackRecognitionState): void {
+  if (!el) return;
+  const mod = phaseToBadgeModifier(recog.phase);
+  el.className = el.className.replace(/mlab-recog-badge--\w+/g, '').trim();
+  el.classList.add(`mlab-recog-badge--${mod}`);
+  el.textContent = TRACK_RECOGNITION_PHASE_LABELS[recog.phase];
+  el.setAttribute('aria-label', `Track recognition: ${TRACK_RECOGNITION_PHASE_LABELS[recog.phase]}`);
+}
+
+function renderTrackRecognition(els: Elements): void {
+  const recog = state.trackRecognition;
+  applyRecogBadge(els.recogRibbonBadge, recog);
+  applyRecogBadge(els.recogPanelBadge, recog);
+  if (els.recogArmReason) {
+    els.recogArmReason.textContent = recog.reason;
+  }
+  // Arm button: enabled only when source is live, record is selected, phase is inactive
+  const canArm = state.captureState === 'live'
+    && state.selectedTestRecordId !== null
+    && (recog.phase === 'disabled' || recog.phase === 'rejected' || recog.phase === 'timeout' || recog.phase === 'ambiguous');
+  if (els.recogArmBtn) {
+    els.recogArmBtn.disabled = !canArm;
+    els.recogArmBtn.style.display = recog.phase !== 'disabled' && recog.phase !== 'rejected' && recog.phase !== 'timeout' && recog.phase !== 'ambiguous' ? 'none' : '';
+  }
+  // Disarm button: shown when armed or active
+  if (els.recogDisarmBtn) {
+    const isActive = recog.phase !== 'disabled';
+    els.recogDisarmBtn.style.display = isActive ? '' : 'none';
+  }
+}
+
+function tickTrackRecognition(els: Elements): void {
+  const recog = state.trackRecognition;
+  if (
+    recog.phase !== 'armed' &&
+    recog.phase !== 'waiting_for_signal' &&
+    recog.phase !== 'candidate_detected'
+  ) return;
+
+  // Extract dominant frequency from left channel analyser
+  const analyser = state.analysers?.L ?? null;
+  let dominantHz: number | null = null;
+  if (analyser && state.captureState === 'live') {
+    const fftSize = analyser.frequencyBinCount;
+    const scratch = new Float32Array(new ArrayBuffer(fftSize * Float32Array.BYTES_PER_ELEMENT));
+    analyser.getFloatFrequencyData(scratch);
+    const sampleRate = state.audioHandle?.context.sampleRate ?? 44100;
+    dominantHz = extractDominantFrequency(scratch, sampleRate);
+  }
+
+  const next = ingestSignal({
+    current: recog,
+    dominantFrequencyHz: dominantHz,
+    nowMs: Date.now(),
+    waitingTimeoutMs: 120_000, // 2 min waiting timeout
+    candidateConfirmMs: 1_500, // 1.5 s confirmation window
+    lockConfidenceThreshold: 0.6,
+  });
+
+  if (next !== recog) {
+    state.trackRecognition = next;
+    renderTrackRecognition(els);
+  }
+}
+
 function renderSessionRibbon(els: Elements): void {
   if (els.ribbonSource) {
     els.ribbonSource.textContent = state.sourceMode === 'self-test' ? 'Self-test' : 'Live';
@@ -7954,6 +8086,7 @@ export function enableMeasurementLabInteractions(): void {
   renderDiagSignalPanel(els);
   renderLogPanel(els);
   clearMeterDom(els);
+  renderTrackRecognition(els);
   activateTool('audio_source', els);
 
   void refreshDeviceList(els);
@@ -8029,6 +8162,7 @@ export function enableMeasurementLabInteractions(): void {
     renderResonancePanel(els);
     renderRefLevelPanel(els);
     renderAdvancedPanel(els);
+    renderTrackRecognition(els);
   });
 
   els.coverageToggleBtn?.addEventListener('click', () => {
@@ -8154,5 +8288,52 @@ export function enableMeasurementLabInteractions(): void {
         els.contextOverlay.classList.remove('mlab-context-overlay--open');
       }
     }
+  });
+
+  // ── S7B: Track recognition arm / disarm ──────────────────────────────────────
+  els.recogArmBtn?.addEventListener('click', () => {
+    const record = selectedRecord();
+    if (!record || state.captureState !== 'live') return;
+
+    // Find all single-tone-eligible bands on current record
+    const coverageList = computeAllWorkflowCoverage(record);
+    const coverageMap = new Map(coverageList.map(c => [c.workflowId, c.availability]));
+    const allBands = record.sides.flatMap(s => s.bands);
+    const candidates = buildRecognitionCandidates(allBands, coverageMap);
+
+    // Pick the first eligible candidate for the currently active workflow
+    const activeWfId = state.activeWorkflowId;
+    const candidate = candidates.find(c => activeWfId !== null && c.workflowIds.includes(activeWfId))
+      ?? candidates[0]
+      ?? null;
+
+    if (!candidate) {
+      appendLog('Track recognition: no auto-detectable bands on selected test record for current workflow.');
+      return;
+    }
+
+    const chainReadiness = deriveMeasurementChainReadiness({
+      leftRmsDbfs: state.channelLevels.L.rmsDbFs,
+      rightRmsDbfs: state.channelLevels.R.rmsDbFs,
+      leftPeakDbfs: state.channelLevels.L.peakDbFs,
+      rightPeakDbfs: state.channelLevels.R.peakDbFs,
+    });
+    const chainReady: AutostartChainReadiness = chainReadiness.status === 'ready' ? 'ready' : 'invalid';
+
+    state.trackRecognition = armTrackRecognition({
+      workflowId: candidate.workflowIds[0] ?? activeWfId ?? 'unknown',
+      targetBand: candidate.band,
+      chainReadiness: chainReady,
+    });
+    appendLog(`Track recognition armed for "${candidate.band.label}" (${candidate.expectedFrequencyHz} Hz).`);
+    renderTrackRecognition(els);
+    renderSessionRibbon(els);
+  });
+
+  els.recogDisarmBtn?.addEventListener('click', () => {
+    state.trackRecognition = disarmTrackRecognition();
+    appendLog('Track recognition disarmed.');
+    renderTrackRecognition(els);
+    renderSessionRibbon(els);
   });
 }
