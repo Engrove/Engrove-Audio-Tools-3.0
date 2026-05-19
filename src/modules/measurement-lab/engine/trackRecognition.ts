@@ -69,6 +69,8 @@ export type TrackRecognitionState = {
   readonly chainReadiness: AutostartChainReadiness;
   // Pre-roll status — always 'not_available' in this release
   readonly preRollStatus: PreRollStatus;
+  // Which tool panel initiated the arm action (null if global arm or disabled)
+  readonly armedFromToolId: string | null;
 };
 
 // ── Default / initial state ───────────────────────────────────────────────────
@@ -86,6 +88,7 @@ export const initialTrackRecognitionState = (): TrackRecognitionState => ({
   phaseEnteredAt: null,
   chainReadiness: 'invalid',
   preRollStatus: 'not_available',
+  armedFromToolId: null,
 });
 
 // ── Band eligibility ──────────────────────────────────────────────────────────
@@ -254,6 +257,7 @@ export type ArmTrackRecognitionArgs = {
   readonly workflowId: string;
   readonly targetBand: TestBand;
   readonly chainReadiness: AutostartChainReadiness;
+  readonly armedFromToolId: string | null;
 };
 
 /**
@@ -263,7 +267,7 @@ export type ArmTrackRecognitionArgs = {
  * a descriptive reason — we never silently arm an unsupported band.
  */
 export function armTrackRecognition(args: ArmTrackRecognitionArgs): TrackRecognitionState {
-  const { workflowId, targetBand, chainReadiness } = args;
+  const { workflowId, targetBand, chainReadiness, armedFromToolId } = args;
   const detectorType = classifyBandDetector(targetBand);
 
   if (detectorType !== 'single_tone_exact') {
@@ -280,6 +284,7 @@ export function armTrackRecognition(args: ArmTrackRecognitionArgs): TrackRecogni
       phaseEnteredAt: null,
       chainReadiness,
       preRollStatus: 'not_available',
+      armedFromToolId: null,
     };
   }
 
@@ -296,6 +301,7 @@ export function armTrackRecognition(args: ArmTrackRecognitionArgs): TrackRecogni
     phaseEnteredAt: Date.now(),
     chainReadiness,
     preRollStatus: 'not_available',
+    armedFromToolId,
   };
 }
 
@@ -481,6 +487,7 @@ export type TrackRecognitionProvenance = {
   readonly preRollStatus: PreRollStatus;
   readonly reason: string;
   readonly startMode: 'auto' | 'manual' | 'not_started';
+  readonly armedFromToolId: string | null;
 };
 
 /**
@@ -505,5 +512,6 @@ export function buildTrackRecognitionProvenance(
     preRollStatus: recog.preRollStatus,
     reason: recog.reason,
     startMode,
+    armedFromToolId: recog.armedFromToolId,
   };
 }

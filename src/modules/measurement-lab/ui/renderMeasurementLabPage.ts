@@ -8324,6 +8324,7 @@ export function enableMeasurementLabInteractions(): void {
       workflowId: candidate.workflowIds[0] ?? activeWfId ?? 'unknown',
       targetBand: candidate.band,
       chainReadiness: chainReady,
+      armedFromToolId: null,
     });
     appendLog(`Track recognition armed for "${candidate.band.label}" (${candidate.expectedFrequencyHz} Hz).`);
     renderTrackRecognition(els);
