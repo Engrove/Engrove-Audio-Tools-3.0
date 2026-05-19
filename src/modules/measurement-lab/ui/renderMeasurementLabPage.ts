@@ -2188,55 +2188,59 @@ function buildReportText(): string {
     lines.push('');
   }
 
-  // Channel identity
+  // Channel / Crosstalk Geometry (merged section — S7C.5)
+  lines.push('CHANNEL / CROSSTALK GEOMETRY');
+
+  // Sub-section A: Routing / Identity Check
+  lines.push('  [Routing / Identity Check]');
   const { leftCapture, rightCapture, identityResult: chIdentity, source: chSource, leftBandMeta: chLeftBand, rightBandMeta: chRightBand } = state.channel;
   if (leftCapture && rightCapture) {
-    lines.push('CHANNEL IDENTITY & CROSSTALK');
-    lines.push(`  Source:                ${chSource ?? 'live_capture'}`);
+    lines.push(`    Source:                ${chSource ?? 'live_capture'}`);
     if (chLeftBand) {
       const lf = chLeftBand.frequencyHz != null ? ` · ${chLeftBand.frequencyHz.toLocaleString('en-US')} Hz` : '';
-      lines.push(`  Left band:             ${chLeftBand.label}${lf}`);
+      lines.push(`    Left band:             ${chLeftBand.label}${lf}`);
     }
     if (chRightBand) {
       const rf = chRightBand.frequencyHz != null ? ` · ${chRightBand.frequencyHz.toLocaleString('en-US')} Hz` : '';
-      lines.push(`  Right band:            ${chRightBand.label}${rf}`);
+      lines.push(`    Right band:            ${chRightBand.label}${rf}`);
     }
     if (chIdentity) {
-      lines.push(`  Identity:              ${chIdentity.identity}`);
-      lines.push(`  Confidence:            ${chIdentity.confidence}`);
-      lines.push(`  Balance (R−L wanted):  ${chIdentity.wantedBalanceDb != null ? chIdentity.wantedBalanceDb.toFixed(2) + ' dB' : 'n/a'}`);
-      lines.push(`  L→R crosstalk:         ${chIdentity.leftToRightCrosstalkDb.toFixed(1)} dB`);
-      lines.push(`  R→L crosstalk:         ${chIdentity.rightToLeftCrosstalkDb.toFixed(1)} dB`);
+      lines.push(`    Identity:              ${chIdentity.identity}`);
+      lines.push(`    Confidence:            ${chIdentity.confidence}`);
+      lines.push(`    Balance (R−L wanted):  ${chIdentity.wantedBalanceDb != null ? chIdentity.wantedBalanceDb.toFixed(2) + ' dB' : 'n/a'}`);
+      lines.push(`    L→R crosstalk:         ${chIdentity.leftToRightCrosstalkDb.toFixed(1)} dB`);
+      lines.push(`    R→L crosstalk:         ${chIdentity.rightToLeftCrosstalkDb.toFixed(1)} dB`);
       if (chIdentity.warnings.length > 0) {
-        chIdentity.warnings.forEach(w => lines.push(`  Warning:               ${w}`));
+        chIdentity.warnings.forEach(w => lines.push(`    Warning:               ${w}`));
       }
     } else {
-      lines.push(`  Left RMS:              ${leftCapture.leftRmsDbFs.toFixed(2)} dBFS`);
-      lines.push(`  Right RMS:             ${rightCapture.rightRmsDbFs.toFixed(2)} dBFS`);
-      lines.push(`  L→R crosstalk:         ${leftCapture.crosstalkDb.toFixed(1)} dB`);
-      lines.push(`  R→L crosstalk:         ${rightCapture.crosstalkDb.toFixed(1)} dB`);
+      lines.push(`    Left RMS:              ${leftCapture.leftRmsDbFs.toFixed(2)} dBFS`);
+      lines.push(`    Right RMS:             ${rightCapture.rightRmsDbFs.toFixed(2)} dBFS`);
+      lines.push(`    L→R crosstalk:         ${leftCapture.crosstalkDb.toFixed(1)} dB`);
+      lines.push(`    R→L crosstalk:         ${rightCapture.crosstalkDb.toFixed(1)} dB`);
     }
-    lines.push('');
+  } else {
+    lines.push('    Not captured in this session.');
   }
 
-  // Azimuth steps
-  lines.push('AZIMUTH STEPS');
+  // Sub-section B: Azimuth Step Comparison
+  lines.push('  [Azimuth Step Comparison]');
   if (state.channel.runs.length > 0) {
-    lines.push(`  Runs recorded:         ${state.channel.runs.length}`);
+    lines.push(`    Runs recorded:         ${state.channel.runs.length}`);
     for (let i = 0; i < state.channel.runs.length; i++) {
       const r = state.channel.runs[i];
-      lines.push(`  Run ${i + 1} (${r.label ?? '—'}): L→R ${r.leftToRightCrosstalkDb.toFixed(1)} dB  R→L ${r.rightToLeftCrosstalkDb.toFixed(1)} dB  identity: ${r.identity}  quality: ${r.runQuality?.status ?? 'n/a'}`);
+      lines.push(`    Run ${i + 1} (${r.label ?? '—'}): L→R ${r.leftToRightCrosstalkDb.toFixed(1)} dB  R→L ${r.rightToLeftCrosstalkDb.toFixed(1)} dB  identity: ${r.identity}  quality: ${r.runQuality?.status ?? 'n/a'}`);
     }
     const cmp = computeAzimuthStepComparison(state.channel.runs);
     if (cmp && cmp.compatible && cmp.ltrRangeDb && cmp.rtlRangeDb) {
-      lines.push(`  L→R range:             ${cmp.ltrRangeDb.min.toFixed(1)}–${cmp.ltrRangeDb.max.toFixed(1)} dB`);
-      lines.push(`  R→L range:             ${cmp.rtlRangeDb.min.toFixed(1)}–${cmp.rtlRangeDb.max.toFixed(1)} dB`);
-      lines.push(`  (${cmp.note})`);
+      lines.push(`    L→R range:             ${cmp.ltrRangeDb.min.toFixed(1)}–${cmp.ltrRangeDb.max.toFixed(1)} dB`);
+      lines.push(`    R→L range:             ${cmp.rtlRangeDb.min.toFixed(1)}–${cmp.rtlRangeDb.max.toFixed(1)} dB`);
+      lines.push(`    (${cmp.note})`);
     } else if (cmp && !cmp.compatible) {
-      lines.push(`  (${cmp.note})`);
+      lines.push(`    (${cmp.note})`);
     }
   } else {
-    lines.push('  No azimuth step runs recorded in this session.');
+    lines.push('    No azimuth step comparison runs recorded in this session.');
   }
   lines.push('');
 
@@ -2335,7 +2339,7 @@ function buildReportText(): string {
     lines.push(`  Peak amplitude:        ${rr.peakAmplitudeDbFs.toFixed(1)} dBFS`);
     lines.push(`  Q estimate:            ${rr.qEstimate != null ? rr.qEstimate.toFixed(2) : 'n/a'}`);
     lines.push(`  Sweep type:            ${state.resonance.sweepType}`);
-    lines.push(`  Sweep range:           ${state.resonance.fromHz}–${state.resonance.toHz} Hz`);
+    lines.push(`  Analyzer window:       ${state.resonance.fromHz}–${state.resonance.toHz} Hz (range searched for resonance peak; not the physical test-record sweep range)`);
     if (state.resonance.runQuality) {
       lines.push(`  Run quality:           ${state.resonance.runQuality.status}`);
       for (const w of state.resonance.runQuality.warnings) {
@@ -3385,7 +3389,7 @@ function renderChannelPanel(els: Elements): void {
   const panelContextHead = isAzimuth
     ? `<p class="mlab-azimuth-head ea-muted">Azimuth step comparison mode — capture L/R bands at each tonearm position. Compare crosstalk evidence across steps. No alignment recommendation is declared — compare steps using evidence and your own judgement.</p>`
     : `<p class="mlab-channel-identity-head ea-muted">Routing / Identity mode — verifies L/R wiring, detects reversed connections, confirms channel routing sanity. Result is wiring/routing sanity, not an azimuth recommendation.</p>`;
-  const trackHint = trackBandHintMarkup(submodeWorkflowId);
+  const trackHint = trackBandHintMarkup('channel_crosstalk_geometry');
   const leftBandInfo = leftBand
     ? `<p class="mlab-channel-info">Step 1 of 2: cue band <strong>${renderText(leftBand.index)}</strong> — ${renderText(leftBand.label)}. Each capture is ${channelMeasurementDurationSeconds}&nbsp;seconds.</p>`
     : `<p class="ea-muted">Step 1 of 2: cue the L-channel reference band on the test record (typically 1&nbsp;kHz, L only). Each capture is ${channelMeasurementDurationSeconds}&nbsp;seconds.</p>`;
@@ -5245,7 +5249,7 @@ function renderResonancePanel(els: Elements): void {
           <span class="mlab-wf-result-value">${qStr}</span>
         </div>
         ${rqHtml}
-        <p class="mlab-wf-note">Sweep ${state.resonance.fromHz}&ndash;${state.resonance.toHz}&nbsp;Hz (${state.resonance.sweepType}) &middot; ${state.resonance.durationSeconds}&nbsp;s</p>
+        <p class="mlab-wf-note">Analyzer window: ${state.resonance.fromHz}&ndash;${state.resonance.toHz}&nbsp;Hz (${state.resonance.sweepType}) &middot; ${state.resonance.durationSeconds}&nbsp;s</p>
       </div>
       ${resonanceBasisHtml(state.resonance.fromHz, state.resonance.toHz, resMeta)}
       <div class="mlab-resonance-diagnostic">
@@ -7426,6 +7430,10 @@ function wrPlaceholder(text: string): string {
   return `<div class="ea-webreport-placeholder" aria-label="Placeholder — ${renderText(text)}">${renderText(text)}</div>`;
 }
 
+function wrSubHead(title: string): string {
+  return `<h3 style="margin:0.75em 0 0.25em;font-size:0.8em;font-weight:600;color:var(--ea-text-medium,#a0a0a0);text-transform:uppercase;letter-spacing:0.05em;border-top:1px solid rgba(255,255,255,0.06);padding-top:0.5em">${renderText(title)}</h3>`;
+}
+
 function buildSummarySection(): WebReportSection {
   const record = selectedRecord();
   const recordLabel = record ? `${record.manufacturer} — ${record.title}` : 'None selected';
@@ -7908,51 +7916,46 @@ function buildAzimuthStepsSection(): string {
 
 function buildChannelSection(): WebReportSection {
   const { leftCapture, rightCapture, identityResult, source, leftBandMeta, rightBandMeta } = state.channel;
-  if (!leftCapture && !rightCapture) {
-    return {
-      id: 'channel',
-      title: 'Channel / Crosstalk Geometry',
-      html: wrEmpty() + buildAzimuthStepsSection(),
-    };
+
+  // Sub-section A: Routing / Identity Check
+  let identityHtml: string;
+  if (leftCapture && rightCapture) {
+    const pairs: [string, string][] = [['Source', renderText(source ?? 'live_capture')]];
+    if (leftBandMeta) {
+      const lf = leftBandMeta.frequencyHz != null ? ` · ${leftBandMeta.frequencyHz.toLocaleString('en-US')} Hz` : '';
+      pairs.push(['Left band', renderText(leftBandMeta.label) + renderText(lf)]);
+    }
+    if (rightBandMeta) {
+      const rf = rightBandMeta.frequencyHz != null ? ` · ${rightBandMeta.frequencyHz.toLocaleString('en-US')} Hz` : '';
+      pairs.push(['Right band', renderText(rightBandMeta.label) + renderText(rf)]);
+    }
+    if (identityResult) {
+      pairs.push(
+        ['Identity', renderText(identityResult.identity)],
+        ['Confidence', renderText(identityResult.confidence)],
+        ['Balance (R−L wanted)', identityResult.wantedBalanceDb != null ? `${identityResult.wantedBalanceDb.toFixed(2)} dB` : 'n/a'],
+        ['L→R crosstalk', `${identityResult.leftToRightCrosstalkDb.toFixed(1)} dB`],
+        ['R→L crosstalk', `${identityResult.rightToLeftCrosstalkDb.toFixed(1)} dB`],
+      );
+      identityHtml = wrKVs(pairs) + wrWarnings(identityResult.warnings);
+    } else {
+      pairs.push(
+        ['L RMS', `${leftCapture.leftRmsDbFs.toFixed(2)} dBFS`],
+        ['R RMS', `${rightCapture.rightRmsDbFs.toFixed(2)} dBFS`],
+        ['L→R crosstalk', `${leftCapture.crosstalkDb.toFixed(1)} dB`],
+        ['R→L crosstalk', `${rightCapture.crosstalkDb.toFixed(1)} dB`],
+      );
+      identityHtml = wrKVs(pairs);
+    }
+  } else {
+    identityHtml = wrEmpty();
   }
 
-  const pairs: [string, string][] = [
-    ['Source', renderText(source ?? 'live_capture')],
-  ];
-  if (leftBandMeta) {
-    const lf = leftBandMeta.frequencyHz != null ? ` · ${leftBandMeta.frequencyHz.toLocaleString('en-US')} Hz` : '';
-    pairs.push(['Left band', renderText(leftBandMeta.label) + renderText(lf)]);
-  }
-  if (rightBandMeta) {
-    const rf = rightBandMeta.frequencyHz != null ? ` · ${rightBandMeta.frequencyHz.toLocaleString('en-US')} Hz` : '';
-    pairs.push(['Right band', renderText(rightBandMeta.label) + renderText(rf)]);
-  }
-  if (identityResult) {
-    pairs.push(
-      ['Identity', renderText(identityResult.identity)],
-      ['Confidence', renderText(identityResult.confidence)],
-      ['Balance (R−L wanted)', identityResult.wantedBalanceDb != null ? `${identityResult.wantedBalanceDb.toFixed(2)} dB` : 'n/a'],
-      ['L→R crosstalk', `${identityResult.leftToRightCrosstalkDb.toFixed(1)} dB`],
-      ['R→L crosstalk', `${identityResult.rightToLeftCrosstalkDb.toFixed(1)} dB`],
-    );
-    return {
-      id: 'channel',
-      title: 'Channel / Crosstalk Geometry',
-      html: wrKVs(pairs) + wrWarnings(identityResult.warnings) + buildAzimuthStepsSection(),
-    };
-  }
-  if (leftCapture && rightCapture) {
-    pairs.push(
-      ['L RMS', `${leftCapture.leftRmsDbFs.toFixed(2)} dBFS`],
-      ['R RMS', `${rightCapture.rightRmsDbFs.toFixed(2)} dBFS`],
-      ['L→R crosstalk', `${leftCapture.crosstalkDb.toFixed(1)} dB`],
-      ['R→L crosstalk', `${rightCapture.crosstalkDb.toFixed(1)} dB`],
-    );
-  }
   return {
     id: 'channel',
-    title: 'Channel Identity / Crosstalk',
-    html: wrKVs(pairs) + buildAzimuthStepsSection(),
+    title: 'Channel / Crosstalk Geometry',
+    html: wrSubHead('Routing / Identity Check') + identityHtml
+      + wrSubHead('Azimuth Step Comparison') + buildAzimuthStepsSection(),
   };
 }
 
@@ -8141,7 +8144,7 @@ function buildResonanceSection(): WebReportSection {
     ['Peak amplitude', `${rr.peakAmplitudeDbFs.toFixed(1)} dBFS`],
     ['Q estimate', rr.qEstimate !== null ? rr.qEstimate.toFixed(2) : '—'],
     ['Sweep type', renderText(state.resonance.sweepType)],
-    ['Sweep range', `${state.resonance.fromHz}–${state.resonance.toHz} Hz`],
+    ['Analyzer window', `${state.resonance.fromHz}–${state.resonance.toHz} Hz (range searched for resonance peak; not the physical test-record sweep range)`],
     ['Duration', `${state.resonance.durationSeconds} s`],
     ['Sample count', rr.sampleCount.toLocaleString()],
   ];

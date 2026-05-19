@@ -1184,7 +1184,7 @@ function checkS4CChannelIdentity() {
     ['identityResult cleared in resetChannelMeasurement', /identityResult\s*=\s*null/],
     ['channel_identity in SessionJson (not channel_balance)', /channel_identity\s*:/],
     ['channel_balance absent from SessionJson type', !/channel_balance\s*:/.test(src)],
-    ['CHANNEL IDENTITY & CROSSTALK in report', /CHANNEL IDENTITY & CROSSTALK/],
+    ['CHANNEL / CROSSTALK GEOMETRY in report (S7C.5 merged section)', /CHANNEL \/ CROSSTALK GEOMETRY/],
     ['mlab-channel-info CSS class emitted', /mlab-channel-info/],
     ['mlab-channel-warning CSS class emitted', /mlab-channel-warning/],
     ['mlab-channel-selftest-note CSS class emitted', /mlab-channel-selftest-note/],
@@ -1558,8 +1558,8 @@ function checkS4GFinal() {
     ['Report text: Speed source line', /SPEED & WOW[\s\S]{0,800}Source:.*resultSource/],
     ['Report text: Speed band line', /SPEED & WOW[\s\S]{0,1300}state\.speed\.bandMeta[\s\S]{0,200}Band:/],
     // Part C — buildReportText: Channel left/right band
-    ['Report text: Channel left band line', /CHANNEL IDENTITY[\s\S]{0,600}Left band:/],
-    ['Report text: Channel right band line', /CHANNEL IDENTITY[\s\S]{0,600}Right band:/],
+    ['Report text: Channel left band line (S7C.5 merged section)', /CHANNEL \/ CROSSTALK GEOMETRY[\s\S]{0,800}Left band:/],
+    ['Report text: Channel right band line (S7C.5 merged section)', /CHANNEL \/ CROSSTALK GEOMETRY[\s\S]{0,800}Right band:/],
     // Part C — buildReportText: THD source + band
     ['Report text: THD source line', /THD[\s\S]{0,400}Source:.*resultSource/],
     ['Report text: THD band line', /THD[\s\S]{0,600}state\.thd\.bandMeta[\s\S]{0,200}Band:/],
@@ -3579,8 +3579,8 @@ function checkS5RAzimuthStepFoundation() {
     ['AzimuthStepRun auto-save on right capture', /state\.channel\.runs\s*=\s*\[\.\.\.state\.channel\.runs,\s*stepRun\]/.test(uiSrc)],
     // 8. azimuth_steps in JSON export
     ['azimuth_steps in JSON export', /azimuth_steps\s*:/.test(uiSrc)],
-    // 9. AZIMUTH STEPS section in text report
-    ['AZIMUTH STEPS section in text report', /AZIMUTH STEPS/.test(uiSrc)],
+    // 9. Azimuth Step Comparison sub-section in text report (S7C.5: merged under CHANNEL / CROSSTALK GEOMETRY)
+    ['Azimuth Step Comparison sub-section in text report', /\[Azimuth Step Comparison\]/.test(uiSrc)],
     // 10. azimuthStepHistoryMarkup function
     ['azimuthStepHistoryMarkup function', /function azimuthStepHistoryMarkup/.test(uiSrc)],
     // 11. azimuthStepComparisonMarkup function
@@ -5253,3 +5253,128 @@ function checkS7C4() {
 }
 
 checkS7C4();
+
+function checkS7C5() {
+  const renderSrcPath  = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const cssSrcPath     = join(repoRoot, 'src/modules/measurement-lab/ui/measurementLab.css');
+  const workflowsPath  = join(repoRoot, 'src/modules/measurement-lab/data/measurementWorkflows.ts');
+
+  for (const p of [renderSrcPath, cssSrcPath, workflowsPath]) {
+    if (!existsSync(p)) {
+      console.error(`S7C.5 static check FAIL: required file not found: ${p}`);
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const uiSrc  = readFileSync(renderSrcPath, 'utf8');
+  const cssSrc = readFileSync(cssSrcPath, 'utf8');
+  const wfSrc  = readFileSync(workflowsPath, 'utf8');
+
+  const checks = [
+    // ── Registry: no duplicate channel/crosstalk workflows visible ────────────
+    // 1. MEASUREMENT_WORKFLOWS does NOT expose separate channel_identity workflow
+    ['WF: MEASUREMENT_WORKFLOWS does NOT expose channel_identity as top-level workflow',
+      !/id:\s*'channel_identity'/.test(wfSrc)],
+    // 2. MEASUREMENT_WORKFLOWS does NOT expose azimuth_crosstalk workflow
+    ['WF: MEASUREMENT_WORKFLOWS does NOT expose azimuth_crosstalk as top-level workflow',
+      !/id:\s*'azimuth_crosstalk'/.test(wfSrc)],
+    // 3. MEASUREMENT_WORKFLOWS exposes exactly one channel/crosstalk entry: channel_crosstalk_geometry
+    ['WF: MEASUREMENT_WORKFLOWS exposes channel_crosstalk_geometry as sole channel entry',
+      /id:\s*'channel_crosstalk_geometry'/.test(wfSrc)],
+    // 4. computeAllWorkflowCoverage cannot produce a card for channel_identity (not in registry)
+    ['WF: computeAllWorkflowCoverage maps MEASUREMENT_WORKFLOWS — cannot return channel_identity card',
+      !/id:\s*'channel_identity'/.test(wfSrc) && /MEASUREMENT_WORKFLOWS\.map/.test(wfSrc)],
+
+    // ── Text report: merged section with sub-sections ─────────────────────────
+    // 5. Text report uses CHANNEL / CROSSTALK GEOMETRY as top-level header
+    ['TS: text report has CHANNEL / CROSSTALK GEOMETRY header',
+      /CHANNEL \/ CROSSTALK GEOMETRY/.test(uiSrc)],
+    // 6. Text report uses [Routing / Identity Check] sub-section label
+    ['TS: text report has [Routing / Identity Check] sub-section',
+      /\[Routing \/ Identity Check\]/.test(uiSrc)],
+    // 7. Text report uses [Azimuth Step Comparison] sub-section label
+    ['TS: text report has [Azimuth Step Comparison] sub-section',
+      /\[Azimuth Step Comparison\]/.test(uiSrc)],
+    // 8. Text report does NOT have top-level AZIMUTH STEPS section header
+    ['TS: text report does NOT have top-level AZIMUTH STEPS section',
+      !/^AZIMUTH STEPS\s*$/m.test(uiSrc)],
+    // 9. Text report does NOT have CHANNEL IDENTITY & CROSSTALK as top-level header
+    ['TS: text report does NOT have CHANNEL IDENTITY & CROSSTALK header',
+      !/CHANNEL IDENTITY & CROSSTALK/.test(uiSrc)],
+
+    // ── Web report: merged section with sub-section headings ──────────────────
+    // 10. buildChannelSection returns single section titled Channel / Crosstalk Geometry
+    ['TS: buildChannelSection title is Channel / Crosstalk Geometry',
+      /buildChannelSection[\s\S]{0,2500}Channel \/ Crosstalk Geometry/.test(uiSrc)],
+    // 11. wrSubHead helper is defined
+    ['TS: wrSubHead helper function defined',
+      /function wrSubHead\s*\(/.test(uiSrc)],
+    // 12. buildChannelSection calls wrSubHead for Routing / Identity Check
+    ['TS: buildChannelSection calls wrSubHead(Routing / Identity Check)',
+      /wrSubHead\s*\(\s*'Routing \/ Identity Check'\s*\)/.test(uiSrc)],
+    // 13. buildChannelSection calls wrSubHead for Azimuth Step Comparison
+    ['TS: buildChannelSection calls wrSubHead(Azimuth Step Comparison)',
+      /wrSubHead\s*\(\s*'Azimuth Step Comparison'\s*\)/.test(uiSrc)],
+    // 14. No web report section titled Channel Identity / Crosstalk (old fallback title gone)
+    ['TS: no web report section titled Channel Identity / Crosstalk',
+      !/title:\s*'Channel Identity \/ Crosstalk'/.test(uiSrc)],
+
+    // ── Analyzer window label: all exports use consistent terminology ─────────
+    // 15. Text report uses "Analyzer window:" for resonance range (not "Sweep range:")
+    ['TS: text report resonance uses "Analyzer window:" label',
+      /Analyzer window:.*fromHz.*toHz|Analyzer window:.*resonance/.test(uiSrc)],
+    // 16. Web report uses "Analyzer window" key for resonance range
+    ['TS: web report resonance uses "Analyzer window" key',
+      /\[\s*'Analyzer window'/.test(uiSrc)],
+    // 17. UI result panel uses "Analyzer window:" label (not "Sweep X–Y Hz")
+    ['TS: resonance result panel uses "Analyzer window:" label',
+      /Analyzer window:.*resonance\.fromHz|mlab-wf-note.*Analyzer window/.test(uiSrc)],
+    // 18. No stale "Sweep range:" label in text report resonance section
+    ['TS: text report does not use "Sweep range:" for analyzer window',
+      !/lines\.push\(`\s*Sweep range:/.test(uiSrc)],
+
+    // ── S7C.4 regression guards ───────────────────────────────────────────────
+    // 19. Guidance details element still open by default (S7C.4 discoverability fix)
+    ['S7C.4 regression: toolGuidanceMarkup still uses <details open>',
+      /<details class="mlab-guidance-card" open>/.test(uiSrc)],
+    // 20. Setup metadata details still open by default (S7C.4)
+    ['S7C.4 regression: setup-metadata details still uses open attribute',
+      /<details class="mlab-setup-metadata" open>/.test(uiSrc)],
+    // 21. Channel submode selector still present (S7C.4)
+    ['S7C.4 regression: mlab-channel-submode-selector still in renderChannelPanel',
+      /mlab-channel-submode-selector/.test(uiSrc)],
+    // 22. .mlab-log-body base rule still does not fix height to 200px (S7C.4 modal fix)
+    ['S7C.4 regression: .mlab-log-body base rule still does not use fixed height:200px',
+      !/(^|\n)\s*\.mlab-log-body\s*\{[^}]*height:\s*200px/.test(cssSrc)],
+
+    // ── Safety constraints ────────────────────────────────────────────────────
+    // 23. Top ribbon Demo button absent
+    ['Safety: top ribbon Demo button (data-mlab-ribbon-demo) NOT present',
+      !/data-mlab-ribbon-demo/.test(uiSrc)],
+    // 24. No fake "5 Hz to 30 Hz" resonance band
+    ['Safety: no fake 5-30 Hz resonance band in source',
+      !/5.*Hz.*to.*30.*Hz.*resonance|resonance.*5.*Hz.*to.*30.*Hz/i.test(uiSrc)],
+    // 25. S7B.2 autostart safety guard preserved
+    ['Safety: S7B.2 autostart guard still present',
+      /suspended/.test(uiSrc) || /AutostartGuard/.test(uiSrc)],
+    // 26. No best/optimal azimuth recommendation from channel tool
+    ['Safety: no best/optimal azimuth recommendation from merged channel tool',
+      !/channel_crosstalk_geometry[\s\S]{0,1500}(?:best|optimal|recommended)\s+azimuth(?!\s+is\s+not|\s+setting\s+is\s+not)/i.test(uiSrc)],
+  ];
+
+  let allPass = true;
+  for (const [label, ok] of checks) {
+    if (!ok) {
+      console.error(`S7C.5 static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S7C.5 static source check (Narrow cleanup: channel merge, report labels, Analyzer window): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS7C5();
