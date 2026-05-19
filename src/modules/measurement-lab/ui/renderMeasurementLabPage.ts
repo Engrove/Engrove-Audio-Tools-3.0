@@ -453,13 +453,16 @@ type LabState = {
  * site below; it has no runtime effect.
  */
 const tokenLayoutGeneratedClassNames =
-  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured mlab-vta-candidate-badge mlab-vta-comparison mlab-vta-comparison-candidate mlab-vta-comparison-meta mlab-vta-comparison-warning mlab-vta-comparison-status mlab-vta-comparison-confidence mlab-vta-confidence-level mlab-vta-confidence-level--insufficient mlab-vta-confidence-level--low mlab-vta-confidence-level--medium mlab-vta-confidence-level--high mlab-vta-confidence-reason mlab-vta-gate mlab-vta-gate-head mlab-vta-gate-summary mlab-vta-gate-status mlab-vta-gate-status--not-ready mlab-vta-gate-status--candidate mlab-vta-gate-status--review mlab-vta-gate-msg mlab-vta-gate-table mlab-vta-gate-row mlab-vta-gate-pass mlab-vta-gate-pass--ok mlab-vta-gate-pass--fail mlab-vta-gate-label mlab-vta-gate-detail mlab-vta-policy mlab-vta-policy-head mlab-vta-policy-status-row mlab-vta-policy-status mlab-vta-policy-status--experimental mlab-vta-policy-status--review-not-supported mlab-vta-policy-reason mlab-vta-policy-req-head mlab-vta-policy-req-list mlab-vta-policy-req mlab-guided-order-panel mlab-guided-order-body mlab-guided-order-intro mlab-guided-order-list mlab-guided-order-item mlab-guided-order-item--first mlab-guided-order-step-head mlab-guided-order-track mlab-guided-order-name mlab-guided-order-first-badge mlab-guided-order-detail mlab-guided-order-workflow mlab-speed-ctx-row mlab-speed-ctx-label mlab-speed-ctx-btn mlab-speed-ctx-btn--active mlab-speed-ctx-note mlab-speed-ctx-badge mlab-speed-history mlab-speed-history-head mlab-speed-history-clear mlab-speed-history-empty mlab-speed-history-scroll mlab-speed-history-table mlab-speed-history-row mlab-speed-history-cell mlab-speed-settings mlab-speed-settings--result mlab-speed-settings-head mlab-speed-settings-hint mlab-speed-settings-row mlab-speed-settings-label mlab-speed-settings-value mlab-speed-settings-input-group mlab-speed-settings-input mlab-speed-settings-unit mlab-speed-settings-src mlab-speed-settings-reset mlab-nf-intro mlab-nf-guidance mlab-nf-settings mlab-nf-settings-row mlab-nf-settings-label mlab-nf-settings-select mlab-nf-settings-input mlab-nf-settings-input--wide mlab-nf-settings-input-group mlab-nf-settings-unit mlab-nf-settings-src mlab-nf-result mlab-nf-history mlab-nf-history-head mlab-nf-history-clear mlab-nf-history-scroll mlab-nf-history-table mlab-nf-history-row mlab-nf-history-cell mlab-chain-readiness mlab-chain-readiness--ready mlab-chain-readiness--warning mlab-chain-readiness--blocked mlab-chain-readiness--not-checked mlab-chain-readiness-row mlab-chain-readiness-key mlab-chain-readiness-val mlab-chain-readiness-warning mlab-chain-readiness-note mlab-run-quality mlab-run-quality--ok mlab-run-quality--warning mlab-run-quality--invalid mlab-run-quality-label mlab-run-quality-warnings mlab-session-ribbon mlab-ribbon-group mlab-ribbon-group--active mlab-ribbon-label mlab-ribbon-value mlab-ribbon-sep mlab-ribbon-sep--flex mlab-ribbon-active-tool mlab-workflow-rail mlab-rail-head mlab-rail-items mlab-rail-loading mlab-rail-item mlab-rail-item--available mlab-rail-item--planned mlab-rail-item--partial mlab-rail-item--unavailable mlab-rail-item--active mlab-rail-item-label mlab-rail-item-status mlab-diag-rail mlab-diag-signal-panel mlab-diag-signal-body mlab-diag-signal-status mlab-diag-signal-status--ready mlab-diag-signal-status--blocked mlab-diag-signal-status--warning mlab-diag-signal-status--not_checked mlab-diag-signal-row mlab-diag-signal-key mlab-diag-signal-val mlab-diag-signal-clip mlab-workbench-center mlab-center-head mlab-center-title mlab-center-title-pre mlab-center-title-h mlab-center-actions mlab-center-body mlab-center-status-pill mlab-tool-panel--active mlab-context-overlay mlab-context-overlay--open mlab-context-head mlab-context-body mlab-context-foot mlab-log-modal mlab-log-modal--open mlab-log-modal-dialog mlab-log-modal-head mlab-log-modal-body mlab-log-modal-foot mlab-workbench-footer mlab-footer-status mlab-footer-actions mlab-ribbon-meters mlab-ribbon-mini-meter mlab-ribbon-mini-label mlab-ribbon-mini-bar-wrap mlab-ribbon-mini-fill mlab-ribbon-mini-db mlab-rail-group-head mlab-rail-item-tooltip mlab-rail-item-tooltip-name mlab-rail-item-tooltip-status mlab-home-prereqs mlab-context-home-section mlab-rail-tooltip-portal--visible mlab-rail-item--source-inactive mlab-source-controls-head mlab-source-viz mlab-source-meter-grid mlab-source-freq-canvas mlab-ribbon-group--wide mlab-source-meter-channel mlab-recog-badge mlab-recog-badge--disabled mlab-recog-badge--armed mlab-recog-badge--waiting mlab-recog-badge--detecting mlab-recog-badge--locked mlab-recog-badge--recording mlab-recog-badge--rejected mlab-recog-badge--timeout mlab-recog-badge--ambiguous mlab-recog-badge--manual mlab-recog-arm-section mlab-recog-arm-row mlab-recog-arm-status mlab-recog-arm-actions mlab-recog-arm-reason';
+  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured mlab-vta-candidate-badge mlab-vta-comparison mlab-vta-comparison-candidate mlab-vta-comparison-meta mlab-vta-comparison-warning mlab-vta-comparison-status mlab-vta-comparison-confidence mlab-vta-confidence-level mlab-vta-confidence-level--insufficient mlab-vta-confidence-level--low mlab-vta-confidence-level--medium mlab-vta-confidence-level--high mlab-vta-confidence-reason mlab-vta-gate mlab-vta-gate-head mlab-vta-gate-summary mlab-vta-gate-status mlab-vta-gate-status--not-ready mlab-vta-gate-status--candidate mlab-vta-gate-status--review mlab-vta-gate-msg mlab-vta-gate-table mlab-vta-gate-row mlab-vta-gate-pass mlab-vta-gate-pass--ok mlab-vta-gate-pass--fail mlab-vta-gate-label mlab-vta-gate-detail mlab-vta-policy mlab-vta-policy-head mlab-vta-policy-status-row mlab-vta-policy-status mlab-vta-policy-status--experimental mlab-vta-policy-status--review-not-supported mlab-vta-policy-reason mlab-vta-policy-req-head mlab-vta-policy-req-list mlab-vta-policy-req mlab-guided-order-panel mlab-guided-order-body mlab-guided-order-intro mlab-guided-order-list mlab-guided-order-item mlab-guided-order-item--first mlab-guided-order-step-head mlab-guided-order-track mlab-guided-order-name mlab-guided-order-first-badge mlab-guided-order-detail mlab-guided-order-workflow mlab-speed-ctx-row mlab-speed-ctx-label mlab-speed-ctx-btn mlab-speed-ctx-btn--active mlab-speed-ctx-note mlab-speed-ctx-badge mlab-speed-history mlab-speed-history-head mlab-speed-history-clear mlab-speed-history-empty mlab-speed-history-scroll mlab-speed-history-table mlab-speed-history-row mlab-speed-history-cell mlab-speed-settings mlab-speed-settings--result mlab-speed-settings-head mlab-speed-settings-hint mlab-speed-settings-row mlab-speed-settings-label mlab-speed-settings-value mlab-speed-settings-input-group mlab-speed-settings-input mlab-speed-settings-unit mlab-speed-settings-src mlab-speed-settings-reset mlab-nf-intro mlab-nf-guidance mlab-nf-settings mlab-nf-settings-row mlab-nf-settings-label mlab-nf-settings-select mlab-nf-settings-input mlab-nf-settings-input--wide mlab-nf-settings-input-group mlab-nf-settings-unit mlab-nf-settings-src mlab-nf-result mlab-nf-history mlab-nf-history-head mlab-nf-history-clear mlab-nf-history-scroll mlab-nf-history-table mlab-nf-history-row mlab-nf-history-cell mlab-chain-readiness mlab-chain-readiness--ready mlab-chain-readiness--warning mlab-chain-readiness--blocked mlab-chain-readiness--not-checked mlab-chain-readiness-row mlab-chain-readiness-key mlab-chain-readiness-val mlab-chain-readiness-warning mlab-chain-readiness-note mlab-run-quality mlab-run-quality--ok mlab-run-quality--warning mlab-run-quality--invalid mlab-run-quality-label mlab-run-quality-warnings mlab-session-ribbon mlab-ribbon-group mlab-ribbon-group--active mlab-ribbon-label mlab-ribbon-value mlab-ribbon-sep mlab-ribbon-sep--flex mlab-ribbon-active-tool mlab-workflow-rail mlab-rail-head mlab-rail-items mlab-rail-loading mlab-rail-item mlab-rail-item--available mlab-rail-item--planned mlab-rail-item--partial mlab-rail-item--unavailable mlab-rail-item--active mlab-rail-item-label mlab-rail-item-status mlab-diag-rail mlab-diag-signal-panel mlab-diag-signal-body mlab-diag-signal-status mlab-diag-signal-status--ready mlab-diag-signal-status--blocked mlab-diag-signal-status--warning mlab-diag-signal-status--not_checked mlab-diag-signal-row mlab-diag-signal-key mlab-diag-signal-val mlab-diag-signal-clip mlab-workbench-center mlab-center-head mlab-center-title mlab-center-title-pre mlab-center-title-h mlab-center-actions mlab-center-body mlab-center-status-pill mlab-tool-panel--active mlab-context-overlay mlab-context-overlay--open mlab-context-head mlab-context-body mlab-context-foot mlab-log-modal mlab-log-modal--open mlab-log-modal-dialog mlab-log-modal-head mlab-log-modal-body mlab-log-modal-foot mlab-workbench-footer mlab-footer-status mlab-footer-actions mlab-ribbon-meters mlab-ribbon-mini-meter mlab-ribbon-mini-label mlab-ribbon-mini-bar-wrap mlab-ribbon-mini-fill mlab-ribbon-mini-db mlab-rail-group-head mlab-rail-item-tooltip mlab-rail-item-tooltip-name mlab-rail-item-tooltip-status mlab-home-prereqs mlab-context-home-section mlab-rail-tooltip-portal--visible mlab-rail-item--source-inactive mlab-source-controls-head mlab-source-viz mlab-source-meter-grid mlab-source-freq-canvas mlab-ribbon-group--wide mlab-source-meter-channel mlab-recog-badge mlab-recog-badge--disabled mlab-recog-badge--armed mlab-recog-badge--waiting mlab-recog-badge--detecting mlab-recog-badge--locked mlab-recog-badge--recording mlab-recog-badge--rejected mlab-recog-badge--timeout mlab-recog-badge--ambiguous mlab-recog-badge--manual mlab-recog-arm-section mlab-recog-arm-row mlab-recog-arm-status mlab-recog-arm-actions mlab-recog-arm-reason mlab-local-autostart mlab-local-autostart-head mlab-local-autostart-reason mlab-local-autostart-actions';
 void tokenLayoutGeneratedClassNames;
 
 const speedMeasurementDurationSeconds = 30;
 const noiseFloorDefaultDurationSeconds = 10;
 const defaultSpeedReferenceHz = 3150;
 const nominalFrequencyHz33: Record<SpeedContext, number> = { '33_33': 3150, '45': Math.round((45 / 33.333) * 3150) };
+
+// ── S7B.1: Scratch buffer for track recognition FFT (reused across frames) ───
+let recognitionScratch: Float32Array<ArrayBuffer> | null = null;
 
 function parsePositiveFloat(input: string): number | null {
   const normalized = input.trim().replace(',', '.');
@@ -1051,9 +1054,8 @@ function audioSourcePanelMarkup(): string {
           <span class="mlab-ribbon-label">Track recognition</span>
           <span class="mlab-recog-badge mlab-recog-badge--disabled" data-mlab-recog-panel-badge>Off</span>
         </div>
-        <p class="ea-muted mlab-recog-arm-reason" data-mlab-recog-arm-reason>Select a test record and connect a source, then arm a workflow for automatic band detection.</p>
+        <p class="ea-muted mlab-recog-arm-reason" data-mlab-recog-arm-reason>Use the Arm autostart button in each measurement tool panel.</p>
         <div class="mlab-recog-arm-actions">
-          <button class="ea-button ea-button--ghost" type="button" data-mlab-recog-arm disabled>Arm autostart</button>
           <button class="ea-button ea-button--ghost" type="button" data-mlab-recog-disarm style="display:none">Disarm</button>
         </div>
       </div>
@@ -2428,6 +2430,29 @@ function buildReportText(): string {
     lines.push('');
   }
 
+  // Track recognition / autostart provenance
+  {
+    const recog = state.trackRecognition;
+    const startMode: 'auto' | 'manual' | 'not_started' =
+      recog.phase === 'recording' ? 'auto'
+      : recog.phase === 'manual_override' ? 'manual'
+      : 'not_started';
+    const provenance = buildTrackRecognitionProvenance(recog, startMode);
+    lines.push('TRACK RECOGNITION / AUTOSTART');
+    lines.push(`  Phase:                 ${provenance.phase}`);
+    lines.push(`  Detector type:         ${provenance.detectorType ?? 'none'}`);
+    lines.push(`  Selected workflow:     ${provenance.selectedWorkflowId ?? 'none'}`);
+    lines.push(`  Target band:           ${provenance.targetBandLabel ?? 'none'}${provenance.targetBandIndex != null ? ` (index ${provenance.targetBandIndex})` : ''}`);
+    lines.push(`  Expected frequency:    ${provenance.expectedFrequencyHz != null ? provenance.expectedFrequencyHz + ' Hz' : 'n/a'}`);
+    lines.push(`  Observed frequency:    ${provenance.observedFrequencyHz != null ? provenance.observedFrequencyHz.toFixed(1) + ' Hz' : 'n/a'}`);
+    lines.push(`  Confidence:            ${provenance.confidence != null ? (provenance.confidence * 100).toFixed(0) + '%' : 'n/a'}`);
+    lines.push(`  Chain readiness:       ${provenance.chainReadiness}`);
+    lines.push(`  Pre-roll:              ${provenance.preRollStatus}`);
+    lines.push(`  Start mode:            ${provenance.startMode}`);
+    lines.push(`  Reason:                ${provenance.reason}`);
+    lines.push('');
+  }
+
   return lines.join('\n');
 }
 
@@ -3017,6 +3042,7 @@ function renderSpeedPanel(els: Elements): void {
       <button class="ea-button ea-button--primary" type="button" data-mlab-speed-start>Start measurement</button>
     </div>
     ${historyMarkup}
+    ${toolLocalAutostartMarkup('wow_flutter')}
   `;
   body.querySelector<HTMLButtonElement>('[data-mlab-speed-start]')?.addEventListener('click', () => {
     startSpeedMeasurement(els);
@@ -3044,6 +3070,14 @@ function renderSpeedPanel(els: Elements): void {
     state.speed.nominalFrequencyHzInput = '';
     state.speed.captureDurationSecondsInput = '';
     renderSpeedPanel(els);
+  });
+  // Wire local arm/disarm buttons for wow_flutter autostart
+  updateToolLocalAutostart('wow_flutter', 'wow_flutter');
+  body.querySelector<HTMLButtonElement>('[data-mlab-local-arm="wow_flutter"]')?.addEventListener('click', () => {
+    armToolLocalAutostart('wow_flutter', 'wow_flutter', els);
+  });
+  body.querySelector<HTMLButtonElement>('[data-mlab-local-disarm="wow_flutter"]')?.addEventListener('click', () => {
+    disarmFromTool('wow_flutter', 'wow_flutter', els);
   });
 }
 function fmtDb(value: number | null | undefined, digits = 1): string {
@@ -3259,12 +3293,21 @@ function renderChannelPanel(els: Elements): void {
     </div>
     ${azimuthStepHistoryMarkup(ch.runs)}
     ${azimuthStepComparisonMarkup(ch.runs)}
+    ${toolLocalAutostartMarkup('channel_identity')}
   `;
   body.querySelector<HTMLInputElement>('#mlab-step-label')?.addEventListener('input', (e) => {
     state.channel.stepLabelInput = (e.target as HTMLInputElement).value;
   });
   body.querySelector<HTMLButtonElement>('[data-mlab-channel-start-l]')?.addEventListener('click', () => {
     startChannelCapture(els, 'left');
+  });
+  // Wire local arm/disarm buttons for channel_identity autostart (manual start only in S7B.1)
+  updateToolLocalAutostart('channel_identity', 'channel_identity');
+  body.querySelector<HTMLButtonElement>('[data-mlab-local-arm="channel_identity"]')?.addEventListener('click', () => {
+    armToolLocalAutostart('channel_identity', 'channel_identity', els);
+  });
+  body.querySelector<HTMLButtonElement>('[data-mlab-local-disarm="channel_identity"]')?.addEventListener('click', () => {
+    disarmFromTool('channel_identity', 'channel_identity', els);
   });
 }
 
@@ -4196,6 +4239,7 @@ function renderRefLevelPanel(els: Elements): void {
       <button class="ea-button ea-button--primary" type="button" data-mlab-reflevel-start>Analyze reference level</button>
     </div>
     ${renderCalibrationSetHtml(state.refLevel.calibrationSet)}
+    ${toolLocalAutostartMarkup('reference_level')}
   `;
   body.querySelector<HTMLSelectElement>('[data-mlab-reflevel-band]')?.addEventListener('change', (e) => {
     const val = (e.currentTarget as HTMLSelectElement).value;
@@ -4205,6 +4249,14 @@ function renderRefLevelPanel(els: Elements): void {
     startRefLevelCapture(els);
   });
   attachClearSetListener(body, els);
+  // Wire local arm/disarm buttons for reference_level autostart (manual start only in S7B.1)
+  updateToolLocalAutostart('reference_level', 'reference_level');
+  body.querySelector<HTMLButtonElement>('[data-mlab-local-arm="reference_level"]')?.addEventListener('click', () => {
+    armToolLocalAutostart('reference_level', 'reference_level', els);
+  });
+  body.querySelector<HTMLButtonElement>('[data-mlab-local-disarm="reference_level"]')?.addEventListener('click', () => {
+    disarmFromTool('reference_level', 'reference_level', els);
+  });
 }
 
 function highlightTargetPanel(panelId: string): void {
@@ -6143,6 +6195,25 @@ function startSpeedMeasurement(els: Elements): void {
   const source = state.preSplitterNode;
   if (!context || !source || state.captureState !== 'live') return;
 
+  // ── S7B.1: Record manual_override when recognition was active ─────────────
+  {
+    const recognitionPhase = state.trackRecognition.phase;
+    if (
+      recognitionPhase === 'armed' ||
+      recognitionPhase === 'waiting_for_signal' ||
+      recognitionPhase === 'candidate_detected' ||
+      recognitionPhase === 'locked'
+    ) {
+      state.trackRecognition = {
+        ...state.trackRecognition,
+        phase: 'manual_override',
+        reason: 'Manual start invoked while recognition was active.',
+      };
+      renderTrackRecognition(els);
+      renderSessionRibbon(els);
+    }
+  }
+
   const speedBands = getWowFlutterBands(selectedRecord());
   const band = speedBands.find(b => b.frequencyHz === 3150)
     ?? speedBands[0]
@@ -6901,6 +6972,7 @@ function buildSummarySection(): WebReportSection {
           ['Sample-rate honesty', renderText(state.honesty.classification)] as [string, string],
         ]
       : []),
+    ['Track recognition', renderText(`${TRACK_RECOGNITION_PHASE_LABELS[state.trackRecognition.phase]} — ${state.trackRecognition.reason.slice(0, 80)}`)] as [string, string],
   ];
 
   // Coverage table — what was measured and what is still missing
@@ -7752,21 +7824,177 @@ function renderTrackRecognition(els: Elements): void {
   applyRecogBadge(els.recogRibbonBadge, recog);
   applyRecogBadge(els.recogPanelBadge, recog);
   if (els.recogArmReason) {
-    els.recogArmReason.textContent = recog.reason;
+    // Global arm section shows read-only status; arm is in each tool panel
+    if (recog.phase === 'disabled') {
+      els.recogArmReason.textContent = 'Use the Arm autostart button in each measurement tool panel.';
+    } else {
+      els.recogArmReason.textContent = recog.reason;
+    }
   }
-  // Arm button: enabled only when source is live, record is selected, phase is inactive
-  const canArm = state.captureState === 'live'
-    && state.selectedTestRecordId !== null
-    && (recog.phase === 'disabled' || recog.phase === 'rejected' || recog.phase === 'timeout' || recog.phase === 'ambiguous');
-  if (els.recogArmBtn) {
-    els.recogArmBtn.disabled = !canArm;
-    els.recogArmBtn.style.display = recog.phase !== 'disabled' && recog.phase !== 'rejected' && recog.phase !== 'timeout' && recog.phase !== 'ambiguous' ? 'none' : '';
-  }
+  // Global arm button removed — arm is now per-tool. Only disarm is global.
   // Disarm button: shown when armed or active
   if (els.recogDisarmBtn) {
     const isActive = recog.phase !== 'disabled';
     els.recogDisarmBtn.style.display = isActive ? '' : 'none';
   }
+}
+
+// ── S7B.1: Tool-local autostart block ─────────────────────────────────────────
+
+/**
+ * Returns the first test band eligible as a recognition target for a given workflow.
+ * For wow_flutter: finds speed/single_tone band at 3150 Hz, or first speed/single_tone.
+ * For reference_level: first analyzerModule=reference_calibration single_tone band.
+ * For channel_identity / azimuth_crosstalk: first crosstalk/single_tone band.
+ * Else: null.
+ */
+function findToolTargetBand(record: TestRecord, workflowId: string): TestBand | null {
+  const allBands = record.sides.flatMap(s => s.bands);
+  if (workflowId === 'wow_flutter') {
+    const speedSingleTone = allBands.filter(
+      b => b.purpose === 'speed' && b.signalType === 'single_tone',
+    );
+    return speedSingleTone.find(b => b.frequencyHz === 3150) ?? speedSingleTone[0] ?? null;
+  }
+  if (workflowId === 'reference_level') {
+    return allBands.find(
+      b => b.analyzerModule === 'reference_calibration' && b.signalType === 'single_tone',
+    ) ?? null;
+  }
+  if (workflowId === 'channel_identity' || workflowId === 'azimuth_crosstalk') {
+    return allBands.find(
+      b => b.purpose === 'crosstalk' && b.signalType === 'single_tone',
+    ) ?? null;
+  }
+  return null;
+}
+
+/**
+ * Returns the static HTML for the tool-local arm/autostart block.
+ * Content is updated dynamically via updateToolLocalAutostart().
+ */
+function toolLocalAutostartMarkup(toolId: string): string {
+  return `
+    <div class="mlab-local-autostart" data-mlab-local-autostart="${toolId}" aria-label="Autostart for this tool">
+      <div class="mlab-local-autostart-head">
+        <span class="mlab-ribbon-label">Autostart</span>
+        <span class="mlab-recog-badge mlab-recog-badge--disabled" data-mlab-local-recog-badge="${toolId}">Off</span>
+      </div>
+      <p class="ea-muted mlab-local-autostart-reason" data-mlab-local-recog-reason="${toolId}">Loading…</p>
+      <div class="mlab-local-autostart-actions" data-mlab-local-autostart-actions="${toolId}">
+        <button class="ea-button ea-button--primary" type="button" data-mlab-local-arm="${toolId}" disabled>Arm autostart</button>
+        <button class="ea-button ea-button--ghost" type="button" data-mlab-local-disarm="${toolId}" style="display:none">Disarm</button>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Updates the DOM for a specific tool's local autostart block.
+ */
+function updateToolLocalAutostart(toolId: string, workflowId: string | null): void {
+  const recog = state.trackRecognition;
+  const badge = document.querySelector<HTMLElement>(`[data-mlab-local-recog-badge="${toolId}"]`);
+  const reasonEl = document.querySelector<HTMLElement>(`[data-mlab-local-recog-reason="${toolId}"]`);
+  const armBtn = document.querySelector<HTMLButtonElement>(`[data-mlab-local-arm="${toolId}"]`);
+  const disarmBtn = document.querySelector<HTMLButtonElement>(`[data-mlab-local-disarm="${toolId}"]`);
+
+  if (!badge && !reasonEl) return; // panel not in DOM
+
+  const record = selectedRecord();
+  const isLive = state.captureState === 'live';
+  const isThisToolArmed = recog.phase !== 'disabled' && recog.armedFromToolId === toolId;
+  const isOtherToolArmed = recog.phase !== 'disabled' && recog.armedFromToolId !== null && recog.armedFromToolId !== toolId;
+
+  // Find target band for this tool
+  const targetBand = workflowId != null && record != null
+    ? findToolTargetBand(record, workflowId)
+    : null;
+
+  // Check if this tool supports autostart at all
+  const supportsAutostart = workflowId === 'wow_flutter'; // narrow scope for S7B.1
+
+  // Determine what to show
+  let phaseToShow: TrackRecognitionState['phase'] = 'disabled';
+  let reasonText: string;
+  let canArm = false;
+  let showDisarm = false;
+
+  if (!isLive) {
+    reasonText = 'Connect a source to use autostart.';
+  } else if (!record) {
+    reasonText = 'Select a test record to use autostart.';
+  } else if (!supportsAutostart) {
+    reasonText = 'Autostart not available for this measurement — manual start required.';
+  } else if (!targetBand) {
+    reasonText = 'No compatible band on selected test record. Manual start required.';
+  } else if (isOtherToolArmed) {
+    reasonText = `Recognition is armed for another tool (${recog.armedFromToolId}). Disarm it first.`;
+  } else if (isThisToolArmed) {
+    phaseToShow = recog.phase;
+    reasonText = recog.reason;
+    showDisarm = true;
+    canArm = false;
+  } else {
+    // Not armed — show target info and enable arm
+    const freq = targetBand.frequencyHz;
+    reasonText = `Target: "${targetBand.label}"${freq != null ? ` · ${freq.toLocaleString('en-US')} Hz` : ''}. Press Arm to begin detection.`;
+    canArm = true;
+  }
+
+  // Update badge
+  if (badge) {
+    applyRecogBadge(badge, { ...recog, phase: phaseToShow });
+  }
+  if (reasonEl) reasonEl.textContent = reasonText;
+  if (armBtn) {
+    armBtn.disabled = !canArm;
+    armBtn.style.display = showDisarm ? 'none' : '';
+  }
+  if (disarmBtn) {
+    disarmBtn.style.display = showDisarm ? '' : 'none';
+  }
+}
+
+/**
+ * Arms the autostart recognition from a specific tool panel.
+ */
+function armToolLocalAutostart(toolId: string, workflowId: string, els: Elements): void {
+  const record = selectedRecord();
+  if (!record || state.captureState !== 'live') return;
+  const band = findToolTargetBand(record, workflowId);
+  if (!band) {
+    appendLog(`Arm failed: no eligible band for ${toolId}.`);
+    return;
+  }
+  const chainReadiness = deriveMeasurementChainReadiness({
+    leftRmsDbfs: state.channelLevels.L.rmsDbFs,
+    rightRmsDbfs: state.channelLevels.R.rmsDbFs,
+    leftPeakDbfs: state.channelLevels.L.peakDbFs,
+    rightPeakDbfs: state.channelLevels.R.peakDbFs,
+  });
+  const chainReady: AutostartChainReadiness = chainReadiness.status === 'ready' ? 'ready' : 'invalid';
+  state.trackRecognition = armTrackRecognition({
+    workflowId,
+    targetBand: band,
+    chainReadiness: chainReady,
+    armedFromToolId: toolId,
+  });
+  appendLog(`Track recognition armed from ${toolId}: "${band.label}" (${band.frequencyHz} Hz).`);
+  updateToolLocalAutostart(toolId, workflowId);
+  renderTrackRecognition(els);
+  renderSessionRibbon(els);
+}
+
+/**
+ * Disarms recognition from a specific tool panel.
+ */
+function disarmFromTool(toolId: string, workflowId: string | null, els: Elements): void {
+  state.trackRecognition = disarmTrackRecognition();
+  appendLog('Track recognition disarmed.');
+  updateToolLocalAutostart(toolId, workflowId);
+  renderTrackRecognition(els);
+  renderSessionRibbon(els);
 }
 
 function tickTrackRecognition(els: Elements): void {
@@ -7778,16 +8006,20 @@ function tickTrackRecognition(els: Elements): void {
   ) return;
 
   // Extract dominant frequency from left channel analyser
+  // Reuse module-level scratch buffer; only reallocate if analyser FFT size changed.
   const analyser = state.analysers?.L ?? null;
   let dominantHz: number | null = null;
   if (analyser && state.captureState === 'live') {
     const fftSize = analyser.frequencyBinCount;
-    const scratch = new Float32Array(new ArrayBuffer(fftSize * Float32Array.BYTES_PER_ELEMENT));
-    analyser.getFloatFrequencyData(scratch);
+    if (recognitionScratch === null || recognitionScratch.length !== fftSize) {
+      recognitionScratch = new Float32Array(new ArrayBuffer(fftSize * Float32Array.BYTES_PER_ELEMENT));
+    }
+    analyser.getFloatFrequencyData(recognitionScratch);
     const sampleRate = state.audioHandle?.context.sampleRate ?? 44100;
-    dominantHz = extractDominantFrequency(scratch, sampleRate);
+    dominantHz = extractDominantFrequency(recognitionScratch, sampleRate);
   }
 
+  const prevPhase = recog.phase;
   const next = ingestSignal({
     current: recog,
     dominantFrequencyHz: dominantHz,
@@ -7800,6 +8032,43 @@ function tickTrackRecognition(els: Elements): void {
   if (next !== recog) {
     state.trackRecognition = next;
     renderTrackRecognition(els);
+
+    // ── S7B.1: Autostart on lock transition ────────────────────────────────
+    // prevPhase is always one of armed/waiting_for_signal/candidate_detected (guarded above),
+    // so the transition to 'locked' is always a new lock — no need to check prevPhase !== 'locked'.
+    if (next.phase === 'locked' && state.speed.active === false) {
+      const workflowId = next.selectedWorkflowId;
+      const record = selectedRecord();
+      const coverageList = record ? computeAllWorkflowCoverage(record) : [];
+      const coverageEntry = coverageList.find(c => c.workflowId === workflowId);
+      const workflowAvailability: WorkflowAvailability | null = coverageEntry?.availability ?? null;
+
+      const eligibility = evaluateAutostartEligibility(next, workflowAvailability);
+
+      if (eligibility.eligible) {
+        if (workflowId === 'wow_flutter') {
+          // Autostart: transition to recording and start measurement
+          state.trackRecognition = {
+            ...state.trackRecognition,
+            phase: 'recording',
+            reason: 'Autostart triggered — measurement starting.',
+          };
+          startSpeedMeasurement(els);
+          renderTrackRecognition(els);
+          renderSessionRibbon(els);
+          renderSpeedPanel(els);
+          appendLog('Track recognition: autostart triggered for Speed & W&F.');
+        } else {
+          // Eligible but workflow not wired for autostart yet
+          state.trackRecognition = {
+            ...state.trackRecognition,
+            reason: 'Autostart not yet wired for this workflow — manual start required.',
+          };
+          renderTrackRecognition(els);
+        }
+      }
+      // If not eligible: ingestSignal already set reason; no further action needed
+    }
   }
 }
 
@@ -8290,47 +8559,9 @@ export function enableMeasurementLabInteractions(): void {
     }
   });
 
-  // ── S7B: Track recognition arm / disarm ──────────────────────────────────────
-  els.recogArmBtn?.addEventListener('click', () => {
-    const record = selectedRecord();
-    if (!record || state.captureState !== 'live') return;
-
-    // Find all single-tone-eligible bands on current record
-    const coverageList = computeAllWorkflowCoverage(record);
-    const coverageMap = new Map(coverageList.map(c => [c.workflowId, c.availability]));
-    const allBands = record.sides.flatMap(s => s.bands);
-    const candidates = buildRecognitionCandidates(allBands, coverageMap);
-
-    // Pick the first eligible candidate for the currently active workflow
-    const activeWfId = state.activeWorkflowId;
-    const candidate = candidates.find(c => activeWfId !== null && c.workflowIds.includes(activeWfId))
-      ?? candidates[0]
-      ?? null;
-
-    if (!candidate) {
-      appendLog('Track recognition: no auto-detectable bands on selected test record for current workflow.');
-      return;
-    }
-
-    const chainReadiness = deriveMeasurementChainReadiness({
-      leftRmsDbfs: state.channelLevels.L.rmsDbFs,
-      rightRmsDbfs: state.channelLevels.R.rmsDbFs,
-      leftPeakDbfs: state.channelLevels.L.peakDbFs,
-      rightPeakDbfs: state.channelLevels.R.peakDbFs,
-    });
-    const chainReady: AutostartChainReadiness = chainReadiness.status === 'ready' ? 'ready' : 'invalid';
-
-    state.trackRecognition = armTrackRecognition({
-      workflowId: candidate.workflowIds[0] ?? activeWfId ?? 'unknown',
-      targetBand: candidate.band,
-      chainReadiness: chainReady,
-      armedFromToolId: null,
-    });
-    appendLog(`Track recognition armed for "${candidate.band.label}" (${candidate.expectedFrequencyHz} Hz).`);
-    renderTrackRecognition(els);
-    renderSessionRibbon(els);
-  });
-
+  // ── S7B.1: Track recognition — global disarm only (arm is per-tool) ──────────
+  // The global arm button has been removed from audioSourcePanelMarkup.
+  // Each tool panel has its own Arm autostart button wired via armToolLocalAutostart().
   els.recogDisarmBtn?.addEventListener('click', () => {
     state.trackRecognition = disarmTrackRecognition();
     appendLog('Track recognition disarmed.');

@@ -2618,7 +2618,7 @@ function checkS5H1SpeedReferenceBinding() {
   const checks = [
     // 1. startSpeedMeasurement delegates nominal computation to deriveSpeedMeasurementSettings (S5H.2 arch)
     ['startSpeedMeasurement calls deriveSpeedMeasurementSettings',
-      /function startSpeedMeasurement[\s\S]{0,900}deriveSpeedMeasurementSettings/],
+      /function startSpeedMeasurement[\s\S]{0,1400}deriveSpeedMeasurementSettings/],
     // 2. createSpeedFlutterCapture receives settings.nominalFrequencyHz (S5H.2 arch)
     ['createSpeedFlutterCapture uses settings.nominalFrequencyHz',
       /createSpeedFlutterCapture[\s\S]{0,300}settings\.nominalFrequencyHz/],
@@ -4293,9 +4293,10 @@ function checkS7B() {
     // 26. TS: tickTrackRecognition called inside meter loop
     ['TS: tickTrackRecognition called inside startMeterLoop',
       /startMeterLoop[\s\S]{0,1600}tickTrackRecognition\(els\)/.test(uiSrc)],
-    // 27. TS: arm button wired in enableMeasurementLabInteractions
-    ['TS: recogArmBtn event listener wired',
-      /recogArmBtn[\s\S]{0,100}addEventListener/.test(uiSrc)],
+    // 27. TS: arm is per-tool (S7B.1 supersedes global arm) — recogDisarmBtn still wired
+    ['TS: recogArmBtn event listener wired (or per-tool arm present)',
+      /recogArmBtn[\s\S]{0,100}addEventListener/.test(uiSrc) ||
+      /armToolLocalAutostart/.test(uiSrc)],
     // 28. TS: disarm button wired in enableMeasurementLabInteractions
     ['TS: recogDisarmBtn event listener wired',
       /recogDisarmBtn[\s\S]{0,100}addEventListener/.test(uiSrc)],
@@ -4314,9 +4315,10 @@ function checkS7B() {
     // 33. TS: audio source panel has arm section
     ['TS: audioSourcePanelMarkup includes mlab-recog-arm-section',
       /audioSourcePanelMarkup[\s\S]{0,6000}mlab-recog-arm-section/.test(uiSrc)],
-    // 34. TS: arm button in source panel
-    ['TS: audioSourcePanelMarkup includes data-mlab-recog-arm button',
-      /audioSourcePanelMarkup[\s\S]{0,6000}data-mlab-recog-arm/.test(uiSrc)],
+    // 34. TS: arm affordance exists somewhere (global or per-tool; S7B.1 moves arm to tool panels)
+    ['TS: arm affordance exists (global or per-tool)',
+      /data-mlab-recog-arm/.test(uiSrc) ||
+      /data-mlab-local-arm/.test(uiSrc)],
     // 35. TS: disarm button in source panel
     ['TS: audioSourcePanelMarkup includes data-mlab-recog-disarm button',
       /audioSourcePanelMarkup[\s\S]{0,6500}data-mlab-recog-disarm/.test(uiSrc)],
@@ -4393,3 +4395,160 @@ function checkS7B() {
 }
 
 checkS7B();
+
+function checkS7B1() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const cssSrcPath    = join(repoRoot, 'src/modules/measurement-lab/ui/measurementLab.css');
+  const engineSrcPath = join(repoRoot, 'src/modules/measurement-lab/engine/trackRecognition.ts');
+  const workflowsSrcPath = join(repoRoot, 'src/modules/measurement-lab/data/measurementWorkflows.ts');
+
+  for (const p of [renderSrcPath, cssSrcPath, engineSrcPath, workflowsSrcPath]) {
+    if (!existsSync(p)) {
+      console.error(`S7B.1 static check FAIL: required file not found: ${p}`);
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const uiSrc      = readFileSync(renderSrcPath, 'utf8');
+  const cssSrc     = readFileSync(cssSrcPath, 'utf8');
+  const engineSrc  = readFileSync(engineSrcPath, 'utf8');
+  const wfSrc      = readFileSync(workflowsSrcPath, 'utf8');
+
+  const tokenStart = uiSrc.indexOf('tokenLayoutGeneratedClassNames');
+  const tokenEnd   = uiSrc.indexOf('void tokenLayoutGeneratedClassNames', tokenStart);
+  const tokenBlock = tokenStart >= 0 ? uiSrc.slice(tokenStart, tokenEnd > tokenStart ? tokenEnd + 40 : tokenStart + 9000) : '';
+
+  const checks = [
+    // ── Engine: armedFromToolId ────────────────────────────────────────────
+    // 1. Engine: armedFromToolId field in TrackRecognitionState type
+    ['Engine: armedFromToolId field in TrackRecognitionState type',
+      /TrackRecognitionState[\s\S]{0,1500}armedFromToolId/.test(engineSrc)],
+    // 2. Engine: armedFromToolId in ArmTrackRecognitionArgs type
+    ['Engine: armedFromToolId in ArmTrackRecognitionArgs type',
+      /ArmTrackRecognitionArgs[\s\S]{0,300}armedFromToolId/.test(engineSrc)],
+    // 3. Engine: armedFromToolId in armTrackRecognition return values
+    ['Engine: armedFromToolId passed in armTrackRecognition return',
+      /armTrackRecognition[\s\S]{0,600}armedFromToolId/.test(engineSrc)],
+    // 4. Engine: armedFromToolId in TrackRecognitionProvenance
+    ['Engine: armedFromToolId in TrackRecognitionProvenance type',
+      /TrackRecognitionProvenance[\s\S]{0,600}armedFromToolId/.test(engineSrc)],
+
+    // ── TS: evaluateAutostartEligibility wired into runtime ────────────────
+    // 5. TS: evaluateAutostartEligibility called in tickTrackRecognition (not just imported)
+    ['TS: evaluateAutostartEligibility called in tickTrackRecognition',
+      /tickTrackRecognition[\s\S]{0,2500}evaluateAutostartEligibility/.test(uiSrc)],
+    // 6. TS: startSpeedMeasurement called in tickTrackRecognition (real autostart wired)
+    ['TS: startSpeedMeasurement called in tickTrackRecognition',
+      /tickTrackRecognition[\s\S]{0,2500}startSpeedMeasurement\(els\)/.test(uiSrc)],
+    // 7. TS: recording phase is set in tickTrackRecognition runtime path
+    ['TS: recording phase set in tickTrackRecognition',
+      /tickTrackRecognition[\s\S]{0,2500}phase:\s*'recording'/.test(uiSrc)],
+    // 8. TS: manual_override set in startSpeedMeasurement (manual start path)
+    ['TS: manual_override set in startSpeedMeasurement',
+      /startSpeedMeasurement[\s\S]{0,600}manual_override/.test(uiSrc)],
+
+    // ── TS: new S7B.1 functions ────────────────────────────────────────────
+    // 9. TS: toolLocalAutostartMarkup function defined
+    ['TS: toolLocalAutostartMarkup function defined',
+      /function toolLocalAutostartMarkup\(/.test(uiSrc)],
+    // 10. TS: updateToolLocalAutostart function defined
+    ['TS: updateToolLocalAutostart function defined',
+      /function updateToolLocalAutostart\(/.test(uiSrc)],
+    // 11. TS: findToolTargetBand function defined
+    ['TS: findToolTargetBand function defined',
+      /function findToolTargetBand\(/.test(uiSrc)],
+    // 12. TS: armToolLocalAutostart function defined
+    ['TS: armToolLocalAutostart function defined',
+      /function armToolLocalAutostart\(/.test(uiSrc)],
+
+    // ── TS: local autostart blocks in panels ──────────────────────────────
+    // 13. TS: local autostart block in speed panel (wow_flutter)
+    ['TS: local autostart block in speed panel (wow_flutter)',
+      /renderSpeedPanel[\s\S]{0,6000}toolLocalAutostartMarkup\('wow_flutter'\)/.test(uiSrc)],
+    // 14. TS: local autostart block in refLevel panel
+    ['TS: local autostart block in refLevel panel',
+      /renderRefLevelPanel[\s\S]{0,6000}toolLocalAutostartMarkup\('reference_level'\)/.test(uiSrc)],
+    // 15. TS: local autostart block in channel panel
+    ['TS: local autostart block in channel panel',
+      /renderChannelPanel[\s\S]{0,8000}toolLocalAutostartMarkup\('channel_identity'\)/.test(uiSrc)],
+
+    // ── TS: global arm button removed ─────────────────────────────────────
+    // 16. TS: global arm button removed from audioSourcePanelMarkup (no data-mlab-recog-arm button)
+    ['TS: global arm button removed from audioSourcePanelMarkup',
+      !/audioSourcePanelMarkup[\s\S]{0,3000}data-mlab-recog-arm[^-]/.test(uiSrc)],
+    // 17. TS: global disarm button still in audioSourcePanelMarkup
+    ['TS: global disarm button still in audioSourcePanelMarkup',
+      /audioSourcePanelMarkup[\s\S]{0,7000}data-mlab-recog-disarm/.test(uiSrc)],
+
+    // ── TS: reports ───────────────────────────────────────────────────────
+    // 18. TS: text report includes TRACK RECOGNITION section
+    ['TS: text report includes TRACK RECOGNITION section',
+      /buildReportText[\s\S]{0,27000}TRACK RECOGNITION \/ AUTOSTART/.test(uiSrc)],
+    // 19. TS: buildSummarySection includes TRACK_RECOGNITION_PHASE_LABELS reference
+    ['TS: buildSummarySection includes TRACK_RECOGNITION_PHASE_LABELS for web report',
+      /buildSummarySection[\s\S]{0,4000}TRACK_RECOGNITION_PHASE_LABELS/.test(uiSrc)],
+    // 20. TS: JSON export still has track_recognition (regression guard)
+    ['TS: JSON export still has track_recognition field',
+      /track_recognition/.test(uiSrc)],
+
+    // ── TS: autostart scope ───────────────────────────────────────────────
+    // 21. TS: wow_flutter is the only workflow that triggers real autostart in tickTrackRecognition
+    ['TS: wow_flutter is gated for real autostart in tickTrackRecognition',
+      /tickTrackRecognition[\s\S]{0,2500}wow_flutter/.test(uiSrc)],
+
+    // ── CSS ───────────────────────────────────────────────────────────────
+    // 22. CSS: mlab-local-autostart defined
+    ['CSS: mlab-local-autostart defined',
+      /\.mlab-local-autostart\s*\{/.test(cssSrc)],
+    // 23. CSS: mlab-local-autostart-head defined
+    ['CSS: mlab-local-autostart-head defined',
+      /\.mlab-local-autostart-head\s*\{/.test(cssSrc)],
+    // 24. CSS: mlab-local-autostart-actions defined
+    ['CSS: mlab-local-autostart-actions defined',
+      /\.mlab-local-autostart-actions\s*\{/.test(cssSrc)],
+
+    // ── tokenLayoutGeneratedClassNames ────────────────────────────────────
+    // 25. tokenLayoutGeneratedClassNames includes mlab-local-autostart
+    ['tokenLayoutGeneratedClassNames includes mlab-local-autostart',
+      tokenBlock.includes('mlab-local-autostart')],
+
+    // ── Regressions ───────────────────────────────────────────────────────
+    // 26. Regression: S7A.2.3 layout still present (mlab-source-meter-channel in CSS)
+    ['Regression: S7A.2.3 layout still present (mlab-source-meter-channel in CSS)',
+      /\.mlab-source-meter-channel/.test(cssSrc)],
+    // 27. Regression: VTA remains planned (vta_imd_optimizer still planned in measurementWorkflows.ts)
+    ['Regression: vta_imd_optimizer still planned in measurementWorkflows.ts',
+      /vta_imd_optimizer[\s\S]{0,300}planned/.test(wfSrc) ||
+      /implementationStatus:\s*'planned'[\s\S]{0,200}vta_imd_optimizer/.test(wfSrc)],
+    // 28. Regression: pre_roll_status is still not_available only
+    ['Regression: pre_roll_status is still not_available only',
+      /PreRollStatus\s*=\s*'not_available'/.test(engineSrc)],
+    // 29. Regression: evaluateAutostartEligibility blocks planned workflows
+    ['Regression: evaluateAutostartEligibility blocks planned workflows',
+      /evaluateAutostartEligibility[\s\S]{0,800}planned/.test(engineSrc)],
+    // 30. TS: findToolTargetBand checks wow_flutter with speed/single_tone criteria
+    ['TS: findToolTargetBand checks wow_flutter with speed/single_tone criteria',
+      /findToolTargetBand[\s\S]{0,600}wow_flutter[\s\S]{0,200}speed[\s\S]{0,200}single_tone/.test(uiSrc)],
+
+    // ── scratch buffer ────────────────────────────────────────────────────
+    // 31. TS: recognitionScratch module-level variable defined
+    ['TS: recognitionScratch module-level variable defined',
+      /let recognitionScratch:\s*Float32Array/.test(uiSrc)],
+  ];
+
+  let allPass = true;
+  for (const [label, ok] of checks) {
+    if (!ok) {
+      console.error(`S7B.1 static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S7B.1 static source check (Tool-local Autostart & Recognition Runtime): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS7B1();

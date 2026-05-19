@@ -2856,3 +2856,34 @@ button.mlab-coverage-badge--available:focus-visible {
   gap: var(--ea-space-2, 0.5rem);
   flex-wrap: wrap;
 }
+
+/* ── S7B.1: Tool-local autostart block ─────────────────────────────────────── */
+
+.mlab-local-autostart {
+  margin-top: var(--ea-space-3, 0.75rem);
+  padding: var(--ea-space-3, 0.75rem);
+  border: 1px solid var(--ea-border-soft, rgba(255,255,255,0.07));
+  border-radius: var(--ea-radius-sm, 3px);
+  background: var(--ea-bg-panel-alt, rgba(0,0,0,0.18));
+}
+
+.mlab-local-autostart-head {
+  display: flex;
+  align-items: center;
+  gap: var(--ea-space-2, 0.5rem);
+  margin-bottom: var(--ea-space-2, 0.5rem);
+  user-select: none;
+}
+
+.mlab-local-autostart-reason {
+  font-size: var(--ea-font-size-small, 0.75rem);
+  color: var(--ea-text-low, #888);
+  margin-bottom: var(--ea-space-2, 0.5rem);
+  line-height: 1.5;
+}
+
+.mlab-local-autostart-actions {
+  display: flex;
+  gap: var(--ea-space-2, 0.5rem);
+  flex-wrap: wrap;
+}
