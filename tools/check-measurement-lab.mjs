@@ -5032,3 +5032,119 @@ function checkS7C1() {
 }
 
 checkS7C1();
+
+function checkS7C3() {
+  const renderSrcPath     = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const testRecordsPath   = join(repoRoot, 'public/data/audio/v3/runtime/test-records.json');
+
+  for (const p of [renderSrcPath, testRecordsPath]) {
+    if (!existsSync(p)) {
+      console.error(`S7C.3 static check FAIL: required file not found: ${p}`);
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const uiSrc  = readFileSync(renderSrcPath, 'utf8');
+  const trSrc  = readFileSync(testRecordsPath, 'utf8');
+  const trData = JSON.parse(trSrc);
+
+  // Collect AP Ultimate band indexes and labels
+  const apRecord = trData.records.find(r => r.id === 'analogue-productions-aatlp');
+  const apSide2Bands = apRecord
+    ? apRecord.sides.flatMap(s => s.side === '2' ? s.bands : [])
+    : [];
+  const apBandIndexes  = apSide2Bands.map(b => b.index);
+  const apBandLabels   = apSide2Bands.map(b => b.label);
+  const apVerticalRes  = apSide2Bands.find(b => b.analyzer_module === 'vertical_resonance');
+
+  const checks = [
+    // ── Fix 1: AP Ultimate physical track identity ────────────────────────────
+    // 1. AP Ultimate side 2 vertical resonance band is indexed as 2-5 (Side 2 Track 5)
+    ['AP Ultimate: vertical_resonance band is indexed 2-5 (Side 2 Track 5)',
+      apVerticalRes?.index === '2-5'],
+    // 2. AP Ultimate does NOT have a band indexed 2-6 as vertical_resonance
+    ['AP Ultimate: no vertical_resonance band at index 2-6',
+      !(apSide2Bands.find(b => b.index === '2-6' && b.analyzer_module === 'vertical_resonance'))],
+    // 3. AP Ultimate has no band with label containing "5 Hz to 30 Hz" (fake band removed)
+    ['AP Ultimate: no fake "5 Hz to 30 Hz" resonance band present',
+      !apBandLabels.some(l => /5\s*Hz\s*to\s*30\s*Hz/i.test(l))],
+    // 4. AP Ultimate has no band with purpose "resonance" (unsupported purpose removed)
+    ['AP Ultimate: no band with purpose "resonance"',
+      !apSide2Bands.some(b => b.purpose === 'resonance')],
+    // 5. AP Ultimate side 2 does not contain index 2-7 for vertical_resonance (would be old number)
+    ['AP Ultimate: no stale 2-7 band index on side 2',
+      !apBandIndexes.includes('2-7')],
+    // 6. AP Ultimate vertical sweep band label is consistent with 1 kHz to 10 Hz
+    ['AP Ultimate: vertical_resonance band label mentions 1 kHz and 10 Hz',
+      apVerticalRes ? (/1.*kHz|1000.*Hz/i.test(apVerticalRes.label) && /10\s*Hz/i.test(apVerticalRes.label)) : false],
+
+    // ── Fix 1: UI does not cue "2-6" for AP Ultimate resonance ───────────────
+    // 7. No "07 Resonance peak" invented track name in UI source
+    ['TS: no invented "07 Resonance peak" track label',
+      !/07\s*Resonance\s*peak/i.test(uiSrc)],
+    // 8. recordHint('resonance') not called in resonance panel template
+    ['TS: recordHint("resonance") not called in renderResonancePanel',
+      !/renderResonancePanel[\s\S]{0,8000}recordHint\('resonance'\)/.test(uiSrc)],
+
+    // ── Fix 2: Channel Identity vs Azimuth result-state separation ────────────
+    // 9. result state uses isAzimuthResult variable (not just isAzimuth from idle)
+    ['TS: renderChannelPanel done-state uses isAzimuthResult variable',
+      /isAzimuthResult/.test(uiSrc)],
+    // 10. Azimuth done-state uses "Crosstalk symmetry" label (not "Channel identity" as primary)
+    ['TS: Azimuth done-state primary label is "Crosstalk symmetry"',
+      /isAzimuthResult[\s\S]{0,1500}Crosstalk symmetry/.test(uiSrc)],
+    // 11. Channel Identity done-state still uses "Channel identity" as its primary label
+    ['TS: Channel Identity done-state primary label is "Channel identity"',
+      /mlab-channel-identity-head[\s\S]{0,200}Channel identity/.test(uiSrc)],
+    // 12. Azimuth done-state note does not declare best/optimal/recommended azimuth
+    ['TS: Azimuth done-state note does not recommend/claim optimal azimuth',
+      !/isAzimuthResult[\s\S]{0,2000}(?:best|optimal|recommended|final)\s+azimuth(?!\s+is\s+not|\s+setting\s+is\s+not|\s+is\s+declared)/i.test(uiSrc)],
+    // 13. Azimuth done-state explicitly says no azimuth is declared
+    ['TS: Azimuth done-state note says no azimuth declared',
+      /No best or recommended azimuth is declared/.test(uiSrc)],
+
+    // ── Fix 2: activateTool triggers re-render ────────────────────────────────
+    // 14. activateTool calls renderChannelPanel for channel_identity/azimuth_crosstalk
+    ['TS: activateTool calls renderChannelPanel on channel tool activation',
+      /function activateTool[\s\S]{0,2000}channel_identity.*azimuth_crosstalk[\s\S]{0,400}renderChannelPanel/.test(uiSrc)
+      || /function activateTool[\s\S]{0,2000}renderChannelPanel/.test(uiSrc)],
+
+    // ── Fix 2: autostart workflow ID not hardcoded ────────────────────────────
+    // 15. channel panel uses activeToolForPanel for autostart (not hardcoded channel_identity)
+    ['TS: channel panel autostart uses activeToolForPanel',
+      /toolLocalAutostartMarkup\(activeToolForPanel\)/.test(uiSrc)],
+
+    // ── Preservation checks ───────────────────────────────────────────────────
+    // 16. S7B.2 autostart guard still present (suspended state wording)
+    ['TS: S7B.2 autostart suspended guard preserved',
+      /suspended/.test(uiSrc) || /autostart.*guard/.test(uiSrc) || /AutostartGuard/.test(uiSrc) || /captureState.*live.*autostart/i.test(uiSrc)],
+    // 17. top ribbon has no Demo button
+    ['TS: top ribbon Demo button (data-mlab-ribbon-demo) NOT present',
+      !/data-mlab-ribbon-demo/.test(uiSrc)],
+    // 18. log modal renders from state.log (renderLogModalContent or equivalent present)
+    ['TS: log modal renders from state.log on open (renderLogModalContent pattern)',
+      /renderLogModalContent|logModalContent[\s\S]{0,200}state\.log/.test(uiSrc)],
+    // 19. S7C.2: classifyResonanceBasis accepts metadata parameter
+    ['TS: classifyResonanceBasis accepts bandMeta parameter (S7C.2)',
+      /function classifyResonanceBasis\([^)]*bandMeta/.test(uiSrc)],
+    // 20. No "Low-frequency resonance sweep 5 Hz to 30 Hz" for AP Ultimate anywhere
+    ['AP Ultimate: no "Low-frequency resonance sweep 5 Hz to 30 Hz" in test-records.json',
+      !/Low-frequency resonance sweep 5 Hz to 30 Hz/.test(trSrc)],
+  ];
+
+  let allPass = true;
+  for (const [label, ok] of checks) {
+    if (!ok) {
+      console.error(`S7C.3 static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S7C.3 static source check (AP Ultimate track identity, Channel/Azimuth result-state separation): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS7C3();

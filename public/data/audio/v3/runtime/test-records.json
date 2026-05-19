@@ -74,7 +74,10 @@
               "purpose": "crosstalk",
               "signal_type": "single_tone",
               "analyzer_module": "channel_identity",
-              "analyzer_modules": ["channel_identity", "azimuth_crosstalk"],
+              "analyzer_modules": [
+                "channel_identity",
+                "azimuth_crosstalk"
+              ],
               "notes": "Tone present on the left channel only. Used together with the R band to measure channel separation."
             },
             {
@@ -87,7 +90,10 @@
               "purpose": "crosstalk",
               "signal_type": "single_tone",
               "analyzer_module": "channel_identity",
-              "analyzer_modules": ["channel_identity", "azimuth_crosstalk"],
+              "analyzer_modules": [
+                "channel_identity",
+                "azimuth_crosstalk"
+              ],
               "notes": "Tone present on the right channel only."
             },
             {
@@ -100,7 +106,10 @@
               "purpose": "crosstalk",
               "signal_type": "single_tone",
               "analyzer_module": "azimuth_crosstalk",
-              "analyzer_modules": ["azimuth_crosstalk", "vertical_modulation"],
+              "analyzer_modules": [
+                "azimuth_crosstalk",
+                "vertical_modulation"
+              ],
               "notes": "Vertical-only modulation used for azimuth alignment."
             }
           ]
@@ -184,7 +193,10 @@
               "purpose": "crosstalk",
               "signal_type": "single_tone",
               "analyzer_module": "channel_identity",
-              "analyzer_modules": ["channel_identity", "azimuth_crosstalk"]
+              "analyzer_modules": [
+                "channel_identity",
+                "azimuth_crosstalk"
+              ]
             },
             {
               "index": "A4",
@@ -196,7 +208,10 @@
               "purpose": "crosstalk",
               "signal_type": "single_tone",
               "analyzer_module": "channel_identity",
-              "analyzer_modules": ["channel_identity", "azimuth_crosstalk"]
+              "analyzer_modules": [
+                "channel_identity",
+                "azimuth_crosstalk"
+              ]
             },
             {
               "index": "A5",
@@ -273,7 +288,10 @@
               "purpose": "crosstalk",
               "signal_type": "single_tone",
               "analyzer_module": "channel_identity",
-              "analyzer_modules": ["channel_identity", "azimuth_crosstalk"]
+              "analyzer_modules": [
+                "channel_identity",
+                "azimuth_crosstalk"
+              ]
             },
             {
               "index": "A6",
@@ -285,7 +303,10 @@
               "purpose": "crosstalk",
               "signal_type": "single_tone",
               "analyzer_module": "channel_identity",
-              "analyzer_modules": ["channel_identity", "azimuth_crosstalk"]
+              "analyzer_modules": [
+                "channel_identity",
+                "azimuth_crosstalk"
+              ]
             }
           ]
         }
@@ -343,7 +364,10 @@
               "purpose": "crosstalk",
               "signal_type": "single_tone",
               "analyzer_module": "channel_identity",
-              "analyzer_modules": ["channel_identity", "azimuth_crosstalk"]
+              "analyzer_modules": [
+                "channel_identity",
+                "azimuth_crosstalk"
+              ]
             },
             {
               "index": "A5",
@@ -355,7 +379,10 @@
               "purpose": "crosstalk",
               "signal_type": "single_tone",
               "analyzer_module": "channel_identity",
-              "analyzer_modules": ["channel_identity", "azimuth_crosstalk"]
+              "analyzer_modules": [
+                "channel_identity",
+                "azimuth_crosstalk"
+              ]
             }
           ]
         }
@@ -383,7 +410,10 @@
               "purpose": "crosstalk",
               "signal_type": "single_tone",
               "analyzer_module": "channel_identity",
-              "analyzer_modules": ["channel_identity", "azimuth_crosstalk"],
+              "analyzer_modules": [
+                "channel_identity",
+                "azimuth_crosstalk"
+              ],
               "level_db": 0,
               "level_reference": "0dB_groove",
               "notes": "Tone present on the left channel only. Used for channel identity, reversed-channel detection and crosstalk measurement."
@@ -398,7 +428,10 @@
               "purpose": "crosstalk",
               "signal_type": "single_tone",
               "analyzer_module": "channel_identity",
-              "analyzer_modules": ["channel_identity", "azimuth_crosstalk"],
+              "analyzer_modules": [
+                "channel_identity",
+                "azimuth_crosstalk"
+              ],
               "level_db": 0,
               "level_reference": "0dB_groove",
               "notes": "Tone present on the right channel only."
@@ -538,7 +571,7 @@
           "side": "2",
           "bands": [
             {
-              "index": "2-2",
+              "index": "2-1",
               "label": "Anti-skating 315 Hz amplitude sweep to +12 dB",
               "type": "sine",
               "channel": "both",
@@ -553,7 +586,7 @@
               "notes": "315 Hz lateral tone at escalating amplitude from 0 dB up to +12 dB above standard groove level. Adjust anti-skating force until inner and outer groove-wall distortion are balanced across both channels."
             },
             {
-              "index": "2-3",
+              "index": "2-2",
               "label": "Pink noise lateral",
               "type": "noise",
               "channel": "both",
@@ -564,7 +597,7 @@
               "notes": "Broadband pink noise, lateral modulation (L+R in phase). Used for spectral balance verification, phono chain noise floor diagnostics and left/right spectral tilt comparison."
             },
             {
-              "index": "2-4",
+              "index": "2-3",
               "label": "Pink noise vertical",
               "type": "noise",
               "channel": "out_of_phase",
@@ -575,7 +608,7 @@
               "notes": "Broadband pink noise, vertical modulation (L+R out of phase). Used for vertical compliance response, vertical/lateral noise ratio and channel phase diagnostics."
             },
             {
-              "index": "2-5",
+              "index": "2-4",
               "label": "Vertical 1 kHz",
               "type": "sine",
               "channel": "out_of_phase",
@@ -589,7 +622,7 @@
               "notes": "Pure vertical modulation at 1 kHz (L+R out of phase). Used for azimuth verification, mono-sum null test and vertical channel balance."
             },
             {
-              "index": "2-6",
+              "index": "2-5",
               "label": "Vertical sweep 1 kHz to 10 Hz",
               "type": "sweep",
               "channel": "out_of_phase",
@@ -604,7 +637,7 @@
               "notes": "Descending vertical modulation sweep from 1 kHz to 10 Hz. Used to detect vertical resonance peaks. Compare measured peak with Tonearm Match Lab calculated resonance."
             },
             {
-              "index": "2-7",
+              "index": "2-6",
               "label": "Silent groove",
               "type": "silence",
               "channel": "both",

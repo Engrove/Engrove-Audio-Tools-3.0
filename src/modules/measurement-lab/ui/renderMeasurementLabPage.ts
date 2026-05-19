@@ -3268,6 +3268,7 @@ function renderChannelPanel(els: Elements): void {
   }
 
   if (ch.step === 'done' && ch.leftCapture && ch.rightCapture) {
+    const isAzimuthResult = state.activeWorkflowId === 'azimuth_crosstalk';
     const identity = ch.identityResult;
     const warningsHtml = identity && identity.warnings.length > 0
       ? identity.warnings.map(w => `<p class="mlab-channel-warning">${renderText(w)}</p>`).join('')
@@ -3278,27 +3279,38 @@ function renderChannelPanel(els: Elements): void {
     const selfTestNote = ch.source === 'self_test'
       ? `<p class="mlab-channel-selftest-note">Demo Mode uses a mono sine — channel separation is not meaningful. Results are indicative only.</p>`
       : '';
+    // Primary result label and heading differ per active tool
+    const resultTableLabel = isAzimuthResult ? 'Azimuth step capture summary' : 'Channel identity result';
+    const primaryResultRow = isAzimuthResult
+      ? (identity ? `
+        <div class="mlab-wf-result-row mlab-azimuth-head">
+          <span class="mlab-wf-result-label">Crosstalk symmetry</span>
+          <span class="mlab-wf-result-value">${channelIdentityBadgeHtml(identity.identity)}</span>
+        </div>` : '')
+      : (identity ? `
+        <div class="mlab-wf-result-row mlab-channel-identity-head">
+          <span class="mlab-wf-result-label">Channel identity</span>
+          <span class="mlab-wf-result-value">${channelIdentityBadgeHtml(identity.identity)}</span>
+        </div>` : '');
     body.innerHTML = `
-      <table class="ea-form-table" aria-label="Channel measurement summary">
+      <table class="ea-form-table" aria-label="${renderText(resultTableLabel)}">
         <tbody>
           ${captureRowMarkup('L-band capture', ch.leftCapture)}
           ${captureRowMarkup('R-band capture', ch.rightCapture)}
         </tbody>
       </table>
       <div class="mlab-wf-result">
+        ${primaryResultRow}
         ${identity ? `
-        <div class="mlab-wf-result-row">
-          <span class="mlab-wf-result-label">Channel identity</span>
-          <span class="mlab-wf-result-value">${channelIdentityBadgeHtml(identity.identity)}</span>
-        </div>
         <div class="mlab-wf-result-row">
           <span class="mlab-wf-result-label">Source</span>
           <span class="mlab-wf-result-value">${sourceLabel} <span class="ea-badge">Confidence: ${renderText(identity.confidence)}</span></span>
         </div>
+        ${!isAzimuthResult ? `
         <div class="mlab-wf-result-row">
           <span class="mlab-wf-result-label">Balance (R − L wanted)</span>
           <span class="mlab-wf-result-value">${fmtDb(identity.wantedBalanceDb)}</span>
-        </div>
+        </div>` : ''}
         <div class="mlab-wf-result-row">
           <span class="mlab-wf-result-label">Crosstalk L → R</span>
           <span class="mlab-wf-result-value">${fmtCrosstalk(identity.leftToRightCrosstalkDb)}</span>
@@ -3317,12 +3329,15 @@ function renderChannelPanel(els: Elements): void {
           <span class="mlab-wf-result-value">${fmtCrosstalk(ch.rightCapture.crosstalkDb)}</span>
         </div>
         `}
-        <p class="mlab-wf-note">Negative crosstalk values are better; well-set-up cartridges land at −25 to −35&nbsp;dB across the audio band.</p>
+        <p class="mlab-wf-note">${isAzimuthResult
+          ? 'Crosstalk evidence for this azimuth step. Compare steps in the history below. No best or recommended azimuth is declared — use evidence alongside listening tests.'
+          : 'Negative crosstalk values are better; well-set-up cartridges land at −25 to −35&nbsp;dB across the audio band.'
+        }</p>
         ${warningsHtml}
         ${selfTestNote}
       </div>
       <div class="mlab-session-controls">
-        <button class="ea-button ea-button--ghost" type="button" data-mlab-channel-reset>Start over</button>
+        <button class="ea-button ea-button--ghost" type="button" data-mlab-channel-reset>${isAzimuthResult ? 'Add another step' : 'Start over'}</button>
       </div>
       ${azimuthStepHistoryMarkup(ch.runs)}
       ${azimuthStepComparisonMarkup(ch.runs)}
