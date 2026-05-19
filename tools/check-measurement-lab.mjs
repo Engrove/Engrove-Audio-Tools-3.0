@@ -2539,9 +2539,9 @@ function checkS5HGuidedOrderAndSpeed() {
     // 2. Track 1 as Reference Level + recommended first
     ['Track 1 Reference Level recommended first',
       /Track[\s\S]{0,10}1[\s\S]{0,400}[Rr]ecommended first/],
-    // 3. Tracks 2-3 Channel Identity / Crosstalk
-    ['Tracks 2-3 Channel Identity',
-      /Tracks[\s\S]{0,15}2[\s\S]{0,150}[Cc]hannel [Ii]dentity/],
+    // 3. Tracks 2-3 Channel / Crosstalk Geometry (S7C.6: renamed from Channel Identity / Crosstalk)
+    ['Tracks 2-3 Channel / Crosstalk Geometry',
+      /Tracks[\s\S]{0,15}2[\s\S]{0,150}[Cc]hannel \/ Crosstalk Geometry/],
     // 4. Tracks 4-6 RIAA HF guidance
     ['Tracks 4-6 RIAA HF guidance',
       /Tracks[\s\S]{0,15}4[\s\S]{0,200}(?:RIAA HF|HF frequency)/],
@@ -5378,3 +5378,111 @@ function checkS7C5() {
 }
 
 checkS7C5();
+
+function checkS7C6() {
+  const renderSrcPath  = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const cssSrcPath     = join(repoRoot, 'src/modules/measurement-lab/ui/measurementLab.css');
+  const workflowsPath  = join(repoRoot, 'src/modules/measurement-lab/data/measurementWorkflows.ts');
+
+  for (const p of [renderSrcPath, cssSrcPath, workflowsPath]) {
+    if (!existsSync(p)) {
+      console.error(`S7C.6 static check FAIL: required file not found: ${p}`);
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const uiSrc  = readFileSync(renderSrcPath, 'utf8');
+  const cssSrc = readFileSync(cssSrcPath, 'utf8');
+
+  const checks = [
+    // ── Guided order label cleanup ────────────────────────────────────────────
+    // 1. Guided order uses Channel / Crosstalk Geometry (not old label)
+    ['TS: guided order uses Channel / Crosstalk Geometry',
+      /mlab-guided-order-name.*Channel \/ Crosstalk Geometry|Channel \/ Crosstalk Geometry.*mlab-guided-order-name/.test(uiSrc)],
+    // 2. Guided order does NOT use Channel Identity / Crosstalk as name
+    ['TS: guided order does NOT use "Channel Identity / Crosstalk" as item name',
+      !/mlab-guided-order-name[^<]*Channel Identity \/ Crosstalk/.test(uiSrc)],
+    // 3. Guided order workflow label does NOT say "Channel Identity & Crosstalk"
+    ['TS: guided order workflow does NOT say "Channel Identity & Crosstalk"',
+      !/mlab-guided-order-workflow[\s\S]{0,200}Channel Identity/.test(uiSrc)],
+    // 4. Guided order workflow label says Channel / Crosstalk Geometry
+    ['TS: guided order workflow says "Channel / Crosstalk Geometry"',
+      /mlab-guided-order-workflow[\s\S]{0,200}Channel \/ Crosstalk Geometry/.test(uiSrc)],
+
+    // ── Setup metadata picker integration ─────────────────────────────────────
+    // 5. Setup metadata has picker button for cartridge
+    ['TS: setup metadata has data-mlab-meta-pick="cartridge" button',
+      /data-mlab-meta-pick="cartridge"/.test(uiSrc)],
+    // 6. Setup metadata has picker button for tonearm
+    ['TS: setup metadata has data-mlab-meta-pick="tonearm" button',
+      /data-mlab-meta-pick="tonearm"/.test(uiSrc)],
+    // 7. Manual cartridge text input still present (fallback preserved)
+    ['TS: manual cartridge text input still present',
+      /data-mlab-meta="cartridge"/.test(uiSrc)],
+    // 8. Manual tonearm text input still present (fallback preserved)
+    ['TS: manual tonearm text input still present',
+      /data-mlab-meta="tonearm"/.test(uiSrc)],
+    // 9. openRuntimePickerModal imported/used in measurement lab
+    ['TS: openRuntimePickerModal imported and called',
+      /openRuntimePickerModal/.test(uiSrc)],
+    // 10. loadTonearmRuntimeData imported in measurement lab
+    ['TS: loadTonearmRuntimeData imported',
+      /loadTonearmRuntimeData/.test(uiSrc)],
+    // 11. CSS mlab-meta-pick-group defined
+    ['CSS: mlab-meta-pick-group defined',
+      /\.mlab-meta-pick-group/.test(cssSrc)],
+    // 12. CSS mlab-meta-pick-btn defined
+    ['CSS: mlab-meta-pick-btn defined',
+      /\.mlab-meta-pick-btn/.test(cssSrc)],
+
+    // ── Status badge — no empty pill ─────────────────────────────────────────
+    // 13. When wfId is null, center status pill is hidden (display:none)
+    ['TS: center status pill set to display:none when no workflow',
+      /centerStatus\.style\.display\s*=\s*['"]none['"]/.test(uiSrc)],
+    // 14. center status pill is un-hidden when workflow is present
+    ['TS: center status pill display reset when workflow present',
+      /centerStatus\.style\.display\s*=\s*['"]["']/.test(uiSrc)],
+    // 15. Center status pill initial empty markup uses no visible badge text
+    // (the static HTML has the badge element; it starts hidden via JS on first activateTool)
+    ['TS: centerStatus element still present in markup for dynamic updates',
+      /data-mlab-center-status/.test(uiSrc)],
+
+    // ── S7C.5 regression guards ───────────────────────────────────────────────
+    // 16. CHANNEL / CROSSTALK GEOMETRY still in text report (S7C.5 regression)
+    ['S7C.5 regression: CHANNEL / CROSSTALK GEOMETRY still in text report',
+      /CHANNEL \/ CROSSTALK GEOMETRY/.test(uiSrc)],
+    // 17. Analyzer window still used for resonance range (S7C.5 regression)
+    ['S7C.5 regression: Analyzer window wording still present',
+      /Analyzer window/.test(uiSrc)],
+    // 18. No top-level AZIMUTH STEPS section (S7C.5 regression)
+    ['S7C.5 regression: no top-level AZIMUTH STEPS section',
+      !/^AZIMUTH STEPS\s*$/m.test(uiSrc)],
+
+    // ── Safety constraints ────────────────────────────────────────────────────
+    // 19. Top ribbon Demo button absent
+    ['Safety: top ribbon Demo button NOT present',
+      !/data-mlab-ribbon-demo/.test(uiSrc)],
+    // 20. No fake 5–30 Hz resonance band
+    ['Safety: no fake 5-30 Hz resonance band',
+      !/5.*Hz.*to.*30.*Hz.*resonance|resonance.*5.*Hz.*to.*30.*Hz/i.test(uiSrc)],
+    // 21. S7B.2 autostart guard preserved
+    ['Safety: S7B.2 autostart guard still present',
+      /suspended/.test(uiSrc) || /AutostartGuard/.test(uiSrc)],
+  ];
+
+  let allPass = true;
+  for (const [label, ok] of checks) {
+    if (!ok) {
+      console.error(`S7C.6 static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S7C.6 static source check (Guided-order labels, setup pickers, empty status badge): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS7C6();

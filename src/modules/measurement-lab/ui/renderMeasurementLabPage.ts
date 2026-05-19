@@ -57,6 +57,8 @@ import {
   type TrackRecognitionState,
   type AutostartChainReadiness,
 } from '../engine/trackRecognition';
+import { openRuntimePickerModal, runtimePickerFieldUpdates, type RuntimePickerItem } from '../../../shared/ui/runtimePickerModal';
+import { loadTonearmRuntimeData, type TonearmRuntimeData } from '../../tonearm-match-lab/data/loadTonearmRuntimeData';
 
 const WORKFLOW_PANEL_TARGETS: Readonly<Record<string, string>> = {
   wow_flutter: 'mlab-speed-panel',
@@ -482,7 +484,7 @@ type LabState = {
  * site below; it has no runtime effect.
  */
 const tokenLayoutGeneratedClassNames =
-  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured mlab-vta-candidate-badge mlab-vta-comparison mlab-vta-comparison-candidate mlab-vta-comparison-meta mlab-vta-comparison-warning mlab-vta-comparison-status mlab-vta-comparison-confidence mlab-vta-confidence-level mlab-vta-confidence-level--insufficient mlab-vta-confidence-level--low mlab-vta-confidence-level--medium mlab-vta-confidence-level--high mlab-vta-confidence-reason mlab-vta-gate mlab-vta-gate-head mlab-vta-gate-summary mlab-vta-gate-status mlab-vta-gate-status--not-ready mlab-vta-gate-status--candidate mlab-vta-gate-status--review mlab-vta-gate-msg mlab-vta-gate-table mlab-vta-gate-row mlab-vta-gate-pass mlab-vta-gate-pass--ok mlab-vta-gate-pass--fail mlab-vta-gate-label mlab-vta-gate-detail mlab-vta-policy mlab-vta-policy-head mlab-vta-policy-status-row mlab-vta-policy-status mlab-vta-policy-status--experimental mlab-vta-policy-status--review-not-supported mlab-vta-policy-reason mlab-vta-policy-req-head mlab-vta-policy-req-list mlab-vta-policy-req mlab-guided-order-panel mlab-guided-order-body mlab-guided-order-intro mlab-guided-order-list mlab-guided-order-item mlab-guided-order-item--first mlab-guided-order-step-head mlab-guided-order-track mlab-guided-order-name mlab-guided-order-first-badge mlab-guided-order-detail mlab-guided-order-workflow mlab-speed-ctx-row mlab-speed-ctx-label mlab-speed-ctx-btn mlab-speed-ctx-btn--active mlab-speed-ctx-note mlab-speed-ctx-badge mlab-speed-history mlab-speed-history-head mlab-speed-history-clear mlab-speed-history-empty mlab-speed-history-scroll mlab-speed-history-table mlab-speed-history-row mlab-speed-history-cell mlab-speed-settings mlab-speed-settings--result mlab-speed-settings-head mlab-speed-settings-hint mlab-speed-settings-row mlab-speed-settings-label mlab-speed-settings-value mlab-speed-settings-input-group mlab-speed-settings-input mlab-speed-settings-unit mlab-speed-settings-src mlab-speed-settings-reset mlab-nf-intro mlab-nf-guidance mlab-nf-settings mlab-nf-settings-row mlab-nf-settings-label mlab-nf-settings-select mlab-nf-settings-input mlab-nf-settings-input--wide mlab-nf-settings-input-group mlab-nf-settings-unit mlab-nf-settings-src mlab-nf-result mlab-nf-history mlab-nf-history-head mlab-nf-history-clear mlab-nf-history-scroll mlab-nf-history-table mlab-nf-history-row mlab-nf-history-cell mlab-chain-readiness mlab-chain-readiness--ready mlab-chain-readiness--warning mlab-chain-readiness--blocked mlab-chain-readiness--not-checked mlab-chain-readiness-row mlab-chain-readiness-key mlab-chain-readiness-val mlab-chain-readiness-warning mlab-chain-readiness-note mlab-run-quality mlab-run-quality--ok mlab-run-quality--warning mlab-run-quality--invalid mlab-run-quality-label mlab-run-quality-warnings mlab-session-ribbon mlab-ribbon-group mlab-ribbon-group--active mlab-ribbon-label mlab-ribbon-value mlab-ribbon-sep mlab-ribbon-sep--flex mlab-ribbon-active-tool mlab-workflow-rail mlab-rail-head mlab-rail-items mlab-rail-loading mlab-rail-item mlab-rail-item--available mlab-rail-item--planned mlab-rail-item--partial mlab-rail-item--unavailable mlab-rail-item--active mlab-rail-item-label mlab-rail-item-status mlab-diag-rail mlab-diag-signal-panel mlab-diag-signal-body mlab-diag-signal-status mlab-diag-signal-status--ready mlab-diag-signal-status--blocked mlab-diag-signal-status--warning mlab-diag-signal-status--not_checked mlab-diag-signal-row mlab-diag-signal-key mlab-diag-signal-val mlab-diag-signal-clip mlab-workbench-center mlab-center-head mlab-center-title mlab-center-title-pre mlab-center-title-h mlab-center-actions mlab-center-body mlab-center-status-pill mlab-tool-panel--active mlab-context-overlay mlab-context-overlay--open mlab-context-head mlab-context-body mlab-context-foot mlab-log-modal mlab-log-modal--open mlab-log-modal-dialog mlab-log-modal-head mlab-log-modal-body mlab-log-modal-foot mlab-log-modal-content mlab-workbench-footer mlab-footer-status mlab-footer-actions mlab-ribbon-meters mlab-ribbon-mini-meter mlab-ribbon-mini-label mlab-ribbon-mini-bar-wrap mlab-ribbon-mini-fill mlab-ribbon-mini-db mlab-rail-group-head mlab-rail-item-tooltip mlab-rail-item-tooltip-name mlab-rail-item-tooltip-status mlab-home-prereqs mlab-context-home-section mlab-rail-tooltip-portal--visible mlab-rail-item--source-inactive mlab-source-controls-head mlab-source-viz mlab-source-meter-grid mlab-source-freq-canvas mlab-ribbon-group--wide mlab-source-meter-channel mlab-recog-badge mlab-recog-badge--disabled mlab-recog-badge--armed mlab-recog-badge--waiting mlab-recog-badge--detecting mlab-recog-badge--locked mlab-recog-badge--recording mlab-recog-badge--rejected mlab-recog-badge--timeout mlab-recog-badge--ambiguous mlab-recog-badge--manual mlab-recog-arm-section mlab-recog-arm-row mlab-recog-arm-status mlab-recog-arm-actions mlab-recog-arm-reason mlab-local-autostart mlab-local-autostart-head mlab-local-autostart-reason mlab-local-autostart-actions mlab-guidance-card mlab-guidance-summary mlab-guidance-body mlab-guidance-row mlab-guidance-label mlab-guidance-text mlab-resonance-basis mlab-resonance-basis-label mlab-resonance-basis-note mlab-evidence-note mlab-evidence-note--limitation mlab-ribbon-source-controls mlab-baseline-strip mlab-baseline-active mlab-baseline-off mlab-evidence-card mlab-evidence-card-title mlab-evidence-card-state mlab-evidence-card-state--no-data mlab-evidence-card-state--live mlab-evidence-card-state--captured mlab-evidence-card-state--unavailable mlab-evidence-card-state--estimated mlab-evidence-card-body mlab-evidence-card-metric mlab-evidence-card-label mlab-evidence-card-value mlab-evidence-card-interpretation mlab-evidence-card-limitation mlab-setup-metadata mlab-setup-metadata-head mlab-setup-metadata-body mlab-setup-metadata-row mlab-channel-identity-head mlab-azimuth-head mlab-track-band-hint mlab-track-band-hint--unavailable mlab-demo-mode-warn mlab-channel-submode-selector mlab-channel-submode-btn mlab-channel-submode-btn--active mlab-resonance-band-note';
+  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured mlab-vta-candidate-badge mlab-vta-comparison mlab-vta-comparison-candidate mlab-vta-comparison-meta mlab-vta-comparison-warning mlab-vta-comparison-status mlab-vta-comparison-confidence mlab-vta-confidence-level mlab-vta-confidence-level--insufficient mlab-vta-confidence-level--low mlab-vta-confidence-level--medium mlab-vta-confidence-level--high mlab-vta-confidence-reason mlab-vta-gate mlab-vta-gate-head mlab-vta-gate-summary mlab-vta-gate-status mlab-vta-gate-status--not-ready mlab-vta-gate-status--candidate mlab-vta-gate-status--review mlab-vta-gate-msg mlab-vta-gate-table mlab-vta-gate-row mlab-vta-gate-pass mlab-vta-gate-pass--ok mlab-vta-gate-pass--fail mlab-vta-gate-label mlab-vta-gate-detail mlab-vta-policy mlab-vta-policy-head mlab-vta-policy-status-row mlab-vta-policy-status mlab-vta-policy-status--experimental mlab-vta-policy-status--review-not-supported mlab-vta-policy-reason mlab-vta-policy-req-head mlab-vta-policy-req-list mlab-vta-policy-req mlab-guided-order-panel mlab-guided-order-body mlab-guided-order-intro mlab-guided-order-list mlab-guided-order-item mlab-guided-order-item--first mlab-guided-order-step-head mlab-guided-order-track mlab-guided-order-name mlab-guided-order-first-badge mlab-guided-order-detail mlab-guided-order-workflow mlab-speed-ctx-row mlab-speed-ctx-label mlab-speed-ctx-btn mlab-speed-ctx-btn--active mlab-speed-ctx-note mlab-speed-ctx-badge mlab-speed-history mlab-speed-history-head mlab-speed-history-clear mlab-speed-history-empty mlab-speed-history-scroll mlab-speed-history-table mlab-speed-history-row mlab-speed-history-cell mlab-speed-settings mlab-speed-settings--result mlab-speed-settings-head mlab-speed-settings-hint mlab-speed-settings-row mlab-speed-settings-label mlab-speed-settings-value mlab-speed-settings-input-group mlab-speed-settings-input mlab-speed-settings-unit mlab-speed-settings-src mlab-speed-settings-reset mlab-nf-intro mlab-nf-guidance mlab-nf-settings mlab-nf-settings-row mlab-nf-settings-label mlab-nf-settings-select mlab-nf-settings-input mlab-nf-settings-input--wide mlab-nf-settings-input-group mlab-nf-settings-unit mlab-nf-settings-src mlab-nf-result mlab-nf-history mlab-nf-history-head mlab-nf-history-clear mlab-nf-history-scroll mlab-nf-history-table mlab-nf-history-row mlab-nf-history-cell mlab-chain-readiness mlab-chain-readiness--ready mlab-chain-readiness--warning mlab-chain-readiness--blocked mlab-chain-readiness--not-checked mlab-chain-readiness-row mlab-chain-readiness-key mlab-chain-readiness-val mlab-chain-readiness-warning mlab-chain-readiness-note mlab-run-quality mlab-run-quality--ok mlab-run-quality--warning mlab-run-quality--invalid mlab-run-quality-label mlab-run-quality-warnings mlab-session-ribbon mlab-ribbon-group mlab-ribbon-group--active mlab-ribbon-label mlab-ribbon-value mlab-ribbon-sep mlab-ribbon-sep--flex mlab-ribbon-active-tool mlab-workflow-rail mlab-rail-head mlab-rail-items mlab-rail-loading mlab-rail-item mlab-rail-item--available mlab-rail-item--planned mlab-rail-item--partial mlab-rail-item--unavailable mlab-rail-item--active mlab-rail-item-label mlab-rail-item-status mlab-diag-rail mlab-diag-signal-panel mlab-diag-signal-body mlab-diag-signal-status mlab-diag-signal-status--ready mlab-diag-signal-status--blocked mlab-diag-signal-status--warning mlab-diag-signal-status--not_checked mlab-diag-signal-row mlab-diag-signal-key mlab-diag-signal-val mlab-diag-signal-clip mlab-workbench-center mlab-center-head mlab-center-title mlab-center-title-pre mlab-center-title-h mlab-center-actions mlab-center-body mlab-center-status-pill mlab-tool-panel--active mlab-context-overlay mlab-context-overlay--open mlab-context-head mlab-context-body mlab-context-foot mlab-log-modal mlab-log-modal--open mlab-log-modal-dialog mlab-log-modal-head mlab-log-modal-body mlab-log-modal-foot mlab-log-modal-content mlab-workbench-footer mlab-footer-status mlab-footer-actions mlab-ribbon-meters mlab-ribbon-mini-meter mlab-ribbon-mini-label mlab-ribbon-mini-bar-wrap mlab-ribbon-mini-fill mlab-ribbon-mini-db mlab-rail-group-head mlab-rail-item-tooltip mlab-rail-item-tooltip-name mlab-rail-item-tooltip-status mlab-home-prereqs mlab-context-home-section mlab-rail-tooltip-portal--visible mlab-rail-item--source-inactive mlab-source-controls-head mlab-source-viz mlab-source-meter-grid mlab-source-freq-canvas mlab-ribbon-group--wide mlab-source-meter-channel mlab-recog-badge mlab-recog-badge--disabled mlab-recog-badge--armed mlab-recog-badge--waiting mlab-recog-badge--detecting mlab-recog-badge--locked mlab-recog-badge--recording mlab-recog-badge--rejected mlab-recog-badge--timeout mlab-recog-badge--ambiguous mlab-recog-badge--manual mlab-recog-arm-section mlab-recog-arm-row mlab-recog-arm-status mlab-recog-arm-actions mlab-recog-arm-reason mlab-local-autostart mlab-local-autostart-head mlab-local-autostart-reason mlab-local-autostart-actions mlab-guidance-card mlab-guidance-summary mlab-guidance-body mlab-guidance-row mlab-guidance-label mlab-guidance-text mlab-resonance-basis mlab-resonance-basis-label mlab-resonance-basis-note mlab-evidence-note mlab-evidence-note--limitation mlab-ribbon-source-controls mlab-baseline-strip mlab-baseline-active mlab-baseline-off mlab-evidence-card mlab-evidence-card-title mlab-evidence-card-state mlab-evidence-card-state--no-data mlab-evidence-card-state--live mlab-evidence-card-state--captured mlab-evidence-card-state--unavailable mlab-evidence-card-state--estimated mlab-evidence-card-body mlab-evidence-card-metric mlab-evidence-card-label mlab-evidence-card-value mlab-evidence-card-interpretation mlab-evidence-card-limitation mlab-setup-metadata mlab-setup-metadata-head mlab-setup-metadata-body mlab-setup-metadata-row mlab-channel-identity-head mlab-azimuth-head mlab-track-band-hint mlab-track-band-hint--unavailable mlab-demo-mode-warn mlab-channel-submode-selector mlab-channel-submode-btn mlab-channel-submode-btn--active mlab-resonance-band-note mlab-meta-pick-group mlab-meta-pick-btn';
 void tokenLayoutGeneratedClassNames;
 
 const speedMeasurementDurationSeconds = 30;
@@ -724,6 +726,9 @@ const state: LabState = {
 
 // ── S7A.2: Tooltip portal state ───────────────────────────────────────────────
 let railTooltipTimer: ReturnType<typeof setTimeout> | null = null;
+
+// Lazy-loaded runtime picker data (cartridges + tonearms) shared across sessions
+let _mlabRuntimePickerCache: TonearmRuntimeData | null = null;
 
 function hideRailTooltip(): void {
   if (railTooltipTimer !== null) {
@@ -1115,9 +1120,9 @@ function audioSourcePanelMarkup(): string {
           <div class="mlab-setup-metadata-body">
             <table class="ea-form-table" aria-label="Setup metadata">
               <tbody>
-                <tr><td class="ea-col-status">${statusDot('planned')}</td><td class="ea-col-label">Cartridge / pickup</td><td class="ea-col-value"><input type="text" class="ea-input" data-mlab-meta="cartridge" placeholder="e.g. Ortofon 2M Blue" value=""></td><td class="ea-col-meta"><span class="ea-badge">Optional</span></td></tr>
+                <tr><td class="ea-col-status">${statusDot('planned')}</td><td class="ea-col-label">Cartridge / pickup</td><td class="ea-col-value"><div class="mlab-meta-pick-group"><input type="text" class="ea-input" data-mlab-meta="cartridge" placeholder="e.g. Ortofon 2M Blue" value=""><button type="button" class="ea-button ea-button--ghost mlab-meta-pick-btn" data-mlab-meta-pick="cartridge">Pick&hellip;</button></div></td><td class="ea-col-meta"><span class="ea-badge">Optional</span></td></tr>
                 <tr><td class="ea-col-status">${statusDot('planned')}</td><td class="ea-col-label">Stylus / profile</td><td class="ea-col-value"><input type="text" class="ea-input" data-mlab-meta="stylus" placeholder="e.g. elliptical, line contact" value=""></td><td class="ea-col-meta"><span class="ea-badge">Optional</span></td></tr>
-                <tr><td class="ea-col-status">${statusDot('planned')}</td><td class="ea-col-label">Tonearm</td><td class="ea-col-value"><input type="text" class="ea-input" data-mlab-meta="tonearm" placeholder="e.g. Rega RB330" value=""></td><td class="ea-col-meta"><span class="ea-badge">Optional</span></td></tr>
+                <tr><td class="ea-col-status">${statusDot('planned')}</td><td class="ea-col-label">Tonearm</td><td class="ea-col-value"><div class="mlab-meta-pick-group"><input type="text" class="ea-input" data-mlab-meta="tonearm" placeholder="e.g. Rega RB330" value=""><button type="button" class="ea-button ea-button--ghost mlab-meta-pick-btn" data-mlab-meta-pick="tonearm">Pick&hellip;</button></div></td><td class="ea-col-meta"><span class="ea-badge">Optional</span></td></tr>
                 <tr><td class="ea-col-status">${statusDot('planned')}</td><td class="ea-col-label">Turntable / plinth</td><td class="ea-col-value"><input type="text" class="ea-input" data-mlab-meta="turntable" placeholder="e.g. Rega Planar 3" value=""></td><td class="ea-col-meta"><span class="ea-badge">Optional</span></td></tr>
                 <tr><td class="ea-col-status">${statusDot('planned')}</td><td class="ea-col-label">Phono stage</td><td class="ea-col-value"><input type="text" class="ea-input" data-mlab-meta="phonoStage" placeholder="e.g. Pro-Ject Phono Box S2" value=""></td><td class="ea-col-meta"><span class="ea-badge">Optional</span></td></tr>
                 <tr><td class="ea-col-status">${statusDot('planned')}</td><td class="ea-col-label">ADC / interface</td><td class="ea-col-value"><input type="text" class="ea-input" data-mlab-meta="adcInterface" placeholder="e.g. Focusrite Scarlett 2i2" value=""></td><td class="ea-col-meta"><span class="ea-badge">Optional</span></td></tr>
@@ -1170,10 +1175,10 @@ function guidedMeasurementOrderMarkup(): string {
           <li class="mlab-guided-order-item">
             <div class="mlab-guided-order-step-head">
               <span class="mlab-guided-order-track">Tracks&nbsp;2&ndash;3</span>
-              <span class="mlab-guided-order-name">Channel Identity / Crosstalk</span>
+              <span class="mlab-guided-order-name">Channel / Crosstalk Geometry</span>
             </div>
-            <div class="mlab-guided-order-detail ea-muted">L-only / R-only 1&thinsp;kHz tone — verify stereo wiring and measure crosstalk.</div>
-            <div class="mlab-guided-order-workflow ea-muted">Workflow: <strong>Channel Identity &amp; Crosstalk</strong></div>
+            <div class="mlab-guided-order-detail ea-muted">L-only / R-only 1&thinsp;kHz tone — Mode A verifies L/R wiring (Routing / Identity Check); Mode B compares crosstalk evidence across tonearm positions (Azimuth Step Comparison).</div>
+            <div class="mlab-guided-order-workflow ea-muted">Workflow: <strong>Channel / Crosstalk Geometry</strong></div>
           </li>
           <li class="mlab-guided-order-item">
             <div class="mlab-guided-order-step-head">
@@ -8770,6 +8775,7 @@ function activateTool(toolId: string, els: Elements): void {
     const wfId = tool.workflowId;
     if (!wfId) {
       els.centerStatus.textContent = '';
+      els.centerStatus.style.display = 'none';
       els.centerStatus.className = 'ea-badge mlab-center-status-pill';
     } else {
       const record = selectedRecord();
@@ -8779,8 +8785,9 @@ function activateTool(toolId: string, els: Elements): void {
       const label = avail === 'available' ? 'Available'
         : avail === 'planned' ? 'Planned'
         : avail === 'partial' ? 'Partial'
-        : 'Not available';
+        : 'No source';
       els.centerStatus.textContent = label;
+      els.centerStatus.style.display = '';
       els.centerStatus.className = `ea-badge mlab-center-status-pill mlab-rail-item--${avail}`;
     }
   }
@@ -9160,6 +9167,85 @@ export function enableMeasurementLabInteractions(): void {
     if (!field) return;
     const value = (target as HTMLInputElement).value ?? '';
     (state.setupMetadata as Record<string, string>)[field] = value;
+  });
+
+  // Setup metadata picker buttons — lazy-load runtime data then open picker modal
+  document.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-mlab-meta-pick]');
+    if (!btn) return;
+    const kind = btn.dataset['mlabMetaPick'];
+    if (kind !== 'cartridge' && kind !== 'tonearm') return;
+    void (async () => {
+      if (!_mlabRuntimePickerCache) {
+        try {
+          _mlabRuntimePickerCache = await loadTonearmRuntimeData();
+        } catch {
+          return;
+        }
+      }
+      const items: RuntimePickerItem[] = kind === 'cartridge'
+        ? _mlabRuntimePickerCache.cartridges.map(r => ({
+            id: r.id,
+            kind: 'cartridge' as const,
+            displayName: r.display_name,
+            type: r.type,
+            massG: r.mass_g,
+            compliance10HzCu: r.compliance_10hz_cu,
+          }))
+        : _mlabRuntimePickerCache.tonearms.map(r => ({
+            id: r.id,
+            kind: 'tonearm' as const,
+            displayName: r.display_name,
+            effectiveMassG: r.effective_mass_g,
+            effectiveLengthMm: r.effective_length_mm,
+          }));
+      const metaKey = kind === 'cartridge' ? 'cartridge' : 'tonearm';
+      const appliedName = (state.setupMetadata as Record<string, string>)[metaKey];
+      const appliedItem = items.find(it => it.displayName === appliedName) ?? null;
+      openRuntimePickerModal({
+        kind,
+        title: kind === 'cartridge' ? 'Pick cartridge / pickup' : 'Pick tonearm',
+        items,
+        appliedItemId: appliedItem?.id ?? null,
+        onApply: (item: RuntimePickerItem) => {
+          // Populate name field
+          const nameInput = document.querySelector<HTMLInputElement>(`[data-mlab-meta="${metaKey}"]`);
+          if (nameInput) {
+            nameInput.value = item.displayName;
+            (state.setupMetadata as Record<string, string>)[metaKey] = item.displayName;
+          }
+          // Auto-fill numeric fields from picker data (only if currently empty)
+          const updates = runtimePickerFieldUpdates(item.kind, item);
+          if (kind === 'cartridge') {
+            if (updates.cartridgeMassG !== undefined) {
+              const massEl = document.querySelector<HTMLInputElement>('[data-mlab-meta="cartridgeMassG"]');
+              if (massEl && !massEl.value) {
+                massEl.value = String(updates.cartridgeMassG);
+                state.setupMetadata.cartridgeMassG = String(updates.cartridgeMassG);
+              }
+            }
+            if (updates.compliance10HzCu !== undefined) {
+              const compEl = document.querySelector<HTMLInputElement>('[data-mlab-meta="complianceValue"]');
+              const refEl = document.querySelector<HTMLSelectElement>('[data-mlab-meta="complianceRefFreq"]');
+              if (compEl && !compEl.value) {
+                compEl.value = String(updates.compliance10HzCu);
+                state.setupMetadata.complianceValue = String(updates.compliance10HzCu);
+                state.setupMetadata.complianceRefFreq = '10hz';
+                if (refEl) refEl.value = '10hz';
+              }
+            }
+          } else {
+            if (updates.tonearmEffectiveMassG !== undefined) {
+              const massEl = document.querySelector<HTMLInputElement>('[data-mlab-meta="tonearmMassG"]');
+              if (massEl && !massEl.value) {
+                massEl.value = String(updates.tonearmEffectiveMassG);
+                state.setupMetadata.tonearmMassG = String(updates.tonearmEffectiveMassG);
+              }
+            }
+          }
+        },
+      });
+    })();
   });
 
   els.webReportBtn?.addEventListener('click', () => {
