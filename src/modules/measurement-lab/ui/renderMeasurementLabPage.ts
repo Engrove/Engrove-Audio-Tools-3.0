@@ -439,7 +439,7 @@ type LabState = {
  * site below; it has no runtime effect.
  */
 const tokenLayoutGeneratedClassNames =
-  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured mlab-vta-candidate-badge mlab-vta-comparison mlab-vta-comparison-candidate mlab-vta-comparison-meta mlab-vta-comparison-warning mlab-vta-comparison-status mlab-vta-comparison-confidence mlab-vta-confidence-level mlab-vta-confidence-level--insufficient mlab-vta-confidence-level--low mlab-vta-confidence-level--medium mlab-vta-confidence-level--high mlab-vta-confidence-reason mlab-vta-gate mlab-vta-gate-head mlab-vta-gate-summary mlab-vta-gate-status mlab-vta-gate-status--not-ready mlab-vta-gate-status--candidate mlab-vta-gate-status--review mlab-vta-gate-msg mlab-vta-gate-table mlab-vta-gate-row mlab-vta-gate-pass mlab-vta-gate-pass--ok mlab-vta-gate-pass--fail mlab-vta-gate-label mlab-vta-gate-detail mlab-vta-policy mlab-vta-policy-head mlab-vta-policy-status-row mlab-vta-policy-status mlab-vta-policy-status--experimental mlab-vta-policy-status--review-not-supported mlab-vta-policy-reason mlab-vta-policy-req-head mlab-vta-policy-req-list mlab-vta-policy-req mlab-guided-order-panel mlab-guided-order-body mlab-guided-order-intro mlab-guided-order-list mlab-guided-order-item mlab-guided-order-item--first mlab-guided-order-step-head mlab-guided-order-track mlab-guided-order-name mlab-guided-order-first-badge mlab-guided-order-detail mlab-guided-order-workflow mlab-speed-ctx-row mlab-speed-ctx-label mlab-speed-ctx-btn mlab-speed-ctx-btn--active mlab-speed-ctx-note mlab-speed-ctx-badge mlab-speed-history mlab-speed-history-head mlab-speed-history-clear mlab-speed-history-empty mlab-speed-history-scroll mlab-speed-history-table mlab-speed-history-row mlab-speed-history-cell mlab-speed-settings mlab-speed-settings--result mlab-speed-settings-head mlab-speed-settings-hint mlab-speed-settings-row mlab-speed-settings-label mlab-speed-settings-value mlab-speed-settings-input-group mlab-speed-settings-input mlab-speed-settings-unit mlab-speed-settings-src mlab-speed-settings-reset mlab-nf-intro mlab-nf-guidance mlab-nf-settings mlab-nf-settings-row mlab-nf-settings-label mlab-nf-settings-select mlab-nf-settings-input mlab-nf-settings-input--wide mlab-nf-settings-input-group mlab-nf-settings-unit mlab-nf-settings-src mlab-nf-result mlab-nf-history mlab-nf-history-head mlab-nf-history-clear mlab-nf-history-scroll mlab-nf-history-table mlab-nf-history-row mlab-nf-history-cell mlab-chain-readiness mlab-chain-readiness--ready mlab-chain-readiness--warning mlab-chain-readiness--blocked mlab-chain-readiness--not-checked mlab-chain-readiness-row mlab-chain-readiness-key mlab-chain-readiness-val mlab-chain-readiness-warning mlab-chain-readiness-note mlab-run-quality mlab-run-quality--ok mlab-run-quality--warning mlab-run-quality--invalid mlab-run-quality-label mlab-run-quality-warnings mlab-session-ribbon mlab-ribbon-group mlab-ribbon-group--active mlab-ribbon-label mlab-ribbon-value mlab-ribbon-sep mlab-ribbon-sep--flex mlab-ribbon-active-tool mlab-workflow-rail mlab-rail-head mlab-rail-items mlab-rail-loading mlab-rail-item mlab-rail-item--available mlab-rail-item--planned mlab-rail-item--partial mlab-rail-item--unavailable mlab-rail-item--active mlab-rail-item-label mlab-rail-item-status mlab-diag-rail mlab-diag-signal-panel mlab-diag-signal-body mlab-diag-signal-status mlab-diag-signal-status--ready mlab-diag-signal-status--blocked mlab-diag-signal-status--warning mlab-diag-signal-status--not_checked mlab-diag-signal-row mlab-diag-signal-key mlab-diag-signal-val mlab-diag-signal-clip mlab-workbench-center mlab-center-head mlab-center-title mlab-center-title-pre mlab-center-title-h mlab-center-actions mlab-center-body mlab-center-status-pill mlab-tool-panel--active mlab-context-overlay mlab-context-overlay--open mlab-context-head mlab-context-body mlab-context-foot mlab-log-modal mlab-log-modal--open mlab-log-modal-dialog mlab-log-modal-head mlab-log-modal-body mlab-log-modal-foot mlab-workbench-footer mlab-footer-status mlab-footer-actions mlab-ribbon-meters mlab-ribbon-mini-meter mlab-ribbon-mini-label mlab-ribbon-mini-bar-wrap mlab-ribbon-mini-fill mlab-ribbon-mini-db mlab-rail-group-head mlab-rail-item-tooltip mlab-rail-item-tooltip-name mlab-rail-item-tooltip-status mlab-home-prereqs mlab-context-home-section mlab-rail-tooltip-portal--visible';
+  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured mlab-vta-candidate-badge mlab-vta-comparison mlab-vta-comparison-candidate mlab-vta-comparison-meta mlab-vta-comparison-warning mlab-vta-comparison-status mlab-vta-comparison-confidence mlab-vta-confidence-level mlab-vta-confidence-level--insufficient mlab-vta-confidence-level--low mlab-vta-confidence-level--medium mlab-vta-confidence-level--high mlab-vta-confidence-reason mlab-vta-gate mlab-vta-gate-head mlab-vta-gate-summary mlab-vta-gate-status mlab-vta-gate-status--not-ready mlab-vta-gate-status--candidate mlab-vta-gate-status--review mlab-vta-gate-msg mlab-vta-gate-table mlab-vta-gate-row mlab-vta-gate-pass mlab-vta-gate-pass--ok mlab-vta-gate-pass--fail mlab-vta-gate-label mlab-vta-gate-detail mlab-vta-policy mlab-vta-policy-head mlab-vta-policy-status-row mlab-vta-policy-status mlab-vta-policy-status--experimental mlab-vta-policy-status--review-not-supported mlab-vta-policy-reason mlab-vta-policy-req-head mlab-vta-policy-req-list mlab-vta-policy-req mlab-guided-order-panel mlab-guided-order-body mlab-guided-order-intro mlab-guided-order-list mlab-guided-order-item mlab-guided-order-item--first mlab-guided-order-step-head mlab-guided-order-track mlab-guided-order-name mlab-guided-order-first-badge mlab-guided-order-detail mlab-guided-order-workflow mlab-speed-ctx-row mlab-speed-ctx-label mlab-speed-ctx-btn mlab-speed-ctx-btn--active mlab-speed-ctx-note mlab-speed-ctx-badge mlab-speed-history mlab-speed-history-head mlab-speed-history-clear mlab-speed-history-empty mlab-speed-history-scroll mlab-speed-history-table mlab-speed-history-row mlab-speed-history-cell mlab-speed-settings mlab-speed-settings--result mlab-speed-settings-head mlab-speed-settings-hint mlab-speed-settings-row mlab-speed-settings-label mlab-speed-settings-value mlab-speed-settings-input-group mlab-speed-settings-input mlab-speed-settings-unit mlab-speed-settings-src mlab-speed-settings-reset mlab-nf-intro mlab-nf-guidance mlab-nf-settings mlab-nf-settings-row mlab-nf-settings-label mlab-nf-settings-select mlab-nf-settings-input mlab-nf-settings-input--wide mlab-nf-settings-input-group mlab-nf-settings-unit mlab-nf-settings-src mlab-nf-result mlab-nf-history mlab-nf-history-head mlab-nf-history-clear mlab-nf-history-scroll mlab-nf-history-table mlab-nf-history-row mlab-nf-history-cell mlab-chain-readiness mlab-chain-readiness--ready mlab-chain-readiness--warning mlab-chain-readiness--blocked mlab-chain-readiness--not-checked mlab-chain-readiness-row mlab-chain-readiness-key mlab-chain-readiness-val mlab-chain-readiness-warning mlab-chain-readiness-note mlab-run-quality mlab-run-quality--ok mlab-run-quality--warning mlab-run-quality--invalid mlab-run-quality-label mlab-run-quality-warnings mlab-session-ribbon mlab-ribbon-group mlab-ribbon-group--active mlab-ribbon-label mlab-ribbon-value mlab-ribbon-sep mlab-ribbon-sep--flex mlab-ribbon-active-tool mlab-workflow-rail mlab-rail-head mlab-rail-items mlab-rail-loading mlab-rail-item mlab-rail-item--available mlab-rail-item--planned mlab-rail-item--partial mlab-rail-item--unavailable mlab-rail-item--active mlab-rail-item-label mlab-rail-item-status mlab-diag-rail mlab-diag-signal-panel mlab-diag-signal-body mlab-diag-signal-status mlab-diag-signal-status--ready mlab-diag-signal-status--blocked mlab-diag-signal-status--warning mlab-diag-signal-status--not_checked mlab-diag-signal-row mlab-diag-signal-key mlab-diag-signal-val mlab-diag-signal-clip mlab-workbench-center mlab-center-head mlab-center-title mlab-center-title-pre mlab-center-title-h mlab-center-actions mlab-center-body mlab-center-status-pill mlab-tool-panel--active mlab-context-overlay mlab-context-overlay--open mlab-context-head mlab-context-body mlab-context-foot mlab-log-modal mlab-log-modal--open mlab-log-modal-dialog mlab-log-modal-head mlab-log-modal-body mlab-log-modal-foot mlab-workbench-footer mlab-footer-status mlab-footer-actions mlab-ribbon-meters mlab-ribbon-mini-meter mlab-ribbon-mini-label mlab-ribbon-mini-bar-wrap mlab-ribbon-mini-fill mlab-ribbon-mini-db mlab-rail-group-head mlab-rail-item-tooltip mlab-rail-item-tooltip-name mlab-rail-item-tooltip-status mlab-home-prereqs mlab-context-home-section mlab-rail-tooltip-portal--visible mlab-rail-item--source-inactive mlab-source-controls-head mlab-source-viz mlab-source-meter-grid mlab-source-freq-canvas';
 void tokenLayoutGeneratedClassNames;
 
 const speedMeasurementDurationSeconds = 30;
@@ -936,6 +936,14 @@ function audioSourcePanelMarkup(): string {
         <span class="ea-panel-header-id">01</span>
         <span id="mlab-source-title">Audio source</span>
       </div>
+      <div class="ea-panel-body mlab-source-controls-head">
+        <div class="mlab-session-controls">
+          <button class="ea-button ea-button--primary" type="button" data-mlab-connect>Connect</button>
+          <button class="ea-button ea-button--ghost" type="button" data-mlab-disconnect disabled>Disconnect</button>
+          <button class="ea-button ea-button--ghost" type="button" data-mlab-run-self-test>Demo mode</button>
+        </div>
+        <p class="ea-muted" data-mlab-session-status>Capture is idle. Choose a source mode and click Connect to begin.</p>
+      </div>
       <div class="ea-panel-body--flush">
         <table class="ea-form-table" aria-label="Audio source setup">
           <tbody>
@@ -1009,16 +1017,14 @@ function audioSourcePanelMarkup(): string {
         </table>
       </div>
       <div class="ea-panel-body">
-        <p class="ea-muted" data-mlab-session-status>Capture is idle. Choose a source mode and click Connect to begin.</p>
-        <div class="mlab-session-controls">
-          <button class="ea-button ea-button--primary" type="button" data-mlab-connect>Connect</button>
-          <button class="ea-button ea-button--ghost" type="button" data-mlab-disconnect disabled>Disconnect</button>
-        </div>
-        <div class="mlab-self-test-callout" aria-label="Self-test option">
-          <p>No interface connected? Run a simulated test record to see how the lab works.</p>
-          <button class="ea-button ea-button--secondary" type="button" data-mlab-run-self-test>Run self-test</button>
-        </div>
         <p class="ea-muted mlab-honesty" data-mlab-honesty>Sample-rate honesty report will appear after the audio context is running.</p>
+        <div class="mlab-source-viz" aria-hidden="true">
+          <div class="mlab-source-meter-grid" data-mlab-source-meter-grid>
+            ${meterChannelMarkup('L', 'L channel')}
+            ${meterChannelMarkup('R', 'R channel')}
+          </div>
+          <canvas class="mlab-source-freq-canvas" data-mlab-source-freq-canvas width="600" height="140" aria-hidden="true"></canvas>
+        </div>
       </div>
     </section>
   `;
@@ -2520,6 +2526,8 @@ function elements(root: ParentNode) {
     coverageBody: root.querySelector<HTMLElement>('[data-mlab-coverage-body]'),
     waveformL: root.querySelector<HTMLCanvasElement>('[data-mlab-waveform="L"]'),
     waveformR: root.querySelector<HTMLCanvasElement>('[data-mlab-waveform="R"]'),
+    sourceMeterGrid: root.querySelector<HTMLElement>('[data-mlab-source-meter-grid]'),
+    sourceFreqCanvas: root.querySelector<HTMLCanvasElement>('[data-mlab-source-freq-canvas]'),
     refLevelBody: root.querySelector<HTMLElement>('[data-mlab-reflevel-body]'),
     advancedBody: root.querySelector<HTMLElement>('[data-mlab-advanced-body]'),
     noiseFloorBody: root.querySelector<HTMLElement>('[data-mlab-noisefloor-body]'),
@@ -5809,6 +5817,26 @@ function clearMeterDom(els: Elements): void {
   for (const canvas of [els.waveformL, els.waveformR]) {
     if (canvas) canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height);
   }
+  // Clear source panel meters
+  if (els.sourceMeterGrid) {
+    (['L', 'R'] as ChannelKey[]).forEach((channel) => {
+      const readout = els.sourceMeterGrid?.querySelector<HTMLElement>(`[data-mlab-meter-readout="${channel}"]`);
+      const peakValue = els.sourceMeterGrid?.querySelector<HTMLElement>(`[data-mlab-meter-peak-value="${channel}"]`);
+      const rmsBar = els.sourceMeterGrid?.querySelector<HTMLElement>(`[data-mlab-meter-rms="${channel}"]`);
+      const peakBar = els.sourceMeterGrid?.querySelector<HTMLElement>(`[data-mlab-meter-peak="${channel}"]`);
+      const holdBar = els.sourceMeterGrid?.querySelector<HTMLElement>(`[data-mlab-meter-hold="${channel}"]`);
+      const clip = els.sourceMeterGrid?.querySelector<HTMLElement>(`[data-mlab-meter-clip="${channel}"]`);
+      if (readout) readout.textContent = '— dBFS';
+      if (peakValue) peakValue.textContent = 'peak —';
+      if (rmsBar) rmsBar.style.setProperty('--mlab-bar', '0%');
+      if (peakBar) peakBar.style.setProperty('--mlab-bar', '0%');
+      if (holdBar) holdBar.style.setProperty('--mlab-bar', '0%');
+      if (clip) { clip.textContent = 'no clip'; clip.classList.remove('mlab-meter-clip--active'); }
+    });
+  }
+  if (els.sourceFreqCanvas) {
+    els.sourceFreqCanvas.getContext('2d')?.clearRect(0, 0, els.sourceFreqCanvas.width, els.sourceFreqCanvas.height);
+  }
 }
 
 function levelPercentFromDb(db: number): number {
@@ -5933,11 +5961,83 @@ function drawWaveform(canvas: HTMLCanvasElement | null, data: Float32Array, clip
   ctx.stroke();
 }
 
+function renderSourcePanelLevel(els: Elements, channel: ChannelKey): void {
+  if (!els.sourceMeterGrid) return;
+  const level = state.channelLevels[channel];
+  const grid = els.sourceMeterGrid;
+  const readout = grid.querySelector<HTMLElement>(`[data-mlab-meter-readout="${channel}"]`);
+  const peakValue = grid.querySelector<HTMLElement>(`[data-mlab-meter-peak-value="${channel}"]`);
+  const rmsBar = grid.querySelector<HTMLElement>(`[data-mlab-meter-rms="${channel}"]`);
+  const peakBar = grid.querySelector<HTMLElement>(`[data-mlab-meter-peak="${channel}"]`);
+  const holdBar = grid.querySelector<HTMLElement>(`[data-mlab-meter-hold="${channel}"]`);
+  const clip = grid.querySelector<HTMLElement>(`[data-mlab-meter-clip="${channel}"]`);
+  if (readout) readout.textContent = `${level.rmsDbFs.toFixed(1)} dBFS`;
+  if (peakValue) peakValue.textContent = `peak ${level.peakDbFs.toFixed(1)} dBFS`;
+  if (rmsBar) rmsBar.style.setProperty('--mlab-bar', `${levelPercentFromDb(level.rmsDbFs)}%`);
+  if (peakBar) peakBar.style.setProperty('--mlab-bar', `${levelPercentFromDb(level.peakDbFs)}%`);
+  if (holdBar) {
+    const holdDb = level.peakHoldLinear <= 0 ? silenceFloorDb : 20 * Math.log10(level.peakHoldLinear);
+    holdBar.style.setProperty('--mlab-bar', `${levelPercentFromDb(holdDb)}%`);
+  }
+  if (clip) {
+    clip.textContent = level.clipped ? 'clipping' : 'no clip';
+    clip.classList.toggle('mlab-meter-clip--active', level.clipped);
+  }
+}
+
+function drawSourceSpectrum(canvas: HTMLCanvasElement | null, analyser: AnalyserNode, scratch: Float32Array<ArrayBuffer>): void {
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = canvas.clientWidth;
+  const cssH = canvas.clientHeight;
+  if (cssW === 0 || cssH === 0) return;
+  const pixW = Math.round(cssW * dpr);
+  const pixH = Math.round(cssH * dpr);
+  if (canvas.width !== pixW || canvas.height !== pixH) {
+    canvas.width = pixW;
+    canvas.height = pixH;
+  }
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  analyser.getFloatFrequencyData(scratch);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cssW, cssH);
+  // Draw frequency bars on a log scale (20 Hz – Nyquist)
+  const nyquist = analyser.context.sampleRate / 2;
+  const minHz = 20;
+  const maxHz = nyquist;
+  const logMin = Math.log10(minHz);
+  const logMax = Math.log10(maxHz);
+  const binHz = nyquist / analyser.frequencyBinCount;
+  const minDb = -96;
+  const maxDb = 0;
+  const clipped = state.channelLevels.L.clipped || state.channelLevels.R.clipped;
+  ctx.fillStyle = clipped ? 'rgba(208,80,80,0.7)' : 'rgba(242,184,55,0.55)';
+  const barW = Math.max(1, cssW / 200);
+  for (let i = 0; i < 200; i++) {
+    const t = i / 199;
+    const hz = Math.pow(10, logMin + t * (logMax - logMin));
+    const bin = Math.round(hz / binHz);
+    const db = scratch[Math.min(bin, scratch.length - 1)] ?? minDb;
+    const norm = Math.max(0, Math.min(1, (db - minDb) / (maxDb - minDb)));
+    const barH = norm * cssH;
+    ctx.fillRect(t * cssW, cssH - barH, barW, barH);
+  }
+  // Zero dB line
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, 0.5);
+  ctx.lineTo(cssW, 0.5);
+  ctx.stroke();
+}
+
 function startMeterLoop(els: Elements): void {
   stopMeterLoop();
   if (!state.analysers) return;
   const scratchL = createScratchBuffer(state.analysers.L.fftSize);
   const scratchR = createScratchBuffer(state.analysers.R.fftSize);
+  const spectrumScratch = new Float32Array(new ArrayBuffer(state.analysers.L.frequencyBinCount * Float32Array.BYTES_PER_ELEMENT));
   const step = (timestamp: number) => {
     if (!state.analysers) return;
     const previous = state.meterLastTimestamp;
@@ -5953,6 +6053,12 @@ function startMeterLoop(els: Elements): void {
     renderChannelLevel(els, 'R');
     drawWaveform(els.waveformL, scratchL, state.channelLevels.L.clipped);
     drawWaveform(els.waveformR, state.channelCount > 1 ? scratchR : scratchL, state.channelLevels.R.clipped);
+    // Source panel viz: only when Audio Source is the active tool
+    if (state.activeWorkflowId === 'audio_source') {
+      renderSourcePanelLevel(els, 'L');
+      renderSourcePanelLevel(els, 'R');
+      drawSourceSpectrum(els.sourceFreqCanvas, state.analysers.L, spectrumScratch);
+    }
     state.meterFrame = requestAnimationFrame(step);
   };
   state.meterFrame = requestAnimationFrame(step);
@@ -6272,6 +6378,7 @@ async function connectMeasurementLab(els: Elements): Promise<void> {
   renderRefLevelPanel(els);
   renderSessionRibbon(els);
   renderDiagSignalPanel(els);
+  renderWorkflowRail(els);
 }
 
 async function disconnectMeasurementLab(els: Elements): Promise<void> {
@@ -6294,6 +6401,7 @@ async function disconnectMeasurementLab(els: Elements): Promise<void> {
   renderChainReadinessPanel(els);
   renderSessionRibbon(els);
   renderDiagSignalPanel(els);
+  renderWorkflowRail(els);
 }
 
 async function refreshDeviceList(els: Elements): Promise<void> {
@@ -7625,11 +7733,15 @@ function renderWorkflowRail(els: Elements): void {
       avail = c;
     }
     const isActive = state.activeWorkflowId === tool.id;
-    const availLabel = avail === 'available' ? 'Available'
+    const sourceInactive = tool.workflowId !== null
+      && state.captureState !== 'live'
+      && (avail === 'available' || avail === 'partial');
+    const availLabel = sourceInactive ? 'No source'
+      : avail === 'available' ? 'Available'
       : avail === 'planned' ? 'Planned'
       : avail === 'partial' ? 'Partial'
       : 'Not available';
-    const itemClass = `mlab-rail-item mlab-rail-item--${avail}${isActive ? ' mlab-rail-item--active' : ''}`;
+    const itemClass = `mlab-rail-item mlab-rail-item--${avail}${isActive ? ' mlab-rail-item--active' : ''}${sourceInactive ? ' mlab-rail-item--source-inactive' : ''}`;
 
     if (tool.group !== currentGroup) {
       currentGroup = tool.group;

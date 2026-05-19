@@ -259,8 +259,75 @@ button.mlab-rail-item:focus-visible {
   color: var(--ea-color-ok, #4a9d6a);
 }
 
+.mlab-rail-item--partial .mlab-rail-item-status {
+  color: var(--ea-color-warn, #e0a030);
+}
+
 .mlab-rail-item--planned .mlab-rail-item-status {
   color: var(--ea-color-warn, #e0a030);
+}
+
+/* Source-inactive: tool is available per test record but no audio source is connected */
+.mlab-rail-item--source-inactive .mlab-rail-item-label {
+  opacity: 0.55;
+}
+.mlab-rail-item--source-inactive .mlab-rail-item-status {
+  color: var(--ea-text-low);
+  opacity: 0.55;
+}
+
+/* ── S7A.2.2: Audio Source panel overrides ───────────────────────────────────*/
+
+/* Wider badge column so label text fits on one line */
+#mlab-source-panel .ea-col-meta {
+  width: 7.5rem;
+}
+
+/* Source controls at the top of the panel — prominent connect section */
+.mlab-source-controls-head {
+  display: flex;
+  align-items: center;
+  gap: var(--ea-space-3);
+  flex-wrap: wrap;
+  padding-top: var(--ea-space-2);
+  padding-bottom: var(--ea-space-2);
+  border-bottom: 1px solid var(--ea-border-subtle, rgba(255,255,255,0.07));
+}
+
+.mlab-source-controls-head .mlab-session-controls {
+  margin-top: 0;
+  flex-shrink: 0;
+}
+
+.mlab-source-controls-head [data-mlab-session-status] {
+  flex: 1;
+  font-size: var(--ea-text-sm);
+  color: var(--ea-text-medium);
+  margin: 0;
+}
+
+/* Source viz: VU meters + frequency canvas */
+.mlab-source-viz {
+  margin-top: var(--ea-space-3);
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: var(--ea-space-3);
+  min-height: 0;
+}
+
+.mlab-source-meter-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--ea-space-2);
+}
+
+.mlab-source-freq-canvas {
+  display: block;
+  width: 100%;
+  height: 140px;
+  border-radius: var(--ea-radius-sm);
+  background: var(--ea-bg-panel-alt, rgba(0,0,0,0.3));
+  border: 1px solid var(--ea-border-soft, rgba(255,255,255,0.06));
 }
 
 /* ── S7A.1: Center workbench panel ──────────────────────────────────────────*/
