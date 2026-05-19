@@ -380,6 +380,13 @@ button.mlab-rail-item:focus-visible {
   padding: var(--ea-space-3) var(--ea-space-4);
 }
 
+.mlab-context-home-section {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--ea-space-3);
+}
+
 .mlab-context-foot {
   display: flex;
   align-items: center;

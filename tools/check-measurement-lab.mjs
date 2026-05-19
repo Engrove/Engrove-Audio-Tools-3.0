@@ -3887,12 +3887,12 @@ function checkS7A1WorkbenchLayout() {
     // 2. WorkbenchTool type declared
     ['WorkbenchTool type declared',
       /type WorkbenchTool\s*=\s*\{/.test(uiSrc)],
-    // 3. WORKBENCH_TOOLS includes workbench_home
-    ['WORKBENCH_TOOLS includes workbench_home entry',
-      /WORKBENCH_TOOLS[\s\S]{0,5000}workbench_home/.test(uiSrc)],
-    // 4. WORKBENCH_TOOLS includes all 4 groups
-    ['WORKBENCH_TOOLS includes Home / session group',
-      /Home \/ session/.test(uiSrc)],
+    // 3. WORKBENCH_TOOLS includes audio_source as first entry (S7A.2.1: home removed from rail)
+    ['WORKBENCH_TOOLS starts with audio_source entry',
+      /WORKBENCH_TOOLS[\s\S]{0,200}audio_source/.test(uiSrc)],
+    // 4. WORKBENCH_TOOLS includes Setup / baseline group
+    ['WORKBENCH_TOOLS includes Setup / baseline group',
+      /Setup \/ baseline/.test(uiSrc)],
     // 5. WORKBENCH_TOOLS includes Experimental / planned group
     ['WORKBENCH_TOOLS includes Experimental / planned group',
       /Experimental \/ planned/.test(uiSrc)],
@@ -3905,9 +3905,9 @@ function checkS7A1WorkbenchLayout() {
     // 8. activateTool removes context overlay open class
     ['activateTool removes mlab-context-overlay--open',
       /activateTool[\s\S]{0,500}mlab-context-overlay--open/.test(uiSrc)],
-    // 9. enableMeasurementLabInteractions calls activateTool workbench_home
-    ['enableMeasurementLabInteractions calls activateTool(workbench_home)',
-      /enableMeasurementLabInteractions[\s\S]{0,15000}activateTool\s*\(\s*['"]workbench_home['"]/.test(uiSrc)],
+    // 9. enableMeasurementLabInteractions calls activateTool audio_source (S7A.2.1: default changed)
+    ['enableMeasurementLabInteractions calls activateTool(audio_source)',
+      /enableMeasurementLabInteractions[\s\S]{0,15000}activateTool\s*\(\s*['"]audio_source['"]/.test(uiSrc)],
     // 10. No IntersectionObserver in enableMeasurementLabInteractions
     ['IntersectionObserver removed from enableMeasurementLabInteractions',
       !/enableMeasurementLabInteractions[\s\S]{0,10000}IntersectionObserver/.test(uiSrc)],
@@ -3923,12 +3923,12 @@ function checkS7A1WorkbenchLayout() {
     // 14. logModalMarkup emits data-mlab-log-body inside modal
     ['logModalMarkup contains data-mlab-log-body',
       /logModalMarkup[\s\S]{0,500}data-mlab-log-body/.test(uiSrc)],
-    // 15. workbenchHomePanelMarkup function declared
-    ['workbenchHomePanelMarkup function declared',
-      /function workbenchHomePanelMarkup\s*\(/.test(uiSrc)],
-    // 16. workbench home panel has correct id and data attribute
-    ['workbench home panel has id mlab-home-panel',
-      /id="mlab-home-panel"/.test(uiSrc)],
+    // 15. contextSessionOverviewMarkup function declared (S7A.2.1: moved to context overlay)
+    ['contextSessionOverviewMarkup function declared',
+      /function contextSessionOverviewMarkup\s*\(/.test(uiSrc)],
+    // 16. contextSessionOverviewMarkup included in contextOverlayMarkup
+    ['contextOverlayMarkup calls contextSessionOverviewMarkup',
+      /contextOverlayMarkup[\s\S]{0,2000}contextSessionOverviewMarkup\(\)/.test(uiSrc)],
     // 17. renderMeasurementLabPage uses mlab-workbench-center
     ['renderMeasurementLabPage emits mlab-workbench-center',
       /renderMeasurementLabPage[\s\S]{0,3000}mlab-workbench-center/.test(uiSrc)],
