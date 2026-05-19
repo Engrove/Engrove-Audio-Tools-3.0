@@ -5122,9 +5122,9 @@ function checkS7C3() {
     // 17. top ribbon has no Demo button
     ['TS: top ribbon Demo button (data-mlab-ribbon-demo) NOT present',
       !/data-mlab-ribbon-demo/.test(uiSrc)],
-    // 18. log modal renders from state.log (renderLogModalContent or equivalent present)
+    // 18. log modal renders from state.log on open (renderLogSurfaces or renderLogModalContent pattern)
     ['TS: log modal renders from state.log on open (renderLogModalContent pattern)',
-      /renderLogModalContent|logModalContent[\s\S]{0,200}state\.log/.test(uiSrc)],
+      /renderLogModalContent|renderLogSurfaces|logModalContent[\s\S]{0,200}state\.log/.test(uiSrc)],
     // 19. S7C.2: classifyResonanceBasis accepts metadata parameter
     ['TS: classifyResonanceBasis accepts bandMeta parameter (S7C.2)',
       /function classifyResonanceBasis\([^)]*bandMeta/.test(uiSrc)],
@@ -5486,3 +5486,128 @@ function checkS7C6() {
 }
 
 checkS7C6();
+
+function checkS7C7() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const cssSrcPath    = join(repoRoot, 'src/modules/measurement-lab/ui/measurementLab.css');
+
+  for (const p of [renderSrcPath, cssSrcPath]) {
+    if (!existsSync(p)) {
+      console.error(`S7C.7 static check FAIL: required file not found: ${p}`);
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const uiSrc  = readFileSync(renderSrcPath, 'utf8');
+  const cssSrc = readFileSync(cssSrcPath, 'utf8');
+
+  // ── CSS geometry checks ──────────────────────────────────────────────────────
+
+  // Extract the .mlab-log-modal-dialog rule block for targeted assertions
+  const dialogRuleMatch = cssSrc.match(/\.mlab-log-modal-dialog\s*\{([^}]*)\}/);
+  const dialogRule = dialogRuleMatch ? dialogRuleMatch[1] : '';
+
+  // Extract the .mlab-log-modal-body rule block
+  const bodyRuleMatch = cssSrc.match(/\.mlab-log-modal-body\s*\{([^}]*)\}/);
+  const bodyRule = bodyRuleMatch ? bodyRuleMatch[1] : '';
+
+  const checks = [
+    // ── CSS: dialog has explicit height (not just max-height) ─────────────────
+    // 1. .mlab-log-modal-dialog uses height: (explicit stable height)
+    ['CSS: .mlab-log-modal-dialog has explicit height property',
+      /\bheight\s*:/.test(dialogRule)],
+    // 2. .mlab-log-modal-dialog does NOT rely only on max-height for sizing
+    // (it may still have max-height, but must also have explicit height)
+    ['CSS: .mlab-log-modal-dialog has explicit height (min/max alone is insufficient)',
+      /(?:^|;|\{)\s*height\s*:(?!\s*auto|\s*0)/.test(dialogRule.replace(/\n/g, ';'))
+        || /height\s*:\s*min\(/.test(dialogRule)],
+    // 3. .mlab-log-modal-body does NOT use flex: 1 1 0 (collapses with auto-height parent)
+    ['CSS: .mlab-log-modal-body does not use collapsed flex: 1 1 0',
+      !/flex\s*:\s*1\s+1\s+0(?:px|)(?:\s|;|$)/.test(bodyRule)],
+    // 4. .mlab-log-modal-body has explicit min-height > 0
+    ['CSS: .mlab-log-modal-body has explicit min-height (prevents collapse)',
+      /min-height\s*:\s*(?!0(?:px)?\b)/.test(bodyRule)],
+    // 5. .mlab-log-modal-body min-height is at least 80px or equivalent
+    ['CSS: .mlab-log-modal-body min-height is 80px or more',
+      /min-height\s*:\s*(?:9[0-9]|[1-9]\d{2,})px/.test(bodyRule)
+        || /min-height\s*:\s*(?:9[0-9]|[1-9]\d{2,})px/.test(cssSrc)],
+    // 6. .mlab-log-modal-body has overflow-y: auto
+    ['CSS: .mlab-log-modal-body has overflow-y: auto',
+      /overflow-y\s*:\s*auto/.test(bodyRule)],
+
+    // ── JS: log surfaces ──────────────────────────────────────────────────────
+    // 7. renderLogSurfaces function defined (module-level helper)
+    ['TS: renderLogSurfaces function defined',
+      /function renderLogSurfaces\s*\(\s*\)/.test(uiSrc)],
+    // 8. renderLogSurfaces updates modal surface [data-mlab-log-modal-content]
+    ['TS: renderLogSurfaces queries data-mlab-log-modal-content',
+      /renderLogSurfaces[\s\S]{0,800}data-mlab-log-modal-content/.test(uiSrc)],
+    // 9. renderLogSurfaces updates sidebar surface [data-mlab-log-body]
+    ['TS: renderLogSurfaces queries data-mlab-log-body',
+      /renderLogSurfaces[\s\S]{0,800}data-mlab-log-body/.test(uiSrc)],
+    // 10. openLogModal calls renderLogSurfaces before adding --open class
+    ['TS: openLogModal calls renderLogSurfaces before classList.add(--open)',
+      /openLogModal[\s\S]{0,400}renderLogSurfaces\(\)[\s\S]{0,200}mlab-log-modal--open/.test(uiSrc)],
+    // 11. appendLog updates [data-mlab-log-modal-content] — either directly or via shared selector list
+    ['TS: appendLog updates log-modal-content surface',
+      // Direct reference in appendLog body
+      /appendLog[\s\S]{0,600}data-mlab-log-modal-content/.test(uiSrc)
+      // OR appendLog uses LOG_SURFACE_SELECTORS which contains the modal selector
+      || (/appendLog[\s\S]{0,600}LOG_SURFACE_SELECTORS/.test(uiSrc)
+          && /LOG_SURFACE_SELECTORS[\s\S]{0,200}data-mlab-log-modal-content/.test(uiSrc))],
+    // 12. appendLog updates [data-mlab-log-body] surface
+    ['TS: appendLog updates log-body surface',
+      /appendLog[\s\S]{0,600}data-mlab-log-body/.test(uiSrc)
+      || (/appendLog[\s\S]{0,600}LOG_SURFACE_SELECTORS/.test(uiSrc)
+          && /LOG_SURFACE_SELECTORS[\s\S]{0,200}data-mlab-log-body/.test(uiSrc))],
+    // 13. Clear (data-mlab-log-reset) calls renderLogSurfaces (not stale captured ref)
+    ['TS: log-reset handler calls renderLogSurfaces',
+      /data-mlab-log-reset[\s\S]{0,400}renderLogSurfaces\(\)|renderLogSurfaces\(\)[\s\S]{0,200}data-mlab-log-reset/.test(uiSrc)],
+    // 14. Empty-state text "No activity yet." is present in log surface renders
+    ['TS: "No activity yet." empty-state text present',
+      /No activity yet\./.test(uiSrc)],
+    // 15. data-mlab-log-modal-content present in modal markup
+    ['TS: data-mlab-log-modal-content in logModalMarkup',
+      /logModalMarkup[\s\S]{0,600}data-mlab-log-modal-content/.test(uiSrc)],
+
+    // ── Static log surface selector constant ──────────────────────────────────
+    // 16. LOG_SURFACE_SELECTORS or equivalent covers both selectors
+    ['TS: both log surfaces covered in a shared selector list or constant',
+      /LOG_SURFACE_SELECTORS|data-mlab-log-body.*data-mlab-log-modal-content|data-mlab-log-modal-content.*data-mlab-log-body/.test(uiSrc)],
+
+    // ── S7C.6 regression guards ───────────────────────────────────────────────
+    // 17. Setup metadata picker buttons still present (S7C.6)
+    ['S7C.6 regression: setup metadata picker buttons still present',
+      /data-mlab-meta-pick="cartridge"/.test(uiSrc) && /data-mlab-meta-pick="tonearm"/.test(uiSrc)],
+    // 18. Guided order still uses Channel / Crosstalk Geometry (S7C.6)
+    ['S7C.6 regression: guided order still uses Channel / Crosstalk Geometry',
+      /mlab-guided-order-name.*Channel \/ Crosstalk Geometry/.test(uiSrc)],
+
+    // ── Safety constraints ────────────────────────────────────────────────────
+    // 19. Top ribbon Demo button absent
+    ['Safety: top ribbon Demo button NOT present',
+      !/data-mlab-ribbon-demo/.test(uiSrc)],
+    // 20. No fake 5–30 Hz resonance band
+    ['Safety: no fake 5-30 Hz resonance band',
+      !/5.*Hz.*to.*30.*Hz.*resonance|resonance.*5.*Hz.*to.*30.*Hz/i.test(uiSrc)],
+    // 21. S7B.2 autostart guard preserved
+    ['Safety: S7B.2 autostart guard still present',
+      /suspended/.test(uiSrc) || /AutostartGuard/.test(uiSrc)],
+  ];
+
+  let allPass = true;
+  for (const [label, ok] of checks) {
+    if (!ok) {
+      console.error(`S7C.7 static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S7C.7 static source check (Activity Log modal body geometry + live surface render): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS7C7();

@@ -555,7 +555,9 @@ button.mlab-rail-item:focus-visible {
   display: flex;
   flex-direction: column;
   width: min(680px, 90vw);
-  max-height: 70vh;
+  height: min(520px, 70vh);  /* explicit height — max-height alone lets the dialog collapse
+                                to head+foot (~85px) because flex-basis:0 body contributes
+                                nothing to intrinsic content height */
   background: var(--ea-bg-panel, #14161d);
   border: 1px solid var(--ea-border-primary, rgba(255,255,255,0.15));
   border-radius: 8px;
@@ -575,8 +577,8 @@ button.mlab-rail-item:focus-visible {
 }
 
 .mlab-log-modal-body {
-  flex: 1 1 0;
-  min-height: 0;
+  flex: 1 1 auto;  /* was 1 1 0 — auto basis preserves intrinsic height so flex-grow works */
+  min-height: 96px; /* hard floor: body cannot collapse below 96px even if flex math drifts */
   overflow-y: auto;
 }
 

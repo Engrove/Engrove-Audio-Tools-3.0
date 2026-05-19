@@ -2028,6 +2028,22 @@ function downloadSessionJson(): void {
   URL.revokeObjectURL(url);
 }
 
+// All selectors that should display live log entries.
+// Queried fresh each time to handle any layout change without stale refs.
+const LOG_SURFACE_SELECTORS = ['[data-mlab-log-body]', '[data-mlab-log-modal-content]'] as const;
+
+function renderLogSurfaces(): void {
+  const html = state.log.length === 0
+    ? '<span class="mlab-log-empty">No activity yet.</span>'
+    : state.log.map(e => `<div class="mlab-log-entry">${renderText(e)}</div>`).join('');
+  for (const sel of LOG_SURFACE_SELECTORS) {
+    const el = document.querySelector<HTMLElement>(sel);
+    if (!el) continue;
+    el.innerHTML = html;
+    el.scrollTop = el.scrollHeight;
+  }
+}
+
 function appendLog(message: string): void {
   const now = new Date();
   const hh = now.getHours().toString().padStart(2, '0');
@@ -2035,10 +2051,11 @@ function appendLog(message: string): void {
   const ss = now.getSeconds().toString().padStart(2, '0');
   const entry = `${hh}:${mm}:${ss}  ${message}`;
   state.log.push(entry);
-  const body = document.querySelector<HTMLElement>('[data-mlab-log-body]');
-  if (body) {
-    const empty = body.querySelector('.mlab-log-empty');
-    if (empty) empty.remove();
+  // Efficiently append single entry to all visible log surfaces
+  for (const sel of LOG_SURFACE_SELECTORS) {
+    const body = document.querySelector<HTMLElement>(sel);
+    if (!body) continue;
+    body.querySelector('.mlab-log-empty')?.remove();
     const line = document.createElement('div');
     line.className = 'mlab-log-entry';
     line.textContent = entry;
@@ -9274,8 +9291,7 @@ export function enableMeasurementLabInteractions(): void {
   document.querySelectorAll<HTMLButtonElement>('[data-mlab-log-reset]').forEach(btn => {
     btn.addEventListener('click', () => {
       state.log = [];
-      renderLogPanel(els);
-      renderLogModalContent();
+      renderLogSurfaces();
     });
   });
 
@@ -9283,7 +9299,6 @@ export function enableMeasurementLabInteractions(): void {
     btn.addEventListener('click', () => {
       exportLog();
       appendLog('Exported activity log.');
-      renderLogModalContent();
     });
   });
 
@@ -9308,21 +9323,11 @@ export function enableMeasurementLabInteractions(): void {
   });
 
   // Log modal open/close
-  const renderLogModalContent = (): void => {
-    const mc = els.logModalContent;
-    if (!mc) return;
-    if (state.log.length === 0) {
-      mc.innerHTML = '<span class="mlab-log-empty">No activity yet.</span>';
-    } else {
-      mc.innerHTML = state.log
-        .map(e => `<div class="mlab-log-entry">${renderText(e)}</div>`)
-        .join('');
-      mc.scrollTop = mc.scrollHeight;
-    }
-  };
+  // renderLogSurfaces() is a module-level helper that queries live DOM for both
+  // [data-mlab-log-body] and [data-mlab-log-modal-content] and re-renders from state.log.
   const openLogModal = (): void => {
     els.contextOverlay?.classList.remove('mlab-context-overlay--open');
-    renderLogModalContent();
+    renderLogSurfaces(); // always re-render from state.log before making modal visible
     els.logModal?.classList.add('mlab-log-modal--open');
   };
   document.querySelectorAll<HTMLButtonElement>('[data-mlab-open-log]').forEach(btn => {
