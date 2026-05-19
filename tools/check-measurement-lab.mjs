@@ -1547,7 +1547,7 @@ function checkS4GFinal() {
   const checks = [
     // Part A — Speed result UI: source badge
     ['Speed result: source badge class present', /mlab-result-source-row[\s\S]{0,400}ea-badge.*srcBadgeClass|srcBadgeClass[\s\S]{0,400}mlab-result-source-row/],
-    ['Speed result: Self-test \/ Simulated badge label', /Self-test \/ Simulated/],
+    ['Speed result: simulated source badge label (Self-test or Demo Mode)', /Self-test \/ Simulated|Demo Mode \/ Simulated/],
     ['Speed result: Live capture badge label in speed result', /function renderSpeedPanel[\s\S]{0,4000}Live capture/],
     // Part A — Speed result UI: band row
     ['Speed result: band meta label rendered', /function renderSpeedPanel[\s\S]{0,4000}state\.speed\.bandMeta[\s\S]{0,400}\.label/],
@@ -4314,14 +4314,14 @@ function checkS7B() {
       /sessionRibbonMarkup[\s\S]{0,1200}data-mlab-recog-badge/.test(uiSrc)],
     // 33. TS: audio source panel has arm section
     ['TS: audioSourcePanelMarkup includes mlab-recog-arm-section',
-      /audioSourcePanelMarkup[\s\S]{0,6000}mlab-recog-arm-section/.test(uiSrc)],
+      /audioSourcePanelMarkup[\s\S]{0,11000}mlab-recog-arm-section/.test(uiSrc)],
     // 34. TS: arm affordance exists somewhere (global or per-tool; S7B.1 moves arm to tool panels)
     ['TS: arm affordance exists (global or per-tool)',
       /data-mlab-recog-arm/.test(uiSrc) ||
       /data-mlab-local-arm/.test(uiSrc)],
     // 35. TS: disarm button in source panel
     ['TS: audioSourcePanelMarkup includes data-mlab-recog-disarm button',
-      /audioSourcePanelMarkup[\s\S]{0,6500}data-mlab-recog-disarm/.test(uiSrc)],
+      /audioSourcePanelMarkup[\s\S]{0,11500}data-mlab-recog-disarm/.test(uiSrc)],
     // 36. TS: manual start always possible (arm section does not disable manual start buttons)
     ['TS: manual start buttons not disabled by recognition state',
       !(/recogArmBtn[\s\S]{0,1000}data-mlab-connect/.test(uiSrc))],
@@ -4684,7 +4684,7 @@ function checkS7C() {
       /function toolGuidanceMarkup\(/.test(uiSrc)],
     // 2. toolGuidanceMarkup uses <details> collapsible pattern
     ['TS: toolGuidanceMarkup uses <details> collapsible pattern',
-      /toolGuidanceMarkup[\s\S]{0,5200}<details\s+class="mlab-guidance-card"/.test(uiSrc)],
+      /toolGuidanceMarkup[\s\S]{0,8000}<details\s+class="mlab-guidance-card"/.test(uiSrc)],
     // 3. toolGuidanceMarkup covers wow_flutter
     ['TS: toolGuidanceMarkup covers wow_flutter tool',
       /toolGuidanceMarkup[\s\S]{0,3000}wow_flutter/.test(uiSrc)],
@@ -4736,7 +4736,7 @@ function checkS7C() {
       /function resonanceBasisHtml\(/.test(uiSrc)],
     // 18. resonanceBasisHtml distinguishes measured sweep from exploratory
     ['TS: resonanceBasisHtml distinguishes measured vs exploratory basis',
-      /resonanceBasisHtml[\s\S]{0,800}Measured sweep[\s\S]{0,400}Exploratory/.test(uiSrc)],
+      /resonanceBasisHtml[\s\S]{0,800}Measured sweep[\s\S]{0,1600}Exploratory/.test(uiSrc)],
     // 19. resonanceBasisHtml injected in renderResonancePanel result state
     ['TS: resonanceBasisHtml injected in renderResonancePanel result state',
       /renderResonancePanel[\s\S]{0,3300}resonanceBasisHtml/.test(uiSrc)],
@@ -4816,3 +4816,219 @@ function checkS7C() {
 }
 
 checkS7C();
+
+function checkS7C1() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const cssSrcPath    = join(repoRoot, 'src/modules/measurement-lab/ui/measurementLab.css');
+
+  for (const p of [renderSrcPath, cssSrcPath]) {
+    if (!existsSync(p)) {
+      console.error(`S7C.1 static check FAIL: required file not found: ${p}`);
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const uiSrc  = readFileSync(renderSrcPath, 'utf8');
+  const cssSrc = readFileSync(cssSrcPath, 'utf8');
+
+  const checks = [
+    // ── Source controls in ribbon ────────────────────────────────────────────
+    // 1. Connect button in ribbon area
+    ['TS: Connect button visible in session ribbon (data-mlab-ribbon-connect)',
+      /data-mlab-ribbon-connect/.test(uiSrc)],
+    // 2. Disconnect button in ribbon area
+    ['TS: Disconnect button visible in session ribbon (data-mlab-ribbon-disconnect)',
+      /data-mlab-ribbon-disconnect/.test(uiSrc)],
+    // 3. Ribbon connect wired to connectMeasurementLab
+    ['TS: Ribbon connect button wired to connectMeasurementLab',
+      /ribbonConnect[\s\S]{0,200}connectMeasurementLab/.test(uiSrc)],
+    // 4. Ribbon disconnect wired to disconnectMeasurementLab
+    ['TS: Ribbon disconnect button wired to disconnectMeasurementLab',
+      /ribbonDisconnect[\s\S]{0,200}disconnectMeasurementLab/.test(uiSrc)],
+
+    // ── Demo Mode naming ────────────────────────────────────────────────────
+    // 5. Demo Mode source mode button label used (not "Self-test" as button text for the segment)
+    ['TS: Demo Mode segment button label used (not raw Self-test)',
+      /data-mlab-source-mode="self-test">Demo Mode</.test(uiSrc)],
+    // 6. SELF TEST or self-test user-facing label not present in primary UI buttons
+    ['Safety: "SELF TEST" user-facing label not in Measurement Lab UI',
+      !/>\s*SELF TEST\s*</.test(uiSrc)],
+    // 7. Demo Mode ribbon button exists
+    ['TS: Demo Mode ribbon button (data-mlab-ribbon-demo) exists',
+      /data-mlab-ribbon-demo/.test(uiSrc)],
+    // 8. Demo Mode has warning-style class (ribbon-demo-btn)
+    ['CSS: mlab-ribbon-demo-btn defined',
+      /\.mlab-ribbon-demo-btn\s*\{/.test(cssSrc)],
+
+    // ── Audio Source guidance ─────────────────────────────────────────────────
+    // 9. toolGuidanceMarkup covers audio_source
+    ['TS: toolGuidanceMarkup covers audio_source',
+      /toolGuidanceMarkup[\s\S]{0,300}audio_source/.test(uiSrc)],
+    // 10. audio_source guidance content exists
+    ['TS: audio_source guidance includes Live vs Demo explanation',
+      /toolGuidanceMarkup[\s\S]{0,8000}audio_source[\s\S]{0,500}Live.*Demo|Demo.*Live/.test(uiSrc)],
+
+    // ── Setup metadata ─────────────────────────────────────────────────────
+    // 11. SetupMetadata type defined
+    ['TS: SetupMetadata type defined',
+      /type SetupMetadata\s*=/.test(uiSrc)],
+    // 12. setupMetadata field in LabState
+    ['TS: setupMetadata field in LabState',
+      /LabState[\s\S]{0,2000}setupMetadata/.test(uiSrc)],
+    // 13. Cartridge field in setup metadata
+    ['TS: cartridge field in SetupMetadata',
+      /SetupMetadata[\s\S]{0,200}cartridge/.test(uiSrc)],
+    // 14. Compliance reference frequency field
+    ['TS: complianceRefFreq field in SetupMetadata',
+      /SetupMetadata[\s\S]{0,500}complianceRefFreq/.test(uiSrc)],
+    // 15. Setup metadata UI rendered (data-mlab-meta inputs)
+    ['TS: setup metadata input fields rendered (data-mlab-meta)',
+      /data-mlab-meta="cartridge"/.test(uiSrc)],
+
+    // ── Noise Floor Baseline ────────────────────────────────────────────────
+    // 16. NoiseFloorBaselineState type defined
+    ['TS: NoiseFloorBaselineState type defined',
+      /type NoiseFloorBaselineState\s*=/.test(uiSrc)],
+    // 17. noiseFloorBaseline field in LabState
+    ['TS: noiseFloorBaseline field in LabState',
+      /LabState[\s\S]{0,2000}noiseFloorBaseline/.test(uiSrc)],
+    // 18. "Set as baseline" button in noise floor panel
+    ['TS: Set-as-baseline button in noise floor panel (data-mlab-nf-set-baseline)',
+      /data-mlab-nf-set-baseline/.test(uiSrc)],
+    // 19. "Clear baseline" button in noise floor panel
+    ['TS: Clear-baseline button in noise floor panel (data-mlab-nf-clear-baseline)',
+      /data-mlab-nf-clear-baseline/.test(uiSrc)],
+    // 20. Baseline strip in ribbon area (data-mlab-baseline-strip)
+    ['TS: Baseline strip exists in ribbon markup (data-mlab-baseline-strip)',
+      /data-mlab-baseline-strip/.test(uiSrc)],
+    // 21. updateBaselineStrip function defined
+    ['TS: updateBaselineStrip function defined',
+      /function updateBaselineStrip\(\)/.test(uiSrc)],
+    // 22. Baseline reference-only note (no silent subtraction)
+    ['TS: Baseline marked reference only (no silent correction)',
+      /reference only|Reference only/.test(uiSrc)],
+    // 23. CSS: baseline-active defined
+    ['CSS: mlab-baseline-active defined',
+      /\.mlab-baseline-active\s*\{/.test(cssSrc)],
+    // 24. CSS: baseline-strip defined
+    ['CSS: mlab-baseline-strip defined',
+      /\.mlab-baseline-strip\s*\{/.test(cssSrc)],
+
+    // ── Channel Identity vs Azimuth ─────────────────────────────────────────
+    // 25. toolGuidanceMarkup covers azimuth_crosstalk
+    ['TS: toolGuidanceMarkup covers azimuth_crosstalk',
+      /toolGuidanceMarkup[\s\S]{0,300}azimuth_crosstalk/.test(uiSrc)],
+    // 26. Azimuth guidance does not positively claim a best/optimal/recommended azimuth setting
+    // (Phrases like "No best or recommended azimuth" or "not declared" are fine; bare positive claims are not.)
+    ['Safety: Azimuth guidance does not positively claim best/optimal azimuth recommendation',
+      !/azimuth_crosstalk[\s\S]{0,800}(?<!No\s{0,10}|not\s{0,10}|no\s{0,10}|declared\s{0,10})(best|optimal)\s+azimuth/i.test(uiSrc)],
+    // 27. Channel identity guidance mentions reversed connections
+    ['TS: Channel identity guidance mentions reversed connections',
+      /channel_identity[\s\S]{0,500}reversed/.test(uiSrc)],
+    // 28. renderChannelPanel distinguishes azimuth vs channel_identity content
+    ['TS: renderChannelPanel uses activeWorkflowId to distinguish azimuth vs channel_identity',
+      /renderChannelPanel[\s\S]{0,800}azimuth_crosstalk/.test(uiSrc)],
+    // 29. Channel identity has distinct head/title
+    ['TS: Channel Identity distinct context head in renderChannelPanel',
+      /mlab-channel-identity-head/.test(uiSrc)],
+    // 30. Azimuth has distinct head/title
+    ['TS: Azimuth distinct context head in renderChannelPanel',
+      /mlab-azimuth-head/.test(uiSrc)],
+
+    // ── Test-record track/band guidance ─────────────────────────────────────
+    // 31. trackBandHintMarkup function defined
+    ['TS: trackBandHintMarkup function defined',
+      /function trackBandHintMarkup\(/.test(uiSrc)],
+    // 32. trackBandHintMarkup covers noise_floor (no test record required)
+    ['TS: trackBandHintMarkup covers noise_floor with no-test-record note',
+      /trackBandHintMarkup[\s\S]{0,1000}noise_floor[\s\S]{0,200}No test record/.test(uiSrc)],
+    // 33. trackBandHintMarkup covers wow_flutter with 3150 Hz reference
+    ['TS: trackBandHintMarkup covers wow_flutter with 3150 Hz note',
+      /trackBandHintMarkup[\s\S]{0,1000}wow_flutter[\s\S]{0,300}3150/.test(uiSrc)],
+    // 34. trackBandHintMarkup covers vertical_resonance with sweep note
+    ['TS: trackBandHintMarkup covers vertical_resonance with sweep note',
+      /trackBandHintMarkup[\s\S]{0,1600}vertical_resonance[\s\S]{0,300}sweep/.test(uiSrc)],
+    // 35. mlab-track-band-hint CSS defined
+    ['CSS: mlab-track-band-hint defined',
+      /\.mlab-track-band-hint\s*\{/.test(cssSrc)],
+
+    // ── Resonance basis classification ──────────────────────────────────────
+    // 36. classifyResonanceBasis does NOT require fromHz >= 50
+    ['TS: classifyResonanceBasis does NOT require fromHz >= 50 for measured sweep',
+      /classifyResonanceBasis[\s\S]{0,200}fromHz\s*>=\s*50/.test(uiSrc) === false],
+    // 37. measured_low_frequency_sweep basis type defined
+    ['TS: measured_low_frequency_sweep basis type present in ResonanceBasis',
+      /measured_low_frequency_sweep/.test(uiSrc)],
+    // 38. measured_vertical_sweep basis type present
+    ['TS: measured_vertical_sweep basis type present',
+      /measured_vertical_sweep/.test(uiSrc)],
+    // 39. measured_lateral_sweep basis type present
+    ['TS: measured_lateral_sweep basis type present',
+      /measured_lateral_sweep/.test(uiSrc)],
+    // 40. exploratory_low_confidence basis type still present
+    ['TS: exploratory_low_confidence basis type still present',
+      /exploratory_low_confidence/.test(uiSrc)],
+    // 41. resonanceBasisHtml handles measured_low_frequency_sweep
+    ['TS: resonanceBasisHtml handles measured_low_frequency_sweep basis',
+      /resonanceBasisHtml[\s\S]{0,800}Measured sweep/.test(uiSrc)],
+    // 42. resonanceBasisHtml mentions vertical or lateral distinction
+    ['TS: resonanceBasisHtml mentions vertical or lateral sweep type',
+      /resonanceBasisHtml[\s\S]{0,1600}vertical[\s\S]{0,200}lateral|lateral[\s\S]{0,200}vertical/.test(uiSrc)],
+
+    // ── Evidence card ─────────────────────────────────────────────────────────
+    // 43. evidenceCardMarkup function defined
+    ['TS: evidenceCardMarkup function defined',
+      /function evidenceCardMarkup\(/.test(uiSrc)],
+    // 44. EvidenceCardState type defined
+    ['TS: EvidenceCardState type defined',
+      /type EvidenceCardState\s*=/.test(uiSrc)],
+    // 45. no_data evidence state defined
+    ['TS: no_data evidence state in EvidenceCardState',
+      /EvidenceCardState[\s\S]{0,100}no_data/.test(uiSrc)],
+    // 46. captured evidence state defined
+    ['TS: captured evidence state in EvidenceCardState',
+      /EvidenceCardState[\s\S]{0,200}captured/.test(uiSrc)],
+    // 47. CSS: mlab-evidence-card defined
+    ['CSS: mlab-evidence-card defined',
+      /\.mlab-evidence-card\s*\{/.test(cssSrc)],
+    // 48. CSS: mlab-evidence-card-title defined
+    ['CSS: mlab-evidence-card-title defined',
+      /\.mlab-evidence-card-title\s*\{/.test(cssSrc)],
+
+    // ── Safety guards ────────────────────────────────────────────────────────
+    // 49. No full S7D contextual evidence panel introduced
+    ['Safety: no full S7D contextual evidence panel introduced',
+      !/S7D.*contextual.*evidence.*panel/i.test(uiSrc)],
+    // 50. No 3D visualization introduced
+    ['Safety: no 3D tonearm visualization introduced',
+      !/three\.js|Three\.js|WebGL.*tonearm|tonearm.*3D|3D.*tonearm/i.test(uiSrc)],
+    // 51. No fake data or fake confidence introduced
+    ['Safety: no fake resonance confidence or correction',
+      !/fakeResonance|fake_resonance|silentCorrect|baselineSubtract/.test(uiSrc)],
+    // 52. S7B.2 autostart safety still present
+    ['Regression: S7B.2 Autostart suspended phrasing still present',
+      /Autostart suspended\. Disarm and re-arm from the target tool/.test(uiSrc)],
+    // 53. VTA still planned
+    ['Regression: VTA still planned/experimental',
+      /vta_imd_optimizer[\s\S]{0,200}planned|planned[\s\S]{0,200}vta_imd_optimizer/i.test(uiSrc)],
+    // 54. CSS: mlab-setup-metadata defined
+    ['CSS: mlab-setup-metadata defined',
+      /\.mlab-setup-metadata\s*\{/.test(cssSrc)],
+  ];
+
+  let allPass = true;
+  for (const [label, ok] of checks) {
+    if (!ok) {
+      console.error(`S7C.1 static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S7C.1 static source check (Corrective Per-Tool Guidance, Source Controls & Evidence Foundation): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS7C1();

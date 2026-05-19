@@ -78,7 +78,7 @@ type WorkbenchTool = {
 };
 
 const WORKBENCH_TOOLS: readonly WorkbenchTool[] = [
-  { id: 'audio_source', label: 'Audio Source', panelId: 'mlab-source-panel', group: 'Setup / baseline', workflowId: null, description: 'Connect ADC, choose live/self-test and verify input scope.' },
+  { id: 'audio_source', label: 'Audio Source', panelId: 'mlab-source-panel', group: 'Setup / baseline', workflowId: null, description: 'Connect ADC, choose live capture or Demo Mode, and verify input scope.' },
   { id: 'reference_level', label: 'Reference Level Calibration', panelId: 'mlab-reflevel-panel', group: 'Setup / baseline', workflowId: 'reference_level', description: 'Calibrate ADC input against standard groove level.' },
   { id: 'channel_identity', label: 'Channel Identity', panelId: 'mlab-channel-panel', group: 'Channel / geometry', workflowId: 'channel_identity', description: 'Verify L/R routing and detect reversed connections.' },
   { id: 'azimuth_crosstalk', label: 'Azimuth & Crosstalk', panelId: 'mlab-channel-panel', group: 'Channel / geometry', workflowId: 'azimuth_crosstalk', description: 'Measure channel separation and azimuth alignment.' },
@@ -1106,6 +1106,30 @@ function audioSourcePanelMarkup(): string {
           </div>
           <canvas class="mlab-source-freq-canvas" data-mlab-source-freq-canvas width="600" height="140" aria-hidden="true"></canvas>
         </div>
+      </div>
+      <div class="ea-panel-body">
+        ${toolGuidanceMarkup('audio_source')}
+        <details class="mlab-setup-metadata">
+          <summary class="mlab-setup-metadata-head">Setup metadata <span class="ea-muted">(optional — for reports)</span></summary>
+          <div class="mlab-setup-metadata-body">
+            <table class="ea-form-table" aria-label="Setup metadata">
+              <tbody>
+                <tr><td class="ea-col-status">${statusDot('planned')}</td><td class="ea-col-label">Cartridge / pickup</td><td class="ea-col-value"><input type="text" class="ea-input" data-mlab-meta="cartridge" placeholder="e.g. Ortofon 2M Blue" value=""></td><td class="ea-col-meta"><span class="ea-badge">Optional</span></td></tr>
+                <tr><td class="ea-col-status">${statusDot('planned')}</td><td class="ea-col-label">Stylus / profile</td><td class="ea-col-value"><input type="text" class="ea-input" data-mlab-meta="stylus" placeholder="e.g. elliptical, line contact" value=""></td><td class="ea-col-meta"><span class="ea-badge">Optional</span></td></tr>
+                <tr><td class="ea-col-status">${statusDot('planned')}</td><td class="ea-col-label">Tonearm</td><td class="ea-col-value"><input type="text" class="ea-input" data-mlab-meta="tonearm" placeholder="e.g. Rega RB330" value=""></td><td class="ea-col-meta"><span class="ea-badge">Optional</span></td></tr>
+                <tr><td class="ea-col-status">${statusDot('planned')}</td><td class="ea-col-label">Turntable / plinth</td><td class="ea-col-value"><input type="text" class="ea-input" data-mlab-meta="turntable" placeholder="e.g. Rega Planar 3" value=""></td><td class="ea-col-meta"><span class="ea-badge">Optional</span></td></tr>
+                <tr><td class="ea-col-status">${statusDot('planned')}</td><td class="ea-col-label">Phono stage</td><td class="ea-col-value"><input type="text" class="ea-input" data-mlab-meta="phonoStage" placeholder="e.g. Pro-Ject Phono Box S2" value=""></td><td class="ea-col-meta"><span class="ea-badge">Optional</span></td></tr>
+                <tr><td class="ea-col-status">${statusDot('planned')}</td><td class="ea-col-label">ADC / interface</td><td class="ea-col-value"><input type="text" class="ea-input" data-mlab-meta="adcInterface" placeholder="e.g. Focusrite Scarlett 2i2" value=""></td><td class="ea-col-meta"><span class="ea-badge">Optional</span></td></tr>
+                <tr><td class="ea-col-status">${statusDot('planned')}</td><td class="ea-col-label">Effective tonearm mass</td><td class="ea-col-value"><input type="text" class="ea-input" data-mlab-meta="tonearmMassG" inputmode="decimal" placeholder="g" value=""></td><td class="ea-col-meta"><span class="ea-badge">Reference</span></td></tr>
+                <tr><td class="ea-col-status">${statusDot('planned')}</td><td class="ea-col-label">Cartridge mass</td><td class="ea-col-value"><input type="text" class="ea-input" data-mlab-meta="cartridgeMassG" inputmode="decimal" placeholder="g" value=""></td><td class="ea-col-meta"><span class="ea-badge">Reference</span></td></tr>
+                <tr><td class="ea-col-status">${statusDot('planned')}</td><td class="ea-col-label">Fastener / hardware mass</td><td class="ea-col-value"><input type="text" class="ea-input" data-mlab-meta="fastenerMassG" inputmode="decimal" placeholder="g" value=""></td><td class="ea-col-meta"><span class="ea-badge">Reference</span></td></tr>
+                <tr><td class="ea-col-status">${statusDot('planned')}</td><td class="ea-col-label">Compliance value</td><td class="ea-col-value"><input type="text" class="ea-input" data-mlab-meta="complianceValue" inputmode="decimal" placeholder="µm/mN or mm/N" value=""></td><td class="ea-col-meta"><span class="ea-badge">Reference</span></td></tr>
+                <tr><td class="ea-col-status">${statusDot('planned')}</td><td class="ea-col-label">Compliance reference</td><td class="ea-col-value"><select class="ea-input" data-mlab-meta="complianceRefFreq"><option value="unknown">Unknown</option><option value="10hz">10 Hz</option><option value="100hz">100 Hz</option></select></td><td class="ea-col-meta"><span class="ea-badge">Reference</span></td></tr>
+              </tbody>
+            </table>
+            <p class="ea-muted">These fields are optional and do not affect measurement capture. Mass and compliance values are reference data, not direct measurements. If entered, they appear in exported reports.</p>
+          </div>
+        </details>
       </div>
       <div class="ea-panel-body mlab-recog-arm-section" data-mlab-recog-arm-section>
         <div class="mlab-recog-arm-row">
@@ -2693,6 +2717,10 @@ function elements(root: ParentNode) {
     recogArmReason: root.querySelector<HTMLElement>('[data-mlab-recog-arm-reason]'),
     recogArmBtn: root.querySelector<HTMLButtonElement>('[data-mlab-recog-arm]'),
     recogDisarmBtn: root.querySelector<HTMLButtonElement>('[data-mlab-recog-disarm]'),
+    ribbonConnect: root.querySelector<HTMLButtonElement>('[data-mlab-ribbon-connect]'),
+    ribbonDisconnect: root.querySelector<HTMLButtonElement>('[data-mlab-ribbon-disconnect]'),
+    ribbonDemoBtn: root.querySelector<HTMLButtonElement>('[data-mlab-ribbon-demo]'),
+    baselineStrip: root.querySelector<HTMLElement>('[data-mlab-baseline-strip]'),
   };
 }
 
@@ -2771,7 +2799,7 @@ function speedRunHistoryMarkup(runs: readonly SpeedMeasurementRun[]): string {
     const err = r.speedErrorPercent !== null ? `${r.speedErrorPercent >= 0 ? '+' : ''}${r.speedErrorPercent.toFixed(3)} %` : '—';
     const wf = r.wowFlutterPercent !== null ? `${r.wowFlutterPercent.toFixed(3)} %` : '—';
     const wfw = r.wowFlutterWeightedPercent !== null ? `${r.wowFlutterWeightedPercent.toFixed(3)} %` : '—';
-    const src = r.source === 'self_test' ? 'Self-test' : 'Live';
+    const src = r.source === 'self_test' ? 'Demo Mode' : 'Live';
     return `<tr class="mlab-speed-history-row">
       <td class="mlab-speed-history-cell">${renderText(time)}</td>
       <td class="mlab-speed-history-cell">${renderText(rpmLabel)}</td>
@@ -2922,7 +2950,7 @@ function renderSpeedPanel(els: Elements): void {
     const r = state.speed.result;
     const grade = classifyWf(r.unweightedWfPercent);
     const srcBadgeClass = state.speed.resultSource === 'self_test' ? 'ea-badge--setup' : 'ea-badge--manufacturer';
-    const srcBadgeLabel = state.speed.resultSource === 'self_test' ? 'Self-test / Simulated' : 'Live capture';
+    const srcBadgeLabel = state.speed.resultSource === 'self_test' ? 'Demo Mode / Simulated' : 'Live capture';
     const bandRow = state.speed.bandMeta
       ? `<div class="mlab-wf-result-row">
           <span class="mlab-wf-result-label">Band</span>
@@ -2985,7 +3013,7 @@ function renderSpeedPanel(els: Elements): void {
         </div>
       </div>
       <p class="mlab-chain-note">These readings measure playback/capture speed stability and are affected by the test record, turntable and capture chain.</p>
-      <p class="mlab-evidence-note mlab-evidence-note--limitation">Limitation: W&amp;F floor ~0.5&thinsp;Hz. Rumble and very slow drift are not measured here. Self-test results are simulated and do not reflect real-world performance.</p>
+      <p class="mlab-evidence-note mlab-evidence-note--limitation">Limitation: W&amp;F floor ~0.5&thinsp;Hz. Rumble and very slow drift are not measured here. Demo Mode results are simulated and do not reflect real-world performance.</p>
       ${renderRunQualityHtml(state.speed.runs[state.speed.runs.length - 1]?.runQuality)}
       ${speedRunComparisonMarkup(state.speed.runs)}
       <div class="mlab-session-controls">
@@ -3032,7 +3060,7 @@ function renderSpeedPanel(els: Elements): void {
   const durationHasOverride = state.speed.captureDurationSecondsInput.trim() !== '';
 
   const selfTestNote = state.sourceMode === 'self-test'
-    ? '<p class="ea-muted mlab-reflevel-selftest-note">Self-test mode: the 1&thinsp;kHz oscillator is not a 3150&thinsp;Hz reference — results will be marked <strong>self-test&nbsp;/&nbsp;simulated</strong> and are not a valid W&amp;F measurement.</p>'
+    ? '<p class="ea-muted mlab-reflevel-selftest-note">Demo Mode: the 1&thinsp;kHz oscillator is not a 3150&thinsp;Hz reference — results will be marked <strong>demo mode&nbsp;/&nbsp;simulated</strong> and are not a valid W&amp;F measurement.</p>'
     : '';
 
   const preferredBand = speedBands.find(b => b.frequencyHz === 3150) ?? speedBands[0];
@@ -3045,6 +3073,7 @@ function renderSpeedPanel(els: Elements): void {
 
   body.innerHTML = `
     ${toolGuidanceMarkup('wow_flutter')}
+    ${trackBandHintMarkup('wow_flutter')}
     ${selfTestNote}
     ${ctxToggleHtml}
     <div class="mlab-speed-settings">
@@ -3245,10 +3274,10 @@ function renderChannelPanel(els: Elements): void {
       ? identity.warnings.map(w => `<p class="mlab-channel-warning">${renderText(w)}</p>`).join('')
       : '';
     const sourceLabel = ch.source === 'self_test'
-      ? '<span class="ea-badge">Self-test</span>'
+      ? '<span class="ea-badge">Demo Mode</span>'
       : '<span class="ea-badge ea-badge--manufacturer">Live</span>';
     const selfTestNote = ch.source === 'self_test'
-      ? `<p class="mlab-channel-selftest-note">Self-test uses a mono sine — channel separation is not meaningful. Results are indicative only.</p>`
+      ? `<p class="mlab-channel-selftest-note">Demo Mode uses a mono sine — channel separation is not meaningful. Results are indicative only.</p>`
       : '';
     body.innerHTML = `
       <table class="ea-form-table" aria-label="Channel measurement summary">
@@ -3333,14 +3362,22 @@ function renderChannelPanel(els: Elements): void {
   }
 
   // Idle (no captures yet)
+  const isAzimuth = state.activeWorkflowId === 'azimuth_crosstalk';
+  const panelGuidance = isAzimuth ? toolGuidanceMarkup('azimuth_crosstalk') : toolGuidanceMarkup('channel_identity');
+  const panelContextHead = isAzimuth
+    ? `<p class="mlab-azimuth-head ea-muted"><strong>Azimuth &amp; Crosstalk</strong> — measure crosstalk evidence across azimuth steps. No best or recommended azimuth setting is declared; use evidence alongside listening tests.</p>`
+    : `<p class="mlab-channel-identity-head ea-muted"><strong>Channel Identity</strong> — verifies L/R wiring, detects reversed connections, confirms channel routing sanity. Result is wiring/routing sanity, not an azimuth recommendation.</p>`;
+  const trackHint = isAzimuth ? trackBandHintMarkup('azimuth_crosstalk') : trackBandHintMarkup('channel_identity');
   const leftBandInfo = leftBand
     ? `<p class="mlab-channel-info">Step 1 of 2: cue band <strong>${renderText(leftBand.index)}</strong> — ${renderText(leftBand.label)}. Each capture is ${channelMeasurementDurationSeconds}&nbsp;seconds.</p>`
     : `<p class="ea-muted">Step 1 of 2: cue the L-channel reference band on the test record (typically 1&nbsp;kHz, L only). Each capture is ${channelMeasurementDurationSeconds}&nbsp;seconds.</p>`;
   const selfTestNotice = isSelfTest
-    ? `<p class="mlab-channel-selftest-note">Self-test mode uses a mono oscillator — channel identity result will be indicative only.</p>`
+    ? `<p class="mlab-channel-selftest-note mlab-demo-mode-warn">Demo Mode uses a mono oscillator — channel identity result will be indicative only.</p>`
     : '';
   body.innerHTML = `
-    ${toolGuidanceMarkup('channel_identity')}
+    ${panelGuidance}
+    ${panelContextHead}
+    ${trackHint}
     ${leftBandInfo}
     ${selfTestNotice}
     <div class="mlab-azimuth-label-row">
@@ -3375,7 +3412,7 @@ function renderChannelPanel(els: Elements): void {
 function azimuthStepHistoryMarkup(runs: readonly AzimuthStepRun[]): string {
   if (runs.length === 0) return '';
   const rows = runs.map((r, i) => {
-    const srcLabel = r.source === 'self_test' ? 'Self-test' : 'Live';
+    const srcLabel = r.source === 'self_test' ? 'Demo Mode' : 'Live';
     const ltr = r.leftToRightCrosstalkDb.toFixed(1);
     const rtl = r.rightToLeftCrosstalkDb.toFixed(1);
     const quality = r.runQuality?.status ?? 'n/a';
@@ -3573,7 +3610,7 @@ function renderFreqPanel(els: Elements): void {
   if (state.freq.result) {
     const chartHtml = buildFreqResponseSvg(state.freq.result, state.iriaaEnabled);
     const sourceBadge = state.freq.resultSource === 'self_test'
-      ? '<span class="ea-badge ea-badge--setup">Self-test / Simulated</span>'
+      ? '<span class="ea-badge ea-badge--setup">Demo Mode / Simulated</span>'
       : '<span class="ea-badge ea-badge--manufacturer">Live capture</span>';
     const iriaaLabel = state.iriaaEnabled
       ? '<span class="ea-badge ea-badge--ok">iRIAA applied</span>'
@@ -3645,7 +3682,7 @@ function renderFreqPanel(els: Elements): void {
     ? ' The RIAA reference curve will be overlaid for comparison.'
     : '';
   const selfTestNote = state.sourceMode === 'self-test'
-    ? `<p class="ea-muted mlab-reflevel-selftest-note">Self-test mode: the 1&thinsp;kHz oscillator does not produce a sweep &mdash; results will be marked <strong>self-test&nbsp;/&nbsp;simulated</strong> and are not a frequency response measurement.</p>`
+    ? `<p class="ea-muted mlab-reflevel-selftest-note">Demo Mode: the 1&thinsp;kHz oscillator does not produce a sweep &mdash; results will be marked <strong>demo mode&nbsp;/&nbsp;simulated</strong> and are not a frequency response measurement.</p>`
     : '';
   const calSetNote = state.refLevel.calibrationSet.length > 0
     ? `<p class="mlab-reflevel-info">Reference calibration set available for context.</p>`
@@ -3685,6 +3722,7 @@ function renderFreqPanel(els: Elements): void {
 
   body.innerHTML = `
     ${toolGuidanceMarkup('frequency_response')}
+    ${trackBandHintMarkup('frequency_response')}
     ${selfTestNote}
     <p class="mlab-reflevel-info">These readings measure the full playback/capture chain: test record, cartridge, tonearm, phono stage and audio interface. They are not cartridge-only response.${overlayNote}</p>
     ${calSetNote}
@@ -4082,7 +4120,7 @@ function renderCalibrationSetHtml(set: CalibrationSetEntry[]): string {
     const ref = e.source === 'live_capture' ? ref1kHzLive : ref1kHzSelfTest;
     const rel = relativeTo1kHz(e, ref);
     const srcBadgeClass = e.source === 'self_test' ? 'ea-badge ea-badge--setup' : 'ea-badge ea-badge--manufacturer';
-    const srcLabel = e.source === 'self_test' ? 'Self-test' : 'Live';
+    const srcLabel = e.source === 'self_test' ? 'Demo Mode' : 'Live';
     const clipCell = e.result.clipping
       ? `<span class="mlab-reflevel-calset-clip">Clip</span>`
       : `<span>—</span>`;
@@ -4144,7 +4182,7 @@ function renderRefLevelPanel(els: Elements): void {
     } else if (state.captureState === 'error') {
       statusMsg = '<p class="ea-muted mlab-coverage-load-error">Connection error &mdash; reconnect to analyze reference level.</p>';
     } else {
-      statusMsg = '<p class="ea-muted">Connect a live source or run a self-test to analyze reference level.</p>';
+      statusMsg = '<p class="ea-muted">Connect a live source or start Demo Mode to analyze reference level.</p>';
     }
     body.innerHTML = statusMsg + renderCalibrationSetHtml(state.refLevel.calibrationSet);
     attachClearSetListener(body, els);
@@ -4190,7 +4228,7 @@ function renderRefLevelPanel(els: Elements): void {
 
   if (state.refLevel.result) {
     const r = state.refLevel.result;
-    const sourceLabel = state.refLevel.resultSource === 'self_test' ? 'Self-test / Simulated' : 'Live capture';
+    const sourceLabel = state.refLevel.resultSource === 'self_test' ? 'Demo Mode / Simulated' : 'Live capture';
     const sourceBadgeClass = state.refLevel.resultSource === 'self_test' ? 'ea-badge ea-badge--setup' : 'ea-badge ea-badge--manufacturer';
     const warningHtml = r.warnings.length > 0
       ? Array.from(r.warnings).map(w => `<p class="mlab-reflevel-warning">${renderText(w)}</p>`).join('')
@@ -4269,11 +4307,12 @@ function renderRefLevelPanel(els: Elements): void {
   }).join('');
 
   const selfTestNote = state.sourceMode === 'self-test'
-    ? `<p class="ea-muted mlab-reflevel-selftest-note">Self-test mode: results will be marked as <strong>self-test / simulated</strong>.</p>`
+    ? `<p class="ea-muted mlab-reflevel-selftest-note">Demo Mode: results will be marked as <strong>demo mode / simulated</strong>.</p>`
     : '';
 
   body.innerHTML = `
     ${toolGuidanceMarkup('reference_level')}
+    ${trackBandHintMarkup('reference_level')}
     ${selfTestNote}
     <p class="mlab-reflevel-info">Reference level calibration measures the signal chain: test record &rarr; cartridge &rarr; tonearm &rarr; phono stage &rarr; audio interface. This is <em>not</em> a full cartridge frequency response measurement. Works best with a line-in or audio interface.</p>
     <table class="ea-form-table" aria-label="Reference level setup">
@@ -4447,6 +4486,25 @@ function toolGuidanceMarkup(toolId: string): string {
         { label: 'Limitation', text: 'Noise floor varies with environment, cables, and grounding. Not a pass/fail test.' },
       ];
       break;
+    case 'audio_source':
+      items = [
+        { label: 'Controls', text: 'Connects your ADC or audio interface to the measurement chain. All measurements require source readiness before capture.' },
+        { label: 'Live vs Demo', text: 'Live capture uses your real hardware input. Demo Mode generates a simulated internal signal — no real hardware input is active in Demo Mode.' },
+        { label: 'Sample rate', text: 'The tool requests 96&thinsp;kHz stereo. Some browsers or drivers may deliver a different rate. The honesty report shows the actual rate after connect.' },
+        { label: 'Input scope', text: 'Level meters show the signal immediately after ADC conversion. Software iRIAA (if enabled) is applied before measurement capture.' },
+        { label: 'Clipping', text: 'Avoid signal clipping (red indicators). Reduce gain at your phono stage or ADC before starting measurements.' },
+        { label: 'Noise baseline', text: 'Run Noise Floor / Rig Baseline after connecting but before playing a record, to capture a reference noise floor for context in later measurements.' },
+      ];
+      break;
+    case 'azimuth_crosstalk':
+      items = [
+        { label: 'Measures', text: 'Channel separation (crosstalk) evidence for azimuth alignment adjustment across multiple tonearm positions.' },
+        { label: 'Signal', text: 'L/R channel-isolated tone bands on the test record — used in a step-capture workflow.' },
+        { label: 'Workflow', text: 'Capture L-band and R-band for each azimuth step. Label each run (e.g. Baseline, +1°). Compare crosstalk across steps.' },
+        { label: 'Interpret', text: 'Lower crosstalk (more negative dB) generally indicates better channel separation at that azimuth. No best or recommended azimuth setting is declared. Use this evidence alongside listening tests and your own judgement.' },
+        { label: 'Limitation', text: 'Crosstalk varies with test frequency. This tool captures at a single frequency band. Azimuth optimisation involves many factors beyond crosstalk alone.' },
+      ];
+      break;
     default:
       return '';
   }
@@ -4462,30 +4520,147 @@ function toolGuidanceMarkup(toolId: string): string {
   </details>`;
 }
 
-// ── S7C: Resonance measurement basis ─────────────────────────────────────────
+// ── S7C.1: Per-tool evidence card helper ─────────────────────────────────────
 
-type ResonanceBasis = 'measured_sweep' | 'exploratory_low_confidence';
+type EvidenceCardState = 'no_data' | 'live' | 'captured' | 'unavailable' | 'estimated';
+
+function evidenceCardMarkup(args: {
+  readonly title: string;
+  readonly state: EvidenceCardState;
+  readonly source?: string;
+  readonly metrics?: ReadonlyArray<{ readonly label: string; readonly value: string }>;
+  readonly interpretation?: string;
+  readonly limitation?: string;
+}): string {
+  const stateLabels: Record<EvidenceCardState, string> = {
+    no_data: 'No data',
+    live: 'Live',
+    captured: 'Captured',
+    unavailable: 'Unavailable',
+    estimated: 'Estimated',
+  };
+  const stateBadgeKind: Record<EvidenceCardState, string> = {
+    no_data: 'ea-badge--setup',
+    live: 'ea-badge--manufacturer',
+    captured: 'ea-badge--manufacturer',
+    unavailable: 'ea-badge--setup',
+    estimated: 'ea-badge--setup',
+  };
+  const metricsHtml = args.metrics && args.metrics.length > 0
+    ? args.metrics.map(m =>
+        `<div class="mlab-evidence-card-metric">
+          <span class="mlab-evidence-card-label">${renderText(m.label)}</span>
+          <span class="mlab-evidence-card-value">${renderText(m.value)}</span>
+        </div>`
+      ).join('')
+    : '';
+  const interpretationHtml = args.interpretation
+    ? `<p class="mlab-evidence-card-interpretation ea-muted">${renderText(args.interpretation)}</p>`
+    : '';
+  const limitationHtml = args.limitation
+    ? `<p class="mlab-evidence-card-limitation mlab-evidence-note mlab-evidence-note--limitation">${renderText(args.limitation)}</p>`
+    : '';
+  const sourceHtml = args.source
+    ? `<span class="ea-muted"> — ${renderText(args.source)}</span>`
+    : '';
+  return `
+    <div class="mlab-evidence-card">
+      <div class="mlab-evidence-card-title">
+        ${renderText(args.title)}
+        <span class="ea-badge ${stateBadgeKind[args.state]} mlab-evidence-card-state mlab-evidence-card-state--${args.state}">${stateLabels[args.state]}</span>
+        ${sourceHtml}
+      </div>
+      <div class="mlab-evidence-card-body">
+        ${metricsHtml}
+        ${interpretationHtml}
+        ${limitationHtml}
+      </div>
+    </div>
+  `;
+}
+
+// ── S7C.1: Per-tool test-record track/band guidance ───────────────────────────
+
+function trackBandHintMarkup(toolId: string): string {
+  const record = selectedRecord();
+  type BandHint = { label: string; unavailableNote: string; notRequired?: boolean };
+  const hints: Partial<Record<string, BandHint>> = {
+    audio_source: { label: 'No test record required for connection', unavailableNote: '', notRequired: true },
+    noise_floor: { label: 'No test record required — rig baseline', unavailableNote: '', notRequired: true },
+    reference_level: { label: '1&thinsp;kHz (or record reference) calibration band', unavailableNote: 'No reference calibration band on selected record.' },
+    wow_flutter: { label: '3150&thinsp;Hz speed reference band', unavailableNote: 'No speed reference band on selected record.' },
+    channel_identity: { label: 'L-only and R-only channel identification bands', unavailableNote: 'No per-channel isolation bands on selected record.' },
+    azimuth_crosstalk: { label: 'L/R channel-isolated tone bands for step workflow', unavailableNote: 'No crosstalk/channel-isolated bands on selected record.' },
+    frequency_response: { label: 'Wide-band frequency sweep band', unavailableNote: 'No frequency sweep band on selected record.' },
+    thd_imd: { label: 'THD single-tone or IMD dual-tone distortion test band', unavailableNote: 'No distortion test band on selected record.' },
+    vertical_resonance: { label: 'Low-frequency sweep (e.g. 1&thinsp;kHz&rarr;10&thinsp;Hz vertical, or 5&ndash;25&thinsp;Hz)', unavailableNote: 'No low-frequency sweep band on selected record. Estimate from compliance/mass values only if available.' },
+    vta_imd_optimizer: { label: 'VTA IMD optimization band (experimental/planned)', unavailableNote: 'No VTA IMD band on selected record.' },
+  };
+  const hint = hints[toolId];
+  if (!hint) return '';
+  if (hint.notRequired) {
+    return `<p class="mlab-track-band-hint ea-muted">&#8226;&thinsp;Test record: ${hint.label}.</p>`;
+  }
+  if (!record) {
+    return `<p class="mlab-track-band-hint mlab-track-band-hint--unavailable ea-muted">&#8226;&thinsp;Test record: Select a record to see required track/band.</p>`;
+  }
+  const workflow = MEASUREMENT_WORKFLOWS.find(w => w.id === toolId);
+  if (!workflow) {
+    return `<p class="mlab-track-band-hint ea-muted">&#8226;&thinsp;Required track: ${hint.label}.</p>`;
+  }
+  const cov = computeAllWorkflowCoverage(record).find(c => c.workflowId === workflow.id);
+  if (cov && cov.availability !== 'unavailable' && cov.matchingBands.length > 0) {
+    return `<p class="mlab-track-band-hint ea-muted">&#8226;&thinsp;Test record band: ${renderText(cov.matchingBands[0] ?? '')}.</p>`;
+  }
+  return `<p class="mlab-track-band-hint mlab-track-band-hint--unavailable ea-muted">&#8226;&thinsp;Test record: ${renderText(hint.unavailableNote || 'Not available with selected record.')} Manual-only measurement possible.</p>`;
+}
+
+// ── S7C.1: Resonance measurement basis ───────────────────────────────────────
+
+type ResonanceBasis =
+  | 'measured_vertical_sweep'
+  | 'measured_lateral_sweep'
+  | 'measured_low_frequency_sweep'
+  | 'estimated_from_compliance'
+  | 'unavailable'
+  | 'exploratory_low_confidence';
 
 function classifyResonanceBasis(fromHz: number, toHz: number): ResonanceBasis {
-  // Valid direct measurement: sweep descends into the resonance range (toHz ≤ 25 Hz)
-  // and starts well above it (fromHz ≥ 50 Hz), indicating a dedicated descending sweep.
-  if (toHz <= 25 && fromHz >= 50) return 'measured_sweep';
+  // Controlled low-frequency sweep: descends into the tonearm–cartridge resonance range.
+  // Any sweep reaching toHz at or below 25 Hz qualifies as a direct low-frequency resonance
+  // measurement. No minimum starting frequency is required (S7C.1 update).
+  void fromHz; // fromHz retained in signature for future sub-classification support.
+  if (toHz <= 25) return 'measured_low_frequency_sweep';
   return 'exploratory_low_confidence';
 }
 
 function resonanceBasisHtml(fromHz: number, toHz: number): string {
   const basis = classifyResonanceBasis(fromHz, toHz);
-  if (basis === 'measured_sweep') {
+  if (basis === 'measured_low_frequency_sweep') {
     return `<div class="mlab-resonance-basis">
       <span class="mlab-resonance-basis-label">Measurement basis</span>
       <span class="ea-badge ea-badge--manufacturer">Measured sweep</span>
-      <span class="mlab-resonance-basis-note">Verify whether the test band is a vertical or lateral modulation sweep. The analysis does not distinguish between them.</span>
+      <span class="mlab-resonance-basis-note">Controlled low-frequency sweep — descends into the tonearm–cartridge resonance range (≤&thinsp;25&thinsp;Hz). Verify whether the test band is a vertical or lateral modulation sweep. The analysis does not distinguish between them.</span>
+    </div>`;
+  }
+  if (basis === 'measured_vertical_sweep') {
+    return `<div class="mlab-resonance-basis">
+      <span class="mlab-resonance-basis-label">Measurement basis</span>
+      <span class="ea-badge ea-badge--manufacturer">Measured vertical sweep</span>
+      <span class="mlab-resonance-basis-note">Vertical modulation sweep covering the resonance range. Peak frequency reflects the vertical resonance of the tonearm–cartridge system. Lateral resonance may differ.</span>
+    </div>`;
+  }
+  if (basis === 'measured_lateral_sweep') {
+    return `<div class="mlab-resonance-basis">
+      <span class="mlab-resonance-basis-label">Measurement basis</span>
+      <span class="ea-badge ea-badge--manufacturer">Measured lateral sweep</span>
+      <span class="mlab-resonance-basis-note">Lateral modulation sweep covering the resonance range. Results apply to lateral (horizontal) resonance. Vertical resonance may differ.</span>
     </div>`;
   }
   return `<div class="mlab-resonance-basis">
     <span class="mlab-resonance-basis-label">Measurement basis</span>
     <span class="ea-badge ea-badge--setup">Exploratory / low confidence</span>
-    <span class="mlab-resonance-basis-note">Sweep range (${renderText(String(fromHz))}–${renderText(String(toHz))}&thinsp;Hz) may not fully cover the tonearm–cartridge resonance region. Use a dedicated low-frequency descending sweep (e.g. 1&thinsp;kHz&rarr;10&thinsp;Hz) for a reliable result.</span>
+    <span class="mlab-resonance-basis-note">Sweep range (${renderText(String(fromHz))}–${renderText(String(toHz))}&thinsp;Hz) does not fully cover the tonearm–cartridge resonance region. Use a dedicated descending low-frequency sweep (e.g. 1&thinsp;kHz&rarr;10&thinsp;Hz or 5&ndash;25&thinsp;Hz) for a reliable result. Vertical or lateral sweep type is not known.</span>
   </div>`;
 }
 
@@ -4668,7 +4843,7 @@ function renderThdPanel(els: Elements): void {
     const r = state.thd.result;
     const distMetaPanel = buildThdDistortionMeta();
     const sourceBadge = state.thd.resultSource === 'self_test'
-      ? '<span class="ea-badge ea-badge--setup">Self-test / Simulated</span>'
+      ? '<span class="ea-badge ea-badge--setup">Demo Mode / Simulated</span>'
       : '<span class="ea-badge ea-badge--manufacturer">Live capture</span>';
     const rq = state.thd.runQuality;
     const rqHtml = rq ? `
@@ -4828,11 +5003,12 @@ function renderThdPanel(els: Elements): void {
         : '');
 
   const selfTestNote = state.sourceMode === 'self-test'
-    ? `<p class="ea-muted mlab-reflevel-selftest-note">Self-test mode: the 1&thinsp;kHz oscillator does not produce a distortion signal — results will be marked <strong>self-test&nbsp;/&nbsp;simulated</strong> and are not a valid distortion measurement.</p>`
+    ? `<p class="ea-muted mlab-reflevel-selftest-note">Demo Mode: the 1&thinsp;kHz oscillator does not produce a distortion signal — results will be marked <strong>demo mode&nbsp;/&nbsp;simulated</strong> and are not a valid distortion measurement.</p>`
     : '';
 
   body.innerHTML = `
     ${toolGuidanceMarkup('thd_imd')}
+    ${trackBandHintMarkup('thd_imd')}
     ${selfTestNote}
     <p class="mlab-reflevel-info">These readings measure distortion in the full playback/capture chain: test record, cartridge, tonearm, phono stage and audio interface. They are not cartridge-only distortion.</p>
     <table class="ea-form-table" aria-label="THD and IMD setup">
@@ -4957,7 +5133,7 @@ function renderResonancePanel(els: Elements): void {
     const qStr = r.qEstimate !== null ? r.qEstimate.toFixed(1) : '—';
     const f0Str = r.peakFrequencyHz.toFixed(1);
     const sourceBadge = state.resonance.resultSource === 'self_test'
-      ? '<span class="ea-badge ea-badge--setup">Self-test / Simulated</span>'
+      ? '<span class="ea-badge ea-badge--setup">Demo Mode / Simulated</span>'
       : '<span class="ea-badge ea-badge--manufacturer">Live capture</span>';
     const rq = state.resonance.runQuality;
     const rqHtml = rq ? `
@@ -5008,6 +5184,7 @@ function renderResonancePanel(els: Elements): void {
   const { sweepType, fromHz, toHz, durationSeconds } = state.resonance;
   body.innerHTML = `
     ${toolGuidanceMarkup('vertical_resonance')}
+    ${trackBandHintMarkup('vertical_resonance')}
     <p class="ea-muted">Play the low-frequency sweep band on your test record. The tool detects the resonance frequency from the amplitude envelope of the captured signal.</p>
     <table class="ea-form-table" aria-label="Resonance sweep setup">
       <tbody>
@@ -5992,7 +6169,7 @@ function renderSourceMode(els: Elements): void {
   if (els.deviceMeta) {
     els.deviceMeta.innerHTML = liveOnly
       ? '<span class="ea-badge ea-badge--manufacturer">Live</span>'
-      : '<span class="ea-badge">Self-test</span>';
+      : '<span class="ea-badge">Demo Mode</span>';
   }
   if (els.deviceRow) {
     els.deviceRow.dataset.mlabSourceMode = state.sourceMode;
@@ -6068,7 +6245,7 @@ function renderSessionStatus(els: Elements): void {
       : `Live capture from ${describeDevice(state.devices.find((d) => d.deviceId === state.selectedDeviceId) ?? null)}.`;
     els.sessionStatus.textContent = `Audio input connected. ${sourceLabel}`;
     setActionStatus(els, 'active', state.sourceMode === 'self-test'
-      ? 'Self-test signal running.'
+      ? 'Demo Mode signal running.'
       : 'Live audio capture running.');
   } else if (state.captureState === 'connecting') {
     els.sessionStatus.textContent = 'Connecting to audio input…';
@@ -6634,7 +6811,7 @@ async function connectMeasurementLab(els: Elements): Promise<void> {
   if (state.sourceMode === 'live') {
     setSessionStatusText(els, 'Waiting for browser audio permission…');
   } else {
-    setSessionStatusText(els, 'Starting self-test…');
+    setSessionStatusText(els, 'Starting Demo Mode…');
   }
   setActionStatus(els, 'active', 'Requesting audio access.');
   try {
@@ -6790,7 +6967,7 @@ function noiseFloorRunHistoryMarkup(runs: readonly NoiseFloorRun[]): string {
     const lRms = r.leftRmsDbfs !== null ? `${r.leftRmsDbfs.toFixed(1)} dBFS` : '—';
     const rRms = r.rightRmsDbfs !== null ? `${r.rightRmsDbfs.toFixed(1)} dBFS` : '—';
     const nf = r.noiseFloorDbfs !== null ? `${r.noiseFloorDbfs.toFixed(1)} dBFS` : '—';
-    const srcLabel = r.source === 'self_test' ? 'Self-test' : 'Live';
+    const srcLabel = r.source === 'self_test' ? 'Demo Mode' : 'Live';
     const time = r.createdAt.slice(11, 19);
     return `<tr class="mlab-nf-history-row">
       <td class="mlab-nf-history-cell">${time}</td>
@@ -6931,7 +7108,7 @@ function renderNoiseFloorPanel(els: Elements): void {
   }
 
   const selfTestNote = state.sourceMode === 'self-test'
-    ? '<p class="ea-muted mlab-reflevel-selftest-note">Self-test mode: results will be marked <strong>self-test / simulated</strong>.</p>'
+    ? '<p class="ea-muted mlab-reflevel-selftest-note">Demo Mode: results will be marked <strong>demo mode / simulated</strong>.</p>'
     : '';
 
   const isPlatter = scenario === 'platter_spinning';
@@ -6955,7 +7132,7 @@ function renderNoiseFloorPanel(els: Elements): void {
   const latestResult = nf.latest;
   const resultHtml = latestResult ? (() => {
     const srcBadgeClass = latestResult.source === 'self_test' ? 'ea-badge--setup' : 'ea-badge--manufacturer';
-    const srcBadgeLabel = latestResult.source === 'self_test' ? 'Self-test / Simulated' : 'Live capture';
+    const srcBadgeLabel = latestResult.source === 'self_test' ? 'Demo Mode / Simulated' : 'Live capture';
     const lRms = latestResult.leftRmsDbfs !== null ? `${latestResult.leftRmsDbfs.toFixed(1)} dBFS` : '—';
     const rRms = latestResult.rightRmsDbfs !== null ? `${latestResult.rightRmsDbfs.toFixed(1)} dBFS` : '—';
     const lPk = latestResult.leftPeakDbfs !== null ? `${latestResult.leftPeakDbfs.toFixed(1)} dBFS` : '—';
@@ -6992,6 +7169,20 @@ function renderNoiseFloorPanel(els: Elements): void {
       ${noiseFloorRunHistoryMarkup(nf.runs)}
     </div>` : '';
 
+  const activeBaseline = state.noiseFloorBaseline;
+  const baselineHtml = (() => {
+    const setBtn = latestResult && !activeBaseline.active
+      ? `<button class="ea-button ea-button--ghost" type="button" data-mlab-nf-set-baseline>Set as baseline reference</button>`
+      : '';
+    const clearBtn = activeBaseline.active
+      ? `<button class="ea-button ea-button--ghost" type="button" data-mlab-nf-clear-baseline>Clear baseline</button>`
+      : '';
+    const activeInfo = activeBaseline.active
+      ? `<p class="mlab-baseline-active ea-muted">Baseline active — captured ${renderText(activeBaseline.capturedAt ?? '—')}. Scenario: ${renderText(activeBaseline.scenario ?? '—')}. L: ${activeBaseline.leftRmsDbfs !== null ? activeBaseline.leftRmsDbfs.toFixed(1) + ' dBFS' : '—'}, R: ${activeBaseline.rightRmsDbfs !== null ? activeBaseline.rightRmsDbfs.toFixed(1) + ' dBFS' : '—'}. Reference only — no correction applied to measurements.</p>`
+      : `<p class="mlab-baseline-off ea-muted">No active baseline. Capture a run and set it as baseline for reference context in later measurements.</p>`;
+    return `<div class="mlab-nf-baseline-controls">${activeInfo}${setBtn}${clearBtn}</div>`;
+  })();
+
   const durDefault = noiseFloorDefaultDurationSeconds;
   const durParsed = parsePositiveFloat(nf.captureDurationSecondsInput);
   const durEffective = (durParsed !== null && Number.isFinite(durParsed) && durParsed > 0) ? durParsed : durDefault;
@@ -6999,6 +7190,7 @@ function renderNoiseFloorPanel(els: Elements): void {
 
   body.innerHTML = `
     ${toolGuidanceMarkup('noise_floor')}
+    ${trackBandHintMarkup('noise_floor')}
     <p class="ea-muted mlab-nf-intro">Noise floor measurements do not use a test record. They capture the connected playback / capture chain in a selected physical state.</p>
     ${selfTestNote}
     <div class="mlab-nf-settings">
@@ -7038,6 +7230,7 @@ function renderNoiseFloorPanel(els: Elements): void {
       </div>
     </div>
     ${resultHtml}
+    ${baselineHtml}
     <div class="mlab-session-controls">
       <button class="ea-button ea-button--primary" type="button" data-mlab-nf-start>Start noise floor capture</button>
     </div>
@@ -7069,6 +7262,36 @@ function renderNoiseFloorPanel(els: Elements): void {
     state.noiseFloor.runs = [];
     state.noiseFloor.latest = null;
     renderNoiseFloorPanel(els);
+  });
+  body.querySelector<HTMLButtonElement>('[data-mlab-nf-set-baseline]')?.addEventListener('click', () => {
+    const run = state.noiseFloor.latest;
+    if (!run) return;
+    state.noiseFloorBaseline = {
+      active: true,
+      runId: run.id,
+      capturedAt: run.createdAt,
+      scenario: noiseFloorScenarioLabel(run.scenarioKind),
+      sourceMode: run.source,
+      leftRmsDbfs: run.leftRmsDbfs,
+      rightRmsDbfs: run.rightRmsDbfs,
+    };
+    appendLog('Noise floor: baseline set as active reference (reference only — no correction applied).');
+    renderNoiseFloorPanel(els);
+    updateBaselineStrip();
+  });
+  body.querySelector<HTMLButtonElement>('[data-mlab-nf-clear-baseline]')?.addEventListener('click', () => {
+    state.noiseFloorBaseline = {
+      active: false,
+      runId: null,
+      capturedAt: null,
+      scenario: null,
+      sourceMode: null,
+      leftRmsDbfs: null,
+      rightRmsDbfs: null,
+    };
+    appendLog('Noise floor: baseline cleared.');
+    renderNoiseFloorPanel(els);
+    updateBaselineStrip();
   });
 }
 
@@ -7232,7 +7455,7 @@ function buildSummarySection(): WebReportSection {
     </table>`;
 
   const selfTestWarning = selfTestRuns
-    ? wrNote('This report contains measurements captured with self-test (simulated) data. Self-test results do not reflect real-world rig performance.', 'warn')
+    ? wrNote('This report contains measurements captured in Demo Mode (simulated data). Demo Mode results do not reflect real-world rig performance.', 'warn')
     : '';
 
   return {
@@ -7414,7 +7637,7 @@ function buildSpeedSection(): WebReportSection {
       const err = r.speedErrorPercent !== null ? `${r.speedErrorPercent >= 0 ? '+' : ''}${r.speedErrorPercent.toFixed(3)} %` : '—';
       const wf = r.wowFlutterPercent !== null ? `${r.wowFlutterPercent.toFixed(3)} %` : '—';
       const wfw = r.wowFlutterWeightedPercent !== null ? `${r.wowFlutterWeightedPercent.toFixed(3)} %` : '—';
-      const src = r.source === 'self_test' ? 'Self-test' : 'Live';
+      const src = r.source === 'self_test' ? 'Demo Mode' : 'Live';
       const rqBadge = r.runQuality ? wrBadge(r.runQuality.status, r.runQuality.status === 'ok' ? 'ok' : r.runQuality.status === 'warning' ? 'warn' : 'err') : '';
       return `<tr>
         <td>${renderText(time)}</td>
@@ -7530,7 +7753,7 @@ function buildAzimuthStepsSection(): string {
   }
   const cmp = computeAzimuthStepComparison(runs);
   const rows = runs.map((r, i) => {
-    const srcLabel = r.source === 'self_test' ? 'Self-test' : 'Live';
+    const srcLabel = r.source === 'self_test' ? 'Demo Mode' : 'Live';
     return `<tr class="mlab-azimuth-step-row">
       <td class="mlab-azimuth-step-cell">${i + 1}</td>
       <td class="mlab-azimuth-step-cell">${renderText(r.label ?? `Step ${i + 1}`)}</td>
@@ -7672,7 +7895,7 @@ function buildFreqSection(): WebReportSection {
   // Real data present — render the actual frequency response curve
   const svgChart = buildFreqResponseSvg(fr, state.iriaaEnabled);
   const sourceBadge = state.freq.resultSource === 'self_test'
-    ? wrBadge('Self-test / Simulated', 'warn')
+    ? wrBadge('Demo Mode / Simulated', 'warn')
     : wrBadge('Live capture', 'ok');
 
   const dev = computeFreqDeviationSummary(fr, state.iriaaEnabled);
@@ -7728,7 +7951,7 @@ function buildThdSection(): WebReportSection {
   const diagMeta = buildThdDistortionMeta();
   const rq = state.thd.runQuality;
   const sourceBadge = state.thd.resultSource === 'self_test'
-    ? wrBadge('Self-test / Simulated', 'warn')
+    ? wrBadge('Demo Mode / Simulated', 'warn')
     : wrBadge('Live capture', 'ok');
 
   const pairs: [string, string][] = [
@@ -7817,7 +8040,7 @@ function buildResonanceSection(): WebReportSection {
   const diagMeta = buildResonanceDiagnosticMeta();
   const rq = state.resonance.runQuality;
   const sourceBadge = state.resonance.resultSource === 'self_test'
-    ? wrBadge('Self-test / Simulated', 'warn')
+    ? wrBadge('Demo Mode / Simulated', 'warn')
     : wrBadge('Live capture', 'ok');
 
   const pairs: [string, string][] = [
@@ -8375,9 +8598,41 @@ function tickTrackRecognition(els: Elements): void {
   }
 }
 
+function updateBaselineStrip(): void {
+  const strip = document.querySelector<HTMLElement>('[data-mlab-baseline-strip]');
+  const label = document.querySelector<HTMLElement>('[data-mlab-baseline-label]');
+  if (!strip || !label) return;
+  const bl = state.noiseFloorBaseline;
+  if (bl.active) {
+    strip.className = 'mlab-baseline-strip mlab-baseline-active';
+    const scenario = bl.scenario ? ` (${bl.scenario})` : '';
+    const lStr = bl.leftRmsDbfs !== null ? `L: ${bl.leftRmsDbfs.toFixed(1)} dBFS` : '';
+    const rStr = bl.rightRmsDbfs !== null ? `R: ${bl.rightRmsDbfs.toFixed(1)} dBFS` : '';
+    const levels = [lStr, rStr].filter(Boolean).join(', ');
+    label.textContent = `Baseline active${scenario}${levels ? ' — ' + levels : ''} — reference only`;
+  } else {
+    strip.className = 'mlab-baseline-strip mlab-baseline-off';
+    label.textContent = 'Baseline: Off';
+  }
+}
+
+function syncRibbonSourceControls(els: Elements): void {
+  const isLive = state.captureState === 'live';
+  const isConnecting = state.captureState === 'connecting';
+  if (els.ribbonConnect) {
+    els.ribbonConnect.disabled = isLive || isConnecting;
+  }
+  if (els.ribbonDisconnect) {
+    els.ribbonDisconnect.disabled = !isLive && !isConnecting;
+  }
+  if (els.ribbonDemoBtn) {
+    els.ribbonDemoBtn.disabled = isLive || isConnecting;
+  }
+}
+
 function renderSessionRibbon(els: Elements): void {
   if (els.ribbonSource) {
-    els.ribbonSource.textContent = state.sourceMode === 'self-test' ? 'Self-test' : 'Live';
+    els.ribbonSource.textContent = state.sourceMode === 'self-test' ? 'Demo Mode' : 'Live';
   }
   if (els.ribbonRecord) {
     const record = selectedRecord();
@@ -8403,6 +8658,8 @@ function renderSessionRibbon(els: Elements): void {
     const wf = MEASUREMENT_WORKFLOWS.find(w => w.id === state.activeWorkflowId);
     els.ribbonActiveTool.textContent = wf ? wf.label : '—';
   }
+  syncRibbonSourceControls(els);
+  updateBaselineStrip();
 }
 
 function activateTool(toolId: string, els: Elements): void {
@@ -8782,6 +9039,37 @@ export function enableMeasurementLabInteractions(): void {
     state.sourceMode = 'self-test';
     renderSourceMode(els);
     void connectMeasurementLab(els);
+  });
+
+  els.ribbonConnect?.addEventListener('click', () => {
+    void connectMeasurementLab(els);
+  });
+
+  els.ribbonDisconnect?.addEventListener('click', () => {
+    void disconnectMeasurementLab(els);
+  });
+
+  els.ribbonDemoBtn?.addEventListener('click', () => {
+    if (state.captureState === 'live' || state.captureState === 'connecting') return;
+    state.sourceMode = 'self-test';
+    renderSourceMode(els);
+    void connectMeasurementLab(els);
+  });
+
+  // Setup metadata inputs — delegate from document since the panel is static HTML
+  document.addEventListener('change', (e) => {
+    const target = e.target as HTMLElement;
+    const field = (target as HTMLElement & { dataset: DOMStringMap }).dataset['mlabMeta'];
+    if (!field) return;
+    const value = (target as HTMLInputElement | HTMLSelectElement).value ?? '';
+    (state.setupMetadata as Record<string, string>)[field] = value;
+  });
+  document.addEventListener('input', (e) => {
+    const target = e.target as HTMLElement;
+    const field = (target as HTMLElement & { dataset: DOMStringMap }).dataset['mlabMeta'];
+    if (!field) return;
+    const value = (target as HTMLInputElement).value ?? '';
+    (state.setupMetadata as Record<string, string>)[field] = value;
   });
 
   els.webReportBtn?.addEventListener('click', () => {

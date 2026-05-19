@@ -2976,3 +2976,127 @@ button.mlab-coverage-badge--available:focus-visible {
 .mlab-evidence-note--limitation {
   color: rgba(245, 158, 11, 0.80);
 }
+
+/* ── S7C.1: Ribbon source controls ─────────────────────────────────────────── */
+.mlab-ribbon-source-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--ea-space-1, 0.25rem);
+  padding: 0 var(--ea-space-2, 0.5rem);
+  border-left: 1px solid var(--ea-border-soft, rgba(255,255,255,0.07));
+  flex-shrink: 0;
+}
+
+.mlab-ribbon-demo-btn {
+  color: var(--ea-text-low, #888);
+  border-color: var(--ea-border-soft, rgba(255,255,255,0.07));
+}
+
+.mlab-demo-mode-warn {
+  color: var(--ea-warning, #b45309);
+}
+
+/* ── S7C.1: Baseline strip ──────────────────────────────────────────────────── */
+.mlab-baseline-strip {
+  font-size: var(--ea-font-size-small, 0.75rem);
+  padding: 2px var(--ea-space-3, 0.75rem);
+  text-align: center;
+  transition: background 0.2s;
+}
+
+.mlab-baseline-off {
+  background: transparent;
+  color: var(--ea-text-low, #888);
+  opacity: 0.5;
+}
+
+.mlab-baseline-active {
+  background: rgba(22, 163, 74, 0.12);
+  color: var(--ea-text-primary, #e2e2e2);
+  border-bottom: 1px solid rgba(22, 163, 74, 0.30);
+}
+
+/* ── S7C.1: Evidence card ───────────────────────────────────────────────────── */
+.mlab-evidence-card {
+  border: 1px solid var(--ea-border-soft, rgba(255,255,255,0.07));
+  border-radius: var(--ea-radius-sm, 3px);
+  padding: var(--ea-space-2, 0.5rem) var(--ea-space-3, 0.75rem);
+  margin: var(--ea-space-2, 0.5rem) 0;
+}
+
+.mlab-evidence-card-title {
+  font-weight: 600;
+  font-size: var(--ea-font-size-small, 0.75rem);
+  display: flex;
+  align-items: center;
+  gap: var(--ea-space-2, 0.5rem);
+  flex-wrap: wrap;
+  margin-bottom: var(--ea-space-2, 0.5rem);
+}
+
+.mlab-evidence-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ea-space-1, 0.25rem);
+}
+
+.mlab-evidence-card-metric {
+  display: flex;
+  gap: var(--ea-space-2, 0.5rem);
+  font-size: var(--ea-font-size-small, 0.75rem);
+}
+
+.mlab-evidence-card-label {
+  color: var(--ea-text-low, #888);
+  min-width: 8ch;
+}
+
+.mlab-evidence-card-interpretation {
+  font-size: var(--ea-font-size-small, 0.75rem);
+  font-style: italic;
+}
+
+.mlab-evidence-card-limitation {
+  font-size: var(--ea-font-size-small, 0.75rem);
+}
+
+/* ── S7C.1: Setup metadata ─────────────────────────────────────────────────── */
+.mlab-setup-metadata {
+  margin: var(--ea-space-2, 0.5rem) 0;
+}
+
+.mlab-setup-metadata-head {
+  cursor: pointer;
+  font-size: var(--ea-font-size-small, 0.75rem);
+  color: var(--ea-text-low, #888);
+  user-select: none;
+}
+
+.mlab-setup-metadata-body {
+  margin-top: var(--ea-space-2, 0.5rem);
+}
+
+/* ── S7C.1: Channel/Azimuth context heads ────────────────────────────────────── */
+.mlab-channel-identity-head,
+.mlab-azimuth-head {
+  font-size: var(--ea-font-size-small, 0.75rem);
+  margin: var(--ea-space-2, 0.5rem) 0;
+}
+
+/* ── S7C.1: Track/band hints ────────────────────────────────────────────────── */
+.mlab-track-band-hint {
+  font-size: var(--ea-font-size-small, 0.75rem);
+  margin: var(--ea-space-1, 0.25rem) 0;
+}
+
+.mlab-track-band-hint--unavailable {
+  color: var(--ea-warning, #b45309);
+}
+
+/* ── S7C.1: NF baseline controls ─────────────────────────────────────────────── */
+.mlab-nf-baseline-controls {
+  margin: var(--ea-space-2, 0.5rem) 0;
+  padding: var(--ea-space-2, 0.5rem) var(--ea-space-3, 0.75rem);
+  border: 1px solid var(--ea-border-soft, rgba(255,255,255,0.07));
+  border-radius: var(--ea-radius-sm, 3px);
+}
