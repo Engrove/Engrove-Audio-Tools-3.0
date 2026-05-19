@@ -42,6 +42,16 @@
   margin-left: auto;
 }
 
+/* Record group expands to fill available ribbon space */
+.mlab-ribbon-group--wide {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 32rem;
+}
+.mlab-ribbon-group--wide .mlab-ribbon-value {
+  max-width: none;
+}
+
 .mlab-ribbon-label {
   font-size: var(--ea-text-xs, 0.75rem);
   color: var(--ea-text-low);
@@ -330,6 +340,66 @@ button.mlab-rail-item:focus-visible {
   border: 1px solid var(--ea-border-soft, rgba(255,255,255,0.06));
 }
 
+/* ── LED-style VU meters in Audio Source panel ───────────────────────────────*/
+
+.mlab-source-meter-channel.mlab-meter-channel {
+  background: rgba(6, 8, 14, 0.8);
+  border-color: rgba(255,255,255,0.1);
+  gap: var(--ea-space-3);
+  padding: var(--ea-space-3) var(--ea-space-3) var(--ea-space-2);
+}
+
+.mlab-source-meter-channel .mlab-meter-channel-readout {
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #e8e8e0;
+}
+
+/* LED bar: tall + segmented grid of colored cells */
+.mlab-source-meter-channel .mlab-meter-bar {
+  height: 28px;
+  border-radius: 2px;
+  background:
+    /* Segment gaps — 20 cells with 2px dark separators */
+    repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent calc(5% - 2px),
+      rgba(6, 8, 14, 0.95) calc(5% - 2px),
+      rgba(6, 8, 14, 0.95) 5%
+    ),
+    /* Fixed color zones: green / yellow / red */
+    linear-gradient(
+      90deg,
+      #16a34a 0% 60%,
+      #d97706 60% 85%,
+      #dc2626 85% 100%
+    );
+}
+
+/* Unlit mask: covers segments beyond current RMS level */
+.mlab-source-meter-channel .mlab-meter-bar-rms {
+  left: var(--mlab-bar, 0%);
+  right: 0;
+  width: auto;
+  background: rgba(6, 8, 14, 0.82);
+  border-right: none;
+}
+
+/* Peak hold needle: bright, glowing white tick */
+.mlab-source-meter-channel .mlab-meter-bar-hold {
+  width: 3px;
+  background: #fff;
+  box-shadow: 0 0 6px rgba(255,255,255,0.85);
+  z-index: 1;
+}
+
+.mlab-source-meter-channel .mlab-meter-channel-meta {
+  font-size: 0.65rem;
+  letter-spacing: 0.05em;
+}
+
 /* ── S7A.1: Center workbench panel ──────────────────────────────────────────*/
 
 .mlab-workbench-center {
@@ -578,24 +648,32 @@ button.mlab-rail-item:focus-visible {
 }
 
 .mlab-ribbon-mini-bar-wrap {
-  width: 60px;
-  height: 6px;
-  background: var(--ea-bg-panel-alt, rgba(255,255,255,0.04));
-  border-radius: 3px;
+  position: relative;
+  width: 72px;
+  height: 7px;
+  border-radius: 2px;
   overflow: hidden;
-  border: 1px solid var(--ea-border-subtle, rgba(255,255,255,0.08));
+  border: 1px solid rgba(255,255,255,0.1);
+  /* Fixed color scale — always visible behind the mask */
+  background: linear-gradient(
+    90deg,
+    #22c55e 0% 60%,
+    #f59e0b 60% 85%,
+    #ef4444 85% 100%
+  );
 }
 
 .mlab-ribbon-mini-fill {
-  height: 100%;
-  width: var(--p, 0%);
-  background: linear-gradient(
-    90deg,
-    var(--ea-status-success) 0% 60%,
-    var(--ea-status-warning) 60% 85%,
-    var(--ea-status-error) 85% 100%
-  );
-  transition: width 0.05s linear;
+  /* Dark mask: hides the portion beyond the current level */
+  position: absolute;
+  left: var(--p, 0%);
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(8, 10, 16, 0.88);
+  /* Needle: bright left-edge marks the current level */
+  border-left: 2px solid rgba(255,255,255,0.9);
+  transition: left 0.05s linear;
 }
 
 .mlab-ribbon-mini-db {
