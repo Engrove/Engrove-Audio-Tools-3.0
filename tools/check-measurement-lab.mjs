@@ -4437,13 +4437,13 @@ function checkS7B1() {
     // ── TS: evaluateAutostartEligibility wired into runtime ────────────────
     // 5. TS: evaluateAutostartEligibility called in tickTrackRecognition (not just imported)
     ['TS: evaluateAutostartEligibility called in tickTrackRecognition',
-      /tickTrackRecognition[\s\S]{0,2500}evaluateAutostartEligibility/.test(uiSrc)],
+      /tickTrackRecognition[\s\S]{0,4300}evaluateAutostartEligibility/.test(uiSrc)],
     // 6. TS: startSpeedMeasurement called in tickTrackRecognition (real autostart wired)
     ['TS: startSpeedMeasurement called in tickTrackRecognition',
-      /tickTrackRecognition[\s\S]{0,2500}startSpeedMeasurement\(els\)/.test(uiSrc)],
+      /tickTrackRecognition[\s\S]{0,4800}startSpeedMeasurement\(els\)/.test(uiSrc)],
     // 7. TS: recording phase is set in tickTrackRecognition runtime path
     ['TS: recording phase set in tickTrackRecognition',
-      /tickTrackRecognition[\s\S]{0,2500}phase:\s*'recording'/.test(uiSrc)],
+      /tickTrackRecognition[\s\S]{0,4600}phase:\s*'recording'/.test(uiSrc)],
     // 8. TS: manual_override set in startSpeedMeasurement (manual start path)
     ['TS: manual_override set in startSpeedMeasurement',
       /startSpeedMeasurement[\s\S]{0,600}manual_override/.test(uiSrc)],
@@ -4495,7 +4495,7 @@ function checkS7B1() {
     // ── TS: autostart scope ───────────────────────────────────────────────
     // 21. TS: wow_flutter is the only workflow that triggers real autostart in tickTrackRecognition
     ['TS: wow_flutter is gated for real autostart in tickTrackRecognition',
-      /tickTrackRecognition[\s\S]{0,2500}wow_flutter/.test(uiSrc)],
+      /tickTrackRecognition[\s\S]{0,4500}wow_flutter/.test(uiSrc)],
 
     // ── CSS ───────────────────────────────────────────────────────────────
     // 22. CSS: mlab-local-autostart defined
@@ -4552,3 +4552,110 @@ function checkS7B1() {
 }
 
 checkS7B1();
+
+function checkS7B2() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const engineSrcPath = join(repoRoot, 'src/modules/measurement-lab/engine/trackRecognition.ts');
+
+  for (const p of [renderSrcPath, engineSrcPath]) {
+    if (!existsSync(p)) {
+      console.error(`S7B.2 static check FAIL: required file not found: ${p}`);
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const uiSrc     = readFileSync(renderSrcPath, 'utf8');
+  const engineSrc = readFileSync(engineSrcPath, 'utf8');
+
+  const checks = [
+    // ── Guard 1: recompute chain readiness at lock time ────────────────────
+    // 1. TS: deriveMeasurementChainReadiness called inside tickTrackRecognition (lock-time check)
+    ['TS: deriveMeasurementChainReadiness recomputed at lock time in tickTrackRecognition',
+      /tickTrackRecognition[\s\S]{0,3000}deriveMeasurementChainReadiness/.test(uiSrc)],
+    // 2. TS: chain block reason mentioning clipping in tickTrackRecognition
+    ['TS: chain block reason (clipping) written to state.trackRecognition.reason on chain failure',
+      /tickTrackRecognition[\s\S]{0,3000}clipping detected/.test(uiSrc)],
+    // 3. TS: chain block reason mentioning signal too low in tickTrackRecognition
+    ['TS: chain block reason (signal too low) written to state.trackRecognition.reason on chain failure',
+      /tickTrackRecognition[\s\S]{0,3000}signal too low/.test(uiSrc)],
+
+    // ── Guard 2: active-tool guard at lock time ────────────────────────────
+    // 4. TS: armedFromToolId compared to activeWorkflowId in tickTrackRecognition
+    ['TS: armedFromToolId vs activeWorkflowId guard in tickTrackRecognition',
+      /tickTrackRecognition[\s\S]{0,3500}armedFromToolId[\s\S]{0,500}activeWorkflowId/.test(uiSrc) ||
+      /tickTrackRecognition[\s\S]{0,3500}armedFromTool[\s\S]{0,500}activeToolId/.test(uiSrc)],
+    // 5. TS: Autostart suspended reason written to state on tool mismatch
+    ['TS: "Autostart suspended" reason written to state on tool mismatch',
+      /tickTrackRecognition[\s\S]{0,3500}Autostart suspended/.test(uiSrc)],
+
+    // ── Eligibility reason display ─────────────────────────────────────────
+    // 6. TS: eligibility.reason written to state.trackRecognition.reason when not eligible
+    ['TS: eligibility.reason written to state.trackRecognition.reason when blocked',
+      /eligibility\.reason/.test(uiSrc)],
+    // 7. TS: appendLog called with eligibility reason in tickTrackRecognition
+    ['TS: appendLog called with eligibility reason on failed lock',
+      /tickTrackRecognition[\s\S]{0,5800}locked but blocked/.test(uiSrc)],
+
+    // ── Rich web report: buildTrackRecognitionSection ─────────────────────
+    // 8. TS: buildTrackRecognitionSection function defined
+    ['TS: buildTrackRecognitionSection function defined',
+      /function buildTrackRecognitionSection\(/.test(uiSrc)],
+    // 9. TS: buildTrackRecognitionSection included in sections array in buildMeasurementLabWebReport
+    ['TS: buildTrackRecognitionSection included in buildMeasurementLabWebReport sections',
+      /buildMeasurementLabWebReport[\s\S]{0,700}buildTrackRecognitionSection\(\)/.test(uiSrc)],
+    // 10. TS: buildTrackRecognitionSection renders phase badge
+    ['TS: buildTrackRecognitionSection renders phase badge',
+      /buildTrackRecognitionSection[\s\S]{0,500}phaseBadgeKind/.test(uiSrc)],
+    // 11. TS: buildTrackRecognitionSection renders chain readiness badge
+    ['TS: buildTrackRecognitionSection renders chain readiness badge',
+      /buildTrackRecognitionSection[\s\S]{0,850}chainBadgeKind/.test(uiSrc)],
+    // 12. TS: buildTrackRecognitionSection includes armedFromToolId
+    ['TS: buildTrackRecognitionSection includes armedFromToolId',
+      /buildTrackRecognitionSection[\s\S]{0,1650}armedFromToolId/.test(uiSrc)],
+    // 13. TS: buildTrackRecognitionSection includes observedFrequencyHz
+    ['TS: buildTrackRecognitionSection includes observedFrequencyHz',
+      /buildTrackRecognitionSection[\s\S]{0,1950}observedFrequencyHz/.test(uiSrc)],
+    // 14. TS: buildTrackRecognitionSection shows note for disabled phase
+    ['TS: buildTrackRecognitionSection shows contextual note for disabled phase',
+      /buildTrackRecognitionSection[\s\S]{0,2450}Track recognition was not used/.test(uiSrc)],
+
+    // ── updateToolLocalAutostart: other-tool-armed mismatch UX ────────────
+    // 15. TS: updateToolLocalAutostart shows "locked" message when other tool is locked
+    ['TS: updateToolLocalAutostart shows locked message for other-tool mismatch',
+      /updateToolLocalAutostart[\s\S]{0,3500}locked for/.test(uiSrc) ||
+      /isOtherToolArmed[\s\S]{0,800}locked/.test(uiSrc)],
+    // 16. TS: updateToolLocalAutostart shows Disarm button when other tool is armed
+    ['TS: updateToolLocalAutostart shows Disarm button when other tool is armed',
+      /isOtherToolArmed[\s\S]{0,800}showDisarm\s*=\s*true/.test(uiSrc)],
+
+    // ── Regressions from S7B / S7B.1 ──────────────────────────────────────
+    // 17. Regression: startSpeedMeasurement still sets manual_override on manual start
+    ['Regression: startSpeedMeasurement still sets manual_override on manual start',
+      /startSpeedMeasurement[\s\S]{0,600}manual_override/.test(uiSrc)],
+    // 18. Regression: armedFromToolId still in ArmTrackRecognitionArgs
+    ['Regression: armedFromToolId still in ArmTrackRecognitionArgs',
+      /ArmTrackRecognitionArgs[\s\S]{0,300}armedFromToolId/.test(engineSrc)],
+    // 19. Regression: VTA still planned
+    ['Regression: VTA still planned (vta_imd_optimizer in workflowLabels in buildTrackRecognitionSection)',
+      /buildTrackRecognitionSection[\s\S]{0,1250}vta_imd_optimizer[\s\S]{0,200}Planned/.test(uiSrc)],
+    // 20. Regression: track-recognition section id is 'track-recognition'
+    ['Regression: track-recognition section id is correct',
+      /id:\s*'track-recognition'/.test(uiSrc)],
+  ];
+
+  let allPass = true;
+  for (const [label, ok] of checks) {
+    if (!ok) {
+      console.error(`S7B.2 static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S7B.2 static source check (Autostart Safety Guards & Rich Report Provenance): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS7B2();

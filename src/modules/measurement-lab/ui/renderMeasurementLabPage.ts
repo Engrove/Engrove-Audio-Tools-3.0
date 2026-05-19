@@ -7766,6 +7766,67 @@ function buildVtaSection(): WebReportSection {
   };
 }
 
+// ── S7B.2: Full track recognition provenance section ─────────────────────────
+function buildTrackRecognitionSection(): WebReportSection {
+  const recog = state.trackRecognition;
+  const startMode: 'auto' | 'manual' | 'not_started' =
+    recog.phase === 'recording' ? 'auto'
+    : recog.phase === 'manual_override' ? 'manual'
+    : 'not_started';
+  const prov = buildTrackRecognitionProvenance(recog, startMode);
+
+  const phaseLabel = TRACK_RECOGNITION_PHASE_LABELS[prov.phase];
+  const phaseBadgeKind: 'ok' | 'warn' | 'err' | 'info' | 'exp' =
+    prov.phase === 'recording' || prov.phase === 'locked' ? 'ok'
+    : prov.phase === 'armed' || prov.phase === 'waiting_for_signal' || prov.phase === 'candidate_detected' || prov.phase === 'disabled' || prov.phase === 'manual_override' ? 'info'
+    : 'warn'; // ambiguous, rejected, timeout
+
+  const chainBadgeKind: 'ok' | 'warn' = prov.chainReadiness === 'ready' ? 'ok' : 'warn';
+
+  const workflowLabels: Record<string, string> = {
+    wow_flutter: 'Speed &amp; Wow/Flutter',
+    reference_level: 'Reference Level',
+    channel_identity: 'Channel Identity',
+    azimuth_crosstalk: 'Azimuth / Crosstalk',
+    frequency_response: 'Frequency Response',
+    thd_imd: 'THD / IMD',
+    resonance: 'Resonance',
+    vta_imd_optimizer: 'VTA IMD Optimizer (Planned)',
+  };
+
+  const pairs: [string, string][] = [
+    ['Phase', wrBadge(phaseLabel, phaseBadgeKind)],
+    ['Detector type', renderText(prov.detectorType ?? 'none')],
+    ['Selected workflow', renderText(prov.selectedWorkflowId != null ? (workflowLabels[prov.selectedWorkflowId] ?? prov.selectedWorkflowId) : 'None')],
+    ['Armed from tool', renderText(prov.armedFromToolId ?? 'None (not armed in this session)')],
+    ['Target band', renderText(prov.targetBandLabel ?? 'None')],
+    ['Expected frequency', prov.expectedFrequencyHz != null ? `${prov.expectedFrequencyHz.toLocaleString('en-US')} Hz` : 'n/a'],
+    ['Observed frequency', prov.observedFrequencyHz != null ? `${prov.observedFrequencyHz.toFixed(1)} Hz` : 'n/a'],
+    ['Match confidence', prov.confidence != null ? `${(prov.confidence * 100).toFixed(0)} %` : 'n/a'],
+    ['Chain readiness', wrBadge(prov.chainReadiness, chainBadgeKind)],
+    ['Pre-roll', renderText(prov.preRollStatus)],
+    ['Start mode', renderText(prov.startMode)],
+    ['Reason / status', renderText(prov.reason)],
+  ];
+
+  let noteHtml = '';
+  if (prov.phase === 'disabled') {
+    noteHtml = wrNote('Track recognition was not used in this session. Arm it from a measurement tool panel to enable autostart.', '');
+  } else if (prov.phase === 'recording') {
+    noteHtml = wrNote('Autostart triggered successfully — measurement was started automatically.', '');
+  } else if (prov.phase === 'manual_override') {
+    noteHtml = wrNote('Measurement was started manually while recognition was active.', '');
+  } else if (prov.phase === 'ambiguous' || prov.phase === 'rejected' || prov.phase === 'timeout') {
+    noteHtml = wrNote('Recognition did not reach a confirmed lock. Verify the signal type and test record selection, then re-arm.', 'warn');
+  }
+
+  return {
+    id: 'track-recognition',
+    title: 'Track Recognition / Autostart',
+    html: wrKVs(pairs) + noteHtml,
+  };
+}
+
 export function buildMeasurementLabWebReport(): WebReportPayload {
   const generatedAt = new Date().toISOString();
   const record = selectedRecord();
@@ -7785,6 +7846,7 @@ export function buildMeasurementLabWebReport(): WebReportPayload {
     buildThdSection(),
     buildResonanceSection(),
     buildVtaSection(),
+    buildTrackRecognitionSection(),
   ];
 
   return { title: 'Engrove Measurement Lab — Session Report', subtitle, generatedAt, sections };
@@ -7929,7 +7991,17 @@ function updateToolLocalAutostart(toolId: string, workflowId: string | null): vo
   } else if (!targetBand) {
     reasonText = 'No compatible band on selected test record. Manual start required.';
   } else if (isOtherToolArmed) {
-    reasonText = `Recognition is armed for another tool (${recog.armedFromToolId}). Disarm it first.`;
+    const armedToolLabel =
+      recog.armedFromToolId === 'wow_flutter' ? 'Speed & Wow/Flutter'
+      : recog.armedFromToolId === 'reference_level' ? 'Reference Level'
+      : recog.armedFromToolId === 'channel_identity' ? 'Channel Identity'
+      : recog.armedFromToolId ?? 'another tool';
+    if (recog.phase === 'locked') {
+      reasonText = `Track recognition locked for ${armedToolLabel}. Return to that tool to continue autostart, or Disarm and re-arm here.`;
+    } else {
+      reasonText = `Recognition is armed for ${armedToolLabel}. Return to continue, or Disarm and re-arm here.`;
+    }
+    showDisarm = true;
   } else if (isThisToolArmed) {
     phaseToShow = recog.phase;
     reasonText = recog.reason;
@@ -8033,17 +8105,58 @@ function tickTrackRecognition(els: Elements): void {
     state.trackRecognition = next;
     renderTrackRecognition(els);
 
-    // ── S7B.1: Autostart on lock transition ────────────────────────────────
+    // ── S7B.2: Autostart on lock transition with current-readiness gate ────
     // prevPhase is always one of armed/waiting_for_signal/candidate_detected (guarded above),
-    // so the transition to 'locked' is always a new lock — no need to check prevPhase !== 'locked'.
+    // so a transition to 'locked' here is always a fresh lock — no need to check prevPhase.
     if (next.phase === 'locked' && state.speed.active === false) {
       const workflowId = next.selectedWorkflowId;
+
+      // ── Guard 1: Recompute current chain readiness at lock time ───────────
+      // Do NOT rely on `next.chainReadiness` captured at arm time.
+      const currentChain = deriveMeasurementChainReadiness({
+        leftRmsDbfs: state.channelLevels.L.rmsDbFs,
+        rightRmsDbfs: state.channelLevels.R.rmsDbFs,
+        leftPeakDbfs: state.channelLevels.L.peakDbFs,
+        rightPeakDbfs: state.channelLevels.R.peakDbFs,
+      });
+      const currentChainReady: AutostartChainReadiness =
+        currentChain.status === 'ready' ? 'ready' : 'invalid';
+      if (currentChainReady !== 'ready') {
+        const chainBlockReason =
+          currentChain.clipping ? 'Autostart blocked: clipping detected.'
+          : currentChain.lowSignal ? 'Autostart blocked: signal too low.'
+          : `Autostart blocked: chain readiness is ${currentChain.status}.`;
+        state.trackRecognition = { ...state.trackRecognition, reason: chainBlockReason };
+        renderTrackRecognition(els);
+        updateToolLocalAutostart(workflowId ?? '', workflowId);
+        appendLog(`Track recognition: ${chainBlockReason}`);
+        return;
+      }
+
+      // ── Guard 2: Active tool must still match the armed tool ──────────────
+      const armedFromTool = next.armedFromToolId;
+      const activeToolId = state.activeWorkflowId;
+      if (armedFromTool !== null && activeToolId !== armedFromTool) {
+        const toolMismatchReason = `Autostart suspended: active tool changed to "${activeToolId ?? 'none'}". Return to "${armedFromTool}" or disarm and re-arm.`;
+        state.trackRecognition = { ...state.trackRecognition, reason: toolMismatchReason };
+        renderTrackRecognition(els);
+        updateToolLocalAutostart(armedFromTool, workflowId);
+        appendLog(`Track recognition: ${toolMismatchReason}`);
+        return;
+      }
+
+      // ── Eligibility check (uses current chain readiness, not arm-time) ────
       const record = selectedRecord();
       const coverageList = record ? computeAllWorkflowCoverage(record) : [];
       const coverageEntry = coverageList.find(c => c.workflowId === workflowId);
       const workflowAvailability: WorkflowAvailability | null = coverageEntry?.availability ?? null;
 
-      const eligibility = evaluateAutostartEligibility(next, workflowAvailability);
+      // Build a state snapshot with current chain readiness for eligibility
+      const recogWithCurrentChain: TrackRecognitionState = {
+        ...next,
+        chainReadiness: currentChainReady,
+      };
+      const eligibility = evaluateAutostartEligibility(recogWithCurrentChain, workflowAvailability);
 
       if (eligibility.eligible) {
         if (workflowId === 'wow_flutter') {
@@ -8051,6 +8164,7 @@ function tickTrackRecognition(els: Elements): void {
           state.trackRecognition = {
             ...state.trackRecognition,
             phase: 'recording',
+            chainReadiness: currentChainReady,
             reason: 'Autostart triggered — measurement starting.',
           };
           startSpeedMeasurement(els);
@@ -8059,15 +8173,26 @@ function tickTrackRecognition(els: Elements): void {
           renderSpeedPanel(els);
           appendLog('Track recognition: autostart triggered for Speed & W&F.');
         } else {
-          // Eligible but workflow not wired for autostart yet
+          // Eligible but workflow not wired for autostart yet — show clear reason
           state.trackRecognition = {
             ...state.trackRecognition,
-            reason: 'Autostart not yet wired for this workflow — manual start required.',
+            chainReadiness: currentChainReady,
+            reason: 'Locked — autostart not yet wired for this workflow. Manual start required.',
           };
           renderTrackRecognition(els);
+          updateToolLocalAutostart(workflowId ?? '', workflowId);
         }
+      } else {
+        // Not eligible — write eligibility.reason to state so UI shows it
+        state.trackRecognition = {
+          ...state.trackRecognition,
+          chainReadiness: currentChainReady,
+          reason: eligibility.reason,
+        };
+        renderTrackRecognition(els);
+        updateToolLocalAutostart(workflowId ?? '', workflowId);
+        appendLog(`Track recognition: locked but blocked — ${eligibility.reason}`);
       }
-      // If not eligible: ingestSignal already set reason; no further action needed
     }
   }
 }
