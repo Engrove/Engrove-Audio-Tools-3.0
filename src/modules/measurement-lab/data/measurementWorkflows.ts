@@ -65,6 +65,15 @@ export const MEASUREMENT_WORKFLOWS: readonly MeasurementWorkflow[] = [
     unavailableReason: 'No azimuth / crosstalk measurement bands on selected test record.',
   },
   {
+    id: 'channel_crosstalk_geometry',
+    label: 'Channel / Crosstalk Geometry',
+    description: 'Combined Routing/Identity check and Azimuth step comparison in one tool.',
+    requiredAnalyzerModule: 'channel_identity',
+    fallbackPurposes: ['crosstalk'],
+    implementationStatus: 'supported',
+    unavailableReason: 'No channel-specific tone bands on selected test record.',
+  },
+  {
     id: 'frequency_response',
     label: 'Frequency response',
     description: 'Plot the cartridge response curve from a logarithmic frequency sweep.',

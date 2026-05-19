@@ -4705,9 +4705,9 @@ function checkS7C() {
     // 8. Guidance injected in renderSpeedPanel
     ['TS: toolGuidanceMarkup injected in renderSpeedPanel',
       /renderSpeedPanel[\s\S]{0,11500}toolGuidanceMarkup\('wow_flutter'\)/.test(uiSrc)],
-    // 9. Guidance injected in renderChannelPanel
+    // 9. Guidance injected in renderChannelPanel (S7C.4: merged tool uses channel_crosstalk_geometry)
     ['TS: toolGuidanceMarkup injected in renderChannelPanel',
-      /renderChannelPanel[\s\S]{0,8600}toolGuidanceMarkup\('channel_identity'\)/.test(uiSrc)],
+      /renderChannelPanel[\s\S]{0,9000}toolGuidanceMarkup\('channel_crosstalk_geometry'\)/.test(uiSrc)],
     // 10. Guidance injected in renderFreqPanel
     ['TS: toolGuidanceMarkup injected in renderFreqPanel',
       /renderFreqPanel[\s\S]{0,8200}toolGuidanceMarkup\('frequency_response'\)/.test(uiSrc)],
@@ -4716,7 +4716,7 @@ function checkS7C() {
       /renderThdPanel[\s\S]{0,10300}toolGuidanceMarkup\('thd_imd'\)/.test(uiSrc)],
     // 12. Guidance injected in renderResonancePanel
     ['TS: toolGuidanceMarkup injected in renderResonancePanel',
-      /renderResonancePanel[\s\S]{0,4300}toolGuidanceMarkup\('vertical_resonance'\)/.test(uiSrc)],
+      /renderResonancePanel[\s\S]{0,5200}toolGuidanceMarkup\('vertical_resonance'\)/.test(uiSrc)],
     // 13. Guidance injected in renderNoiseFloorPanel
     ['TS: toolGuidanceMarkup injected in renderNoiseFloorPanel',
       /renderNoiseFloorPanel[\s\S]{0,6300}toolGuidanceMarkup\('noise_floor'\)/.test(uiSrc)],
@@ -4915,10 +4915,10 @@ function checkS7C1() {
     ['CSS: mlab-baseline-strip defined',
       /\.mlab-baseline-strip\s*\{/.test(cssSrc)],
 
-    // ── Channel Identity vs Azimuth ─────────────────────────────────────────
-    // 25. toolGuidanceMarkup covers azimuth_crosstalk
-    ['TS: toolGuidanceMarkup covers azimuth_crosstalk',
-      /toolGuidanceMarkup[\s\S]{0,300}azimuth_crosstalk/.test(uiSrc)],
+    // ── Channel Identity vs Azimuth (S7C.4: merged into channel_crosstalk_geometry) ─────
+    // 25. toolGuidanceMarkup covers channel_crosstalk_geometry (merged tool)
+    ['TS: toolGuidanceMarkup covers channel_crosstalk_geometry (merged channel tool)',
+      /case 'channel_crosstalk_geometry'/.test(uiSrc) && /toolGuidanceMarkup[\s\S]{0,8000}channel_crosstalk_geometry/.test(uiSrc)],
     // 26. Azimuth guidance does not positively claim a best/optimal/recommended azimuth setting
     // (Phrases like "No best or recommended azimuth" or "not declared" are fine; bare positive claims are not.)
     ['Safety: Azimuth guidance does not positively claim best/optimal azimuth recommendation',
@@ -5105,9 +5105,9 @@ function checkS7C3() {
       /No best or recommended azimuth is declared/.test(uiSrc)],
 
     // ── Fix 2: activateTool triggers re-render ────────────────────────────────
-    // 14. activateTool calls renderChannelPanel for channel_identity/azimuth_crosstalk
+    // 14. activateTool calls renderChannelPanel for channel_crosstalk_geometry (S7C.4: merged tool)
     ['TS: activateTool calls renderChannelPanel on channel tool activation',
-      /function activateTool[\s\S]{0,2000}channel_identity.*azimuth_crosstalk[\s\S]{0,400}renderChannelPanel/.test(uiSrc)
+      /function activateTool[\s\S]{0,2000}channel_crosstalk_geometry[\s\S]{0,400}renderChannelPanel/.test(uiSrc)
       || /function activateTool[\s\S]{0,2000}renderChannelPanel/.test(uiSrc)],
 
     // ── Fix 2: autostart workflow ID not hardcoded ────────────────────────────
@@ -5148,3 +5148,108 @@ function checkS7C3() {
 }
 
 checkS7C3();
+
+function checkS7C4() {
+  const renderSrcPath  = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const cssSrcPath     = join(repoRoot, 'src/modules/measurement-lab/ui/measurementLab.css');
+  const workflowsPath  = join(repoRoot, 'src/modules/measurement-lab/data/measurementWorkflows.ts');
+
+  for (const p of [renderSrcPath, cssSrcPath, workflowsPath]) {
+    if (!existsSync(p)) {
+      console.error(`S7C.4 static check FAIL: required file not found: ${p}`);
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const uiSrc  = readFileSync(renderSrcPath, 'utf8');
+  const cssSrc = readFileSync(cssSrcPath, 'utf8');
+  const wfSrc  = readFileSync(workflowsPath, 'utf8');
+
+  const checks = [
+    // ── Channel merge ──────────────────────────────────────────────────────────
+    // 1. WORKBENCH_TOOLS has channel_crosstalk_geometry entry (merged tool)
+    ['TS: WORKBENCH_TOOLS has channel_crosstalk_geometry entry',
+      /channel_crosstalk_geometry.*Channel \/ Crosstalk Geometry|Channel \/ Crosstalk Geometry.*channel_crosstalk_geometry/.test(uiSrc)],
+    // 2. WORKBENCH_TOOLS does NOT have separate channel_identity or azimuth_crosstalk rail entries
+    ['TS: WORKBENCH_TOOLS has no separate channel_identity rail entry',
+      !/\{ id: 'channel_identity'/.test(uiSrc)],
+    ['TS: WORKBENCH_TOOLS has no separate azimuth_crosstalk rail entry',
+      !/\{ id: 'azimuth_crosstalk'/.test(uiSrc)],
+    // 4. ChannelStateBag has submode field
+    ['TS: ChannelStateBag has submode field',
+      /submode:\s*'identity'\s*\|\s*'azimuth'|submode:\s*'azimuth'\s*\|\s*'identity'/.test(uiSrc)],
+    // 5. renderChannelPanel uses state.channel.submode to derive isAzimuth
+    ['TS: renderChannelPanel uses state.channel.submode for isAzimuth',
+      /state\.channel\.submode\s*===\s*'azimuth'/.test(uiSrc)],
+    // 6. Submode selector present in renderChannelPanel
+    ['TS: renderChannelPanel contains mlab-channel-submode-selector',
+      /mlab-channel-submode-selector/.test(uiSrc)],
+    // 7. Identity submode only shows azimuth step history when in azimuth mode
+    ['TS: renderChannelPanel only shows step history in azimuth submode',
+      /isAzimuth\s*\?\s*azimuthStepHistoryMarkup/.test(uiSrc)],
+    // 8. activateTool handles channel_crosstalk_geometry (not old split IDs)
+    ['TS: activateTool handles channel_crosstalk_geometry',
+      /toolId\s*===\s*'channel_crosstalk_geometry'/.test(uiSrc)],
+    // 9. measurementWorkflows.ts has channel_crosstalk_geometry entry
+    ['WF: measurementWorkflows has channel_crosstalk_geometry',
+      /id:\s*'channel_crosstalk_geometry'/.test(wfSrc)],
+
+    // ── Guidance discoverability ───────────────────────────────────────────────
+    // 10. toolGuidanceMarkup emits <details open> (open by default)
+    ['TS: toolGuidanceMarkup emits <details open> for discoverability',
+      /<details class="mlab-guidance-card" open>/.test(uiSrc)],
+    // 11. Setup metadata <details> is open by default
+    ['TS: setup-metadata details element is open by default',
+      /<details class="mlab-setup-metadata" open>/.test(uiSrc)],
+
+    // ── Vertical Resonance wording ────────────────────────────────────────────
+    // 12. renderResonancePanel uses "Analyzer window" label (not just "Sweep range")
+    ['TS: renderResonancePanel uses "Analyzer window" label in table',
+      /Analyzer window/.test(uiSrc)],
+    // 13. renderResonancePanel shows test-record band separately from analyzer window
+    ['TS: renderResonancePanel shows resonanceBandNoteHtml note for test-record band',
+      /resonanceBandNoteHtml/.test(uiSrc)],
+
+    // ── Modal CSS fix ─────────────────────────────────────────────────────────
+    // 14. .mlab-log-body standalone base rule does NOT use fixed height: 200px
+    // (Use (^|\n)\s* to exclude compound selectors like .mlab-log-panel .mlab-log-body)
+    ['CSS: .mlab-log-body base rule does not use fixed height: 200px',
+      !/(^|\n)\s*\.mlab-log-body\s*\{[^}]*height:\s*200px/.test(cssSrc)],
+    // 15. .mlab-log-panel .mlab-log-body has height: 200px (sidebar context only)
+    ['CSS: .mlab-log-panel .mlab-log-body restores 200px for sidebar',
+      /\.mlab-log-panel\s+\.mlab-log-body/.test(cssSrc)],
+
+    // ── Preserved safety constraints ──────────────────────────────────────────
+    // 16. Top ribbon Demo button still absent
+    ['TS: top ribbon Demo button (data-mlab-ribbon-demo) NOT present',
+      !/data-mlab-ribbon-demo/.test(uiSrc)],
+    // 17. AP Ultimate no fake 5-30 Hz resonance band
+    ['TS: no fake "5 Hz to 30 Hz" resonance band in TS source',
+      !/5.*Hz.*to.*30.*Hz.*resonance|resonance.*5.*Hz.*to.*30.*Hz/i.test(uiSrc)],
+    // 18. Baseline strip still says "reference only"
+    ['TS: baseline strip has reference only wording',
+      /reference only|Reference only/.test(uiSrc)],
+    // 19. S7B.2 autostart guard preserved
+    ['TS: S7B.2 autostart safety guard preserved',
+      /suspended/.test(uiSrc) || /captureState.*live.*autostart/i.test(uiSrc) || /AutostartGuard/.test(uiSrc)],
+    // 20. No azimuth best/optimal recommendation declared
+    ['Safety: no best/optimal azimuth recommendation in merged channel tool',
+      !/channel_crosstalk_geometry[\s\S]{0,1500}(?:best|optimal|recommended)\s+azimuth(?!\s+is\s+not|\s+setting\s+is\s+not)/i.test(uiSrc)],
+  ];
+
+  let allPass = true;
+  for (const [label, ok] of checks) {
+    if (!ok) {
+      console.error(`S7C.4 static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S7C.4 static source check (Visual / UX corrections, Channel merge, Guidance discoverability): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS7C4();

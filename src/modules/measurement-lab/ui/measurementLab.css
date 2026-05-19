@@ -1173,12 +1173,16 @@ button.mlab-rail-item:focus-visible {
 }
 
 .mlab-log-body {
-  height: 200px;
+  min-height: 80px;
   overflow-y: auto;
   padding: var(--ea-space-2) var(--ea-space-3);
   font-family: var(--ea-font-data);
   font-size: var(--ea-font-size-small);
   color: var(--ea-text-medium);
+}
+
+.mlab-log-panel .mlab-log-body {
+  height: 200px;
 }
 
 .mlab-log-entry {
@@ -2939,6 +2943,42 @@ button.mlab-coverage-badge--available:focus-visible {
   font-size: var(--ea-font-size-small, 0.75rem);
   color: var(--ea-text-primary, #e2e2e2);
   line-height: 1.4;
+}
+
+/* ── S7C.4: Channel/Crosstalk geometry submode selector ─────────────────────── */
+.mlab-channel-submode-selector {
+  display: flex;
+  gap: var(--ea-space-2, 0.5rem);
+  margin: var(--ea-space-2, 0.5rem) 0;
+}
+
+.mlab-channel-submode-btn {
+  flex: 1;
+  padding: var(--ea-space-1, 0.25rem) var(--ea-space-3, 0.75rem);
+  border: 1px solid var(--ea-border-primary, rgba(255,255,255,0.15));
+  border-radius: var(--ea-radius-sm, 3px);
+  background: transparent;
+  color: var(--ea-text-low, #888);
+  font-size: var(--ea-font-size-small, 0.75rem);
+  cursor: pointer;
+  text-align: center;
+  user-select: none;
+  transition: background 0.1s, color 0.1s;
+}
+
+.mlab-channel-submode-btn--active {
+  background: var(--ea-bg-accent, rgba(99,102,241,0.18));
+  color: var(--ea-text-primary, #e2e2e2);
+  border-color: var(--ea-accent, #6366f1);
+}
+
+/* ── S7C.4: Vertical resonance band vs window clarification ──────────────── */
+.mlab-resonance-band-note {
+  font-size: var(--ea-font-size-small, 0.75rem);
+  color: var(--ea-text-medium, #b0b0b0);
+  margin: var(--ea-space-1, 0.25rem) 0;
+  padding: var(--ea-space-2, 0.5rem) var(--ea-space-3, 0.75rem);
+  border-left: 2px solid var(--ea-border-soft, rgba(255,255,255,0.07));
 }
 
 /* ── S7C: Resonance measurement basis ─────────────────────────────────────── */

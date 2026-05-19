@@ -62,6 +62,7 @@ const WORKFLOW_PANEL_TARGETS: Readonly<Record<string, string>> = {
   wow_flutter: 'mlab-speed-panel',
   channel_identity: 'mlab-channel-panel',
   azimuth_crosstalk: 'mlab-channel-panel',
+  channel_crosstalk_geometry: 'mlab-channel-panel',
   frequency_response: 'mlab-freq-panel',
   reference_level: 'mlab-reflevel-panel',
   vta_imd_optimizer: 'mlab-advanced-panel',
@@ -80,8 +81,7 @@ type WorkbenchTool = {
 const WORKBENCH_TOOLS: readonly WorkbenchTool[] = [
   { id: 'audio_source', label: 'Audio Source', panelId: 'mlab-source-panel', group: 'Setup / baseline', workflowId: null, description: 'Connect ADC, choose live capture or Demo Mode, and verify input scope.' },
   { id: 'reference_level', label: 'Reference Level Calibration', panelId: 'mlab-reflevel-panel', group: 'Setup / baseline', workflowId: 'reference_level', description: 'Calibrate ADC input against standard groove level.' },
-  { id: 'channel_identity', label: 'Channel Identity', panelId: 'mlab-channel-panel', group: 'Channel / geometry', workflowId: 'channel_identity', description: 'Verify L/R routing and detect reversed connections.' },
-  { id: 'azimuth_crosstalk', label: 'Azimuth & Crosstalk', panelId: 'mlab-channel-panel', group: 'Channel / geometry', workflowId: 'azimuth_crosstalk', description: 'Measure channel separation and azimuth alignment.' },
+  { id: 'channel_crosstalk_geometry', label: 'Channel / Crosstalk Geometry', panelId: 'mlab-channel-panel', group: 'Channel / geometry', workflowId: 'channel_crosstalk_geometry', description: 'Routing/Identity check and Azimuth step comparison in one tool.' },
   { id: 'wow_flutter', label: 'Speed & Wow / Flutter', panelId: 'mlab-speed-panel', group: 'Speed / response', workflowId: 'wow_flutter', description: '33⅓/45 RPM diagnostics, weighted W&F and run comparison.' },
   { id: 'frequency_response', label: 'Frequency Response', panelId: 'mlab-freq-panel', group: 'Speed / response', workflowId: 'frequency_response', description: 'Plot the cartridge response curve from a frequency sweep.' },
   { id: 'thd_imd', label: 'THD / IMD Detail', panelId: 'mlab-thd-panel', group: 'Distortion / resonance', workflowId: null, description: 'Harmonic breakdown and distortion detail.' },
@@ -301,6 +301,7 @@ type ChannelStateBag = {
   rightBandMeta: ChannelBandMeta | null;
   runs: AzimuthStepRun[];
   stepLabelInput: string;
+  submode: 'identity' | 'azimuth';
 };
 
 type FreqBandMeta = {
@@ -481,7 +482,7 @@ type LabState = {
  * site below; it has no runtime effect.
  */
 const tokenLayoutGeneratedClassNames =
-  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured mlab-vta-candidate-badge mlab-vta-comparison mlab-vta-comparison-candidate mlab-vta-comparison-meta mlab-vta-comparison-warning mlab-vta-comparison-status mlab-vta-comparison-confidence mlab-vta-confidence-level mlab-vta-confidence-level--insufficient mlab-vta-confidence-level--low mlab-vta-confidence-level--medium mlab-vta-confidence-level--high mlab-vta-confidence-reason mlab-vta-gate mlab-vta-gate-head mlab-vta-gate-summary mlab-vta-gate-status mlab-vta-gate-status--not-ready mlab-vta-gate-status--candidate mlab-vta-gate-status--review mlab-vta-gate-msg mlab-vta-gate-table mlab-vta-gate-row mlab-vta-gate-pass mlab-vta-gate-pass--ok mlab-vta-gate-pass--fail mlab-vta-gate-label mlab-vta-gate-detail mlab-vta-policy mlab-vta-policy-head mlab-vta-policy-status-row mlab-vta-policy-status mlab-vta-policy-status--experimental mlab-vta-policy-status--review-not-supported mlab-vta-policy-reason mlab-vta-policy-req-head mlab-vta-policy-req-list mlab-vta-policy-req mlab-guided-order-panel mlab-guided-order-body mlab-guided-order-intro mlab-guided-order-list mlab-guided-order-item mlab-guided-order-item--first mlab-guided-order-step-head mlab-guided-order-track mlab-guided-order-name mlab-guided-order-first-badge mlab-guided-order-detail mlab-guided-order-workflow mlab-speed-ctx-row mlab-speed-ctx-label mlab-speed-ctx-btn mlab-speed-ctx-btn--active mlab-speed-ctx-note mlab-speed-ctx-badge mlab-speed-history mlab-speed-history-head mlab-speed-history-clear mlab-speed-history-empty mlab-speed-history-scroll mlab-speed-history-table mlab-speed-history-row mlab-speed-history-cell mlab-speed-settings mlab-speed-settings--result mlab-speed-settings-head mlab-speed-settings-hint mlab-speed-settings-row mlab-speed-settings-label mlab-speed-settings-value mlab-speed-settings-input-group mlab-speed-settings-input mlab-speed-settings-unit mlab-speed-settings-src mlab-speed-settings-reset mlab-nf-intro mlab-nf-guidance mlab-nf-settings mlab-nf-settings-row mlab-nf-settings-label mlab-nf-settings-select mlab-nf-settings-input mlab-nf-settings-input--wide mlab-nf-settings-input-group mlab-nf-settings-unit mlab-nf-settings-src mlab-nf-result mlab-nf-history mlab-nf-history-head mlab-nf-history-clear mlab-nf-history-scroll mlab-nf-history-table mlab-nf-history-row mlab-nf-history-cell mlab-chain-readiness mlab-chain-readiness--ready mlab-chain-readiness--warning mlab-chain-readiness--blocked mlab-chain-readiness--not-checked mlab-chain-readiness-row mlab-chain-readiness-key mlab-chain-readiness-val mlab-chain-readiness-warning mlab-chain-readiness-note mlab-run-quality mlab-run-quality--ok mlab-run-quality--warning mlab-run-quality--invalid mlab-run-quality-label mlab-run-quality-warnings mlab-session-ribbon mlab-ribbon-group mlab-ribbon-group--active mlab-ribbon-label mlab-ribbon-value mlab-ribbon-sep mlab-ribbon-sep--flex mlab-ribbon-active-tool mlab-workflow-rail mlab-rail-head mlab-rail-items mlab-rail-loading mlab-rail-item mlab-rail-item--available mlab-rail-item--planned mlab-rail-item--partial mlab-rail-item--unavailable mlab-rail-item--active mlab-rail-item-label mlab-rail-item-status mlab-diag-rail mlab-diag-signal-panel mlab-diag-signal-body mlab-diag-signal-status mlab-diag-signal-status--ready mlab-diag-signal-status--blocked mlab-diag-signal-status--warning mlab-diag-signal-status--not_checked mlab-diag-signal-row mlab-diag-signal-key mlab-diag-signal-val mlab-diag-signal-clip mlab-workbench-center mlab-center-head mlab-center-title mlab-center-title-pre mlab-center-title-h mlab-center-actions mlab-center-body mlab-center-status-pill mlab-tool-panel--active mlab-context-overlay mlab-context-overlay--open mlab-context-head mlab-context-body mlab-context-foot mlab-log-modal mlab-log-modal--open mlab-log-modal-dialog mlab-log-modal-head mlab-log-modal-body mlab-log-modal-foot mlab-log-modal-content mlab-workbench-footer mlab-footer-status mlab-footer-actions mlab-ribbon-meters mlab-ribbon-mini-meter mlab-ribbon-mini-label mlab-ribbon-mini-bar-wrap mlab-ribbon-mini-fill mlab-ribbon-mini-db mlab-rail-group-head mlab-rail-item-tooltip mlab-rail-item-tooltip-name mlab-rail-item-tooltip-status mlab-home-prereqs mlab-context-home-section mlab-rail-tooltip-portal--visible mlab-rail-item--source-inactive mlab-source-controls-head mlab-source-viz mlab-source-meter-grid mlab-source-freq-canvas mlab-ribbon-group--wide mlab-source-meter-channel mlab-recog-badge mlab-recog-badge--disabled mlab-recog-badge--armed mlab-recog-badge--waiting mlab-recog-badge--detecting mlab-recog-badge--locked mlab-recog-badge--recording mlab-recog-badge--rejected mlab-recog-badge--timeout mlab-recog-badge--ambiguous mlab-recog-badge--manual mlab-recog-arm-section mlab-recog-arm-row mlab-recog-arm-status mlab-recog-arm-actions mlab-recog-arm-reason mlab-local-autostart mlab-local-autostart-head mlab-local-autostart-reason mlab-local-autostart-actions mlab-guidance-card mlab-guidance-summary mlab-guidance-body mlab-guidance-row mlab-guidance-label mlab-guidance-text mlab-resonance-basis mlab-resonance-basis-label mlab-resonance-basis-note mlab-evidence-note mlab-evidence-note--limitation mlab-ribbon-source-controls mlab-baseline-strip mlab-baseline-active mlab-baseline-off mlab-evidence-card mlab-evidence-card-title mlab-evidence-card-state mlab-evidence-card-state--no-data mlab-evidence-card-state--live mlab-evidence-card-state--captured mlab-evidence-card-state--unavailable mlab-evidence-card-state--estimated mlab-evidence-card-body mlab-evidence-card-metric mlab-evidence-card-label mlab-evidence-card-value mlab-evidence-card-interpretation mlab-evidence-card-limitation mlab-setup-metadata mlab-setup-metadata-head mlab-setup-metadata-body mlab-setup-metadata-row mlab-channel-identity-head mlab-azimuth-head mlab-track-band-hint mlab-track-band-hint--unavailable mlab-demo-mode-warn';
+  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured mlab-vta-candidate-badge mlab-vta-comparison mlab-vta-comparison-candidate mlab-vta-comparison-meta mlab-vta-comparison-warning mlab-vta-comparison-status mlab-vta-comparison-confidence mlab-vta-confidence-level mlab-vta-confidence-level--insufficient mlab-vta-confidence-level--low mlab-vta-confidence-level--medium mlab-vta-confidence-level--high mlab-vta-confidence-reason mlab-vta-gate mlab-vta-gate-head mlab-vta-gate-summary mlab-vta-gate-status mlab-vta-gate-status--not-ready mlab-vta-gate-status--candidate mlab-vta-gate-status--review mlab-vta-gate-msg mlab-vta-gate-table mlab-vta-gate-row mlab-vta-gate-pass mlab-vta-gate-pass--ok mlab-vta-gate-pass--fail mlab-vta-gate-label mlab-vta-gate-detail mlab-vta-policy mlab-vta-policy-head mlab-vta-policy-status-row mlab-vta-policy-status mlab-vta-policy-status--experimental mlab-vta-policy-status--review-not-supported mlab-vta-policy-reason mlab-vta-policy-req-head mlab-vta-policy-req-list mlab-vta-policy-req mlab-guided-order-panel mlab-guided-order-body mlab-guided-order-intro mlab-guided-order-list mlab-guided-order-item mlab-guided-order-item--first mlab-guided-order-step-head mlab-guided-order-track mlab-guided-order-name mlab-guided-order-first-badge mlab-guided-order-detail mlab-guided-order-workflow mlab-speed-ctx-row mlab-speed-ctx-label mlab-speed-ctx-btn mlab-speed-ctx-btn--active mlab-speed-ctx-note mlab-speed-ctx-badge mlab-speed-history mlab-speed-history-head mlab-speed-history-clear mlab-speed-history-empty mlab-speed-history-scroll mlab-speed-history-table mlab-speed-history-row mlab-speed-history-cell mlab-speed-settings mlab-speed-settings--result mlab-speed-settings-head mlab-speed-settings-hint mlab-speed-settings-row mlab-speed-settings-label mlab-speed-settings-value mlab-speed-settings-input-group mlab-speed-settings-input mlab-speed-settings-unit mlab-speed-settings-src mlab-speed-settings-reset mlab-nf-intro mlab-nf-guidance mlab-nf-settings mlab-nf-settings-row mlab-nf-settings-label mlab-nf-settings-select mlab-nf-settings-input mlab-nf-settings-input--wide mlab-nf-settings-input-group mlab-nf-settings-unit mlab-nf-settings-src mlab-nf-result mlab-nf-history mlab-nf-history-head mlab-nf-history-clear mlab-nf-history-scroll mlab-nf-history-table mlab-nf-history-row mlab-nf-history-cell mlab-chain-readiness mlab-chain-readiness--ready mlab-chain-readiness--warning mlab-chain-readiness--blocked mlab-chain-readiness--not-checked mlab-chain-readiness-row mlab-chain-readiness-key mlab-chain-readiness-val mlab-chain-readiness-warning mlab-chain-readiness-note mlab-run-quality mlab-run-quality--ok mlab-run-quality--warning mlab-run-quality--invalid mlab-run-quality-label mlab-run-quality-warnings mlab-session-ribbon mlab-ribbon-group mlab-ribbon-group--active mlab-ribbon-label mlab-ribbon-value mlab-ribbon-sep mlab-ribbon-sep--flex mlab-ribbon-active-tool mlab-workflow-rail mlab-rail-head mlab-rail-items mlab-rail-loading mlab-rail-item mlab-rail-item--available mlab-rail-item--planned mlab-rail-item--partial mlab-rail-item--unavailable mlab-rail-item--active mlab-rail-item-label mlab-rail-item-status mlab-diag-rail mlab-diag-signal-panel mlab-diag-signal-body mlab-diag-signal-status mlab-diag-signal-status--ready mlab-diag-signal-status--blocked mlab-diag-signal-status--warning mlab-diag-signal-status--not_checked mlab-diag-signal-row mlab-diag-signal-key mlab-diag-signal-val mlab-diag-signal-clip mlab-workbench-center mlab-center-head mlab-center-title mlab-center-title-pre mlab-center-title-h mlab-center-actions mlab-center-body mlab-center-status-pill mlab-tool-panel--active mlab-context-overlay mlab-context-overlay--open mlab-context-head mlab-context-body mlab-context-foot mlab-log-modal mlab-log-modal--open mlab-log-modal-dialog mlab-log-modal-head mlab-log-modal-body mlab-log-modal-foot mlab-log-modal-content mlab-workbench-footer mlab-footer-status mlab-footer-actions mlab-ribbon-meters mlab-ribbon-mini-meter mlab-ribbon-mini-label mlab-ribbon-mini-bar-wrap mlab-ribbon-mini-fill mlab-ribbon-mini-db mlab-rail-group-head mlab-rail-item-tooltip mlab-rail-item-tooltip-name mlab-rail-item-tooltip-status mlab-home-prereqs mlab-context-home-section mlab-rail-tooltip-portal--visible mlab-rail-item--source-inactive mlab-source-controls-head mlab-source-viz mlab-source-meter-grid mlab-source-freq-canvas mlab-ribbon-group--wide mlab-source-meter-channel mlab-recog-badge mlab-recog-badge--disabled mlab-recog-badge--armed mlab-recog-badge--waiting mlab-recog-badge--detecting mlab-recog-badge--locked mlab-recog-badge--recording mlab-recog-badge--rejected mlab-recog-badge--timeout mlab-recog-badge--ambiguous mlab-recog-badge--manual mlab-recog-arm-section mlab-recog-arm-row mlab-recog-arm-status mlab-recog-arm-actions mlab-recog-arm-reason mlab-local-autostart mlab-local-autostart-head mlab-local-autostart-reason mlab-local-autostart-actions mlab-guidance-card mlab-guidance-summary mlab-guidance-body mlab-guidance-row mlab-guidance-label mlab-guidance-text mlab-resonance-basis mlab-resonance-basis-label mlab-resonance-basis-note mlab-evidence-note mlab-evidence-note--limitation mlab-ribbon-source-controls mlab-baseline-strip mlab-baseline-active mlab-baseline-off mlab-evidence-card mlab-evidence-card-title mlab-evidence-card-state mlab-evidence-card-state--no-data mlab-evidence-card-state--live mlab-evidence-card-state--captured mlab-evidence-card-state--unavailable mlab-evidence-card-state--estimated mlab-evidence-card-body mlab-evidence-card-metric mlab-evidence-card-label mlab-evidence-card-value mlab-evidence-card-interpretation mlab-evidence-card-limitation mlab-setup-metadata mlab-setup-metadata-head mlab-setup-metadata-body mlab-setup-metadata-row mlab-channel-identity-head mlab-azimuth-head mlab-track-band-hint mlab-track-band-hint--unavailable mlab-demo-mode-warn mlab-channel-submode-selector mlab-channel-submode-btn mlab-channel-submode-btn--active mlab-resonance-band-note';
 void tokenLayoutGeneratedClassNames;
 
 const speedMeasurementDurationSeconds = 30;
@@ -621,6 +622,7 @@ const state: LabState = {
     rightBandMeta: null,
     runs: [],
     stepLabelInput: '',
+    submode: 'identity',
   },
   freq: {
     active: false,
@@ -1108,7 +1110,7 @@ function audioSourcePanelMarkup(): string {
       </div>
       <div class="ea-panel-body">
         ${toolGuidanceMarkup('audio_source')}
-        <details class="mlab-setup-metadata">
+        <details class="mlab-setup-metadata" open>
           <summary class="mlab-setup-metadata-head">Setup metadata <span class="ea-muted">(optional — for reports)</span></summary>
           <div class="mlab-setup-metadata-body">
             <table class="ea-form-table" aria-label="Setup metadata">
@@ -1231,7 +1233,7 @@ function speedPanelMarkup(): string {
 
 function channelPanelMarkup(): string {
   return `
-    <section id="mlab-channel-panel" data-mlab-tool-panel="channel_identity" class="ea-panel" aria-labelledby="mlab-channel-title">
+    <section id="mlab-channel-panel" data-mlab-tool-panel="channel_crosstalk_geometry" class="ea-panel" aria-labelledby="mlab-channel-title">
       <div class="ea-panel-header">
         <span class="ea-panel-header-id">04</span>
         <span id="mlab-channel-title">Channel balance &amp; crosstalk</span>
@@ -3268,7 +3270,7 @@ function renderChannelPanel(els: Elements): void {
   }
 
   if (ch.step === 'done' && ch.leftCapture && ch.rightCapture) {
-    const isAzimuthResult = state.activeWorkflowId === 'azimuth_crosstalk';
+    const isAzimuthResult = state.channel.submode === 'azimuth';
     const identity = ch.identityResult;
     const warningsHtml = identity && identity.warnings.length > 0
       ? identity.warnings.map(w => `<p class="mlab-channel-warning">${renderText(w)}</p>`).join('')
@@ -3375,14 +3377,15 @@ function renderChannelPanel(els: Elements): void {
     return;
   }
 
-  // Idle (no captures yet)
-  const isAzimuth = state.activeWorkflowId === 'azimuth_crosstalk';
-  const activeToolForPanel = isAzimuth ? 'azimuth_crosstalk' : 'channel_identity';
-  const panelGuidance = isAzimuth ? toolGuidanceMarkup('azimuth_crosstalk') : toolGuidanceMarkup('channel_identity');
+  // Idle (no captures yet) — S7C.4: submode selector for identity vs azimuth
+  const isAzimuth = state.channel.submode === 'azimuth';
+  const activeToolForPanel = 'channel_crosstalk_geometry';
+  const submodeWorkflowId = isAzimuth ? 'azimuth_crosstalk' : 'channel_identity';
+  const panelGuidance = toolGuidanceMarkup('channel_crosstalk_geometry');
   const panelContextHead = isAzimuth
-    ? `<p class="mlab-azimuth-head ea-muted"><strong>Azimuth &amp; Crosstalk</strong> — step comparison and crosstalk symmetry evidence. No best or recommended azimuth setting is declared; use evidence alongside listening tests.</p>`
-    : `<p class="mlab-channel-identity-head ea-muted"><strong>Channel Identity</strong> — verifies L/R wiring, detects reversed connections, confirms channel routing sanity. Result is wiring/routing sanity, not an azimuth recommendation.</p>`;
-  const trackHint = isAzimuth ? trackBandHintMarkup('azimuth_crosstalk') : trackBandHintMarkup('channel_identity');
+    ? `<p class="mlab-azimuth-head ea-muted">Azimuth step comparison mode — capture L/R bands at each tonearm position. Compare crosstalk evidence across steps. No alignment recommendation is declared — compare steps using evidence and your own judgement.</p>`
+    : `<p class="mlab-channel-identity-head ea-muted">Routing / Identity mode — verifies L/R wiring, detects reversed connections, confirms channel routing sanity. Result is wiring/routing sanity, not an azimuth recommendation.</p>`;
+  const trackHint = trackBandHintMarkup(submodeWorkflowId);
   const leftBandInfo = leftBand
     ? `<p class="mlab-channel-info">Step 1 of 2: cue band <strong>${renderText(leftBand.index)}</strong> — ${renderText(leftBand.label)}. Each capture is ${channelMeasurementDurationSeconds}&nbsp;seconds.</p>`
     : `<p class="ea-muted">Step 1 of 2: cue the L-channel reference band on the test record (typically 1&nbsp;kHz, L only). Each capture is ${channelMeasurementDurationSeconds}&nbsp;seconds.</p>`;
@@ -3390,6 +3393,10 @@ function renderChannelPanel(els: Elements): void {
     ? `<p class="mlab-channel-selftest-note mlab-demo-mode-warn">Demo Mode uses a mono oscillator — channel identity result will be indicative only.</p>`
     : '';
   body.innerHTML = `
+    <div class="mlab-channel-submode-selector" role="group" aria-label="Measurement mode">
+      <button class="mlab-channel-submode-btn${!isAzimuth ? ' mlab-channel-submode-btn--active' : ''}" type="button" data-mlab-channel-submode="identity">A. Routing / Identity</button>
+      <button class="mlab-channel-submode-btn${isAzimuth ? ' mlab-channel-submode-btn--active' : ''}" type="button" data-mlab-channel-submode="azimuth">B. Azimuth Step Comparison</button>
+    </div>
     ${panelGuidance}
     ${panelContextHead}
     ${trackHint}
@@ -3404,10 +3411,19 @@ function renderChannelPanel(els: Elements): void {
     <div class="mlab-session-controls">
       <button class="ea-button ea-button--primary" type="button" data-mlab-channel-start-l>Start L-band capture</button>
     </div>
-    ${azimuthStepHistoryMarkup(ch.runs)}
-    ${azimuthStepComparisonMarkup(ch.runs)}
+    ${isAzimuth ? azimuthStepHistoryMarkup(ch.runs) : ''}
+    ${isAzimuth ? azimuthStepComparisonMarkup(ch.runs) : ''}
     ${toolLocalAutostartMarkup(activeToolForPanel)}
   `;
+  body.querySelectorAll<HTMLButtonElement>('[data-mlab-channel-submode]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const m = btn.dataset.mlabChannelSubmode as 'identity' | 'azimuth' | undefined;
+      if (m && m !== state.channel.submode) {
+        state.channel.submode = m;
+        renderChannelPanel(els);
+      }
+    });
+  });
   body.querySelector<HTMLInputElement>('#mlab-step-label')?.addEventListener('input', (e) => {
     state.channel.stepLabelInput = (e.target as HTMLInputElement).value;
   });
@@ -3415,12 +3431,12 @@ function renderChannelPanel(els: Elements): void {
     startChannelCapture(els, 'left');
   });
   // Wire local arm/disarm buttons for the active tool autostart (manual start only in S7B.1)
-  updateToolLocalAutostart(activeToolForPanel, activeToolForPanel);
+  updateToolLocalAutostart(activeToolForPanel, submodeWorkflowId);
   body.querySelector<HTMLButtonElement>(`[data-mlab-local-arm="${activeToolForPanel}"]`)?.addEventListener('click', () => {
-    armToolLocalAutostart(activeToolForPanel, activeToolForPanel, els);
+    armToolLocalAutostart(activeToolForPanel, submodeWorkflowId, els);
   });
   body.querySelector<HTMLButtonElement>(`[data-mlab-local-disarm="${activeToolForPanel}"]`)?.addEventListener('click', () => {
-    disarmFromTool(activeToolForPanel, activeToolForPanel, els);
+    disarmFromTool(activeToolForPanel, submodeWorkflowId, els);
   });
 }
 
@@ -4456,13 +4472,15 @@ function toolGuidanceMarkup(toolId: string): string {
         { label: 'Limitation', text: 'Level at reference frequency only; does not characterise EQ or spectrum.' },
       ];
       break;
+    case 'channel_crosstalk_geometry':
     case 'channel_identity':
       items = [
-        { label: 'Measures', text: 'Channel polarity, level balance, and crosstalk between L and R.' },
+        { label: 'Mode A', text: 'Routing / Identity — verifies L/R wiring, detects reversed connections. Result is wiring/routing sanity, not an azimuth recommendation.' },
+        { label: 'Mode B', text: 'Azimuth step comparison — capture L/R bands at each tonearm position. Compare crosstalk evidence across steps. No alignment setting is declared.' },
         { label: 'Signal', text: 'Separate L-only and R-only single-tone bands on the test record.' },
         { label: 'Prerequisite', text: 'Test record with dedicated per-channel bands. Source connected.' },
-        { label: 'Interpret', text: 'Near-equal levels = good balance. High dB separation = good channel isolation.' },
-        { label: 'Limitation', text: 'Valid only with a test record that provides dedicated per-channel isolation bands.' },
+        { label: 'Interpret', text: 'Near-equal levels = good balance. Lower crosstalk (more negative dB) indicates better channel separation.' },
+        { label: 'Limitation', text: 'Valid only with a test record that provides dedicated per-channel isolation bands. Azimuth optimisation involves many factors beyond crosstalk alone.' },
       ];
       break;
     case 'frequency_response':
@@ -4513,10 +4531,10 @@ function toolGuidanceMarkup(toolId: string): string {
       break;
     case 'azimuth_crosstalk':
       items = [
-        { label: 'Measures', text: 'Channel separation (crosstalk) evidence for azimuth alignment adjustment across multiple tonearm positions.' },
+        { label: 'Mode B', text: 'Azimuth step comparison — capture L/R bands at each tonearm position and compare crosstalk evidence across steps.' },
         { label: 'Signal', text: 'L/R channel-isolated tone bands on the test record — used in a step-capture workflow.' },
         { label: 'Workflow', text: 'Capture L-band and R-band for each azimuth step. Label each run (e.g. Baseline, +1°). Compare crosstalk across steps.' },
-        { label: 'Interpret', text: 'Lower crosstalk (more negative dB) generally indicates better channel separation at that azimuth. No best or recommended azimuth setting is declared. Use this evidence alongside listening tests and your own judgement.' },
+        { label: 'Interpret', text: 'Lower crosstalk (more negative dB) generally indicates better channel separation at that azimuth. No best or recommended azimuth setting is declared. Use evidence alongside listening tests and your own judgement.' },
         { label: 'Limitation', text: 'Crosstalk varies with test frequency. This tool captures at a single frequency band. Azimuth optimisation involves many factors beyond crosstalk alone.' },
       ];
       break;
@@ -4529,7 +4547,7 @@ function toolGuidanceMarkup(toolId: string): string {
       <span class="mlab-guidance-text">${i.text}</span>
     </div>`,
   ).join('');
-  return `<details class="mlab-guidance-card">
+  return `<details class="mlab-guidance-card" open>
     <summary class="mlab-guidance-summary">What this measures</summary>
     <div class="mlab-guidance-body">${rows}</div>
   </details>`;
@@ -4606,6 +4624,7 @@ function trackBandHintMarkup(toolId: string): string {
     wow_flutter: { label: '3150&thinsp;Hz speed reference band', unavailableNote: 'No speed reference band on selected record.' },
     channel_identity: { label: 'L-only and R-only channel identification bands', unavailableNote: 'No per-channel isolation bands on selected record.' },
     azimuth_crosstalk: { label: 'L/R channel-isolated tone bands for step workflow', unavailableNote: 'No crosstalk/channel-isolated bands on selected record.' },
+    channel_crosstalk_geometry: { label: 'L-only and R-only channel identification bands', unavailableNote: 'No per-channel isolation bands on selected record.' },
     frequency_response: { label: 'Wide-band frequency sweep band', unavailableNote: 'No frequency sweep band on selected record.' },
     thd_imd: { label: 'THD single-tone or IMD dual-tone distortion test band', unavailableNote: 'No distortion test band on selected record.' },
     vertical_resonance: { label: 'Low-frequency sweep (e.g. 1&thinsp;kHz&rarr;10&thinsp;Hz vertical, or 5&ndash;25&thinsp;Hz)', unavailableNote: 'No low-frequency sweep band on selected record. Estimate from compliance/mass values only if available.' },
@@ -5247,9 +5266,18 @@ function renderResonancePanel(els: Elements): void {
 
   // Idle
   const { sweepType, fromHz, toHz, durationSeconds } = state.resonance;
+  // Show test-record band separately from the analyzer detection window.
+  const resBandForNote = selectedRecord()
+    ? selectedRecord()!.sides.flatMap(s => s.bands).find(b =>
+        b.analyzerModule === 'vertical_resonance' || (b as { analyzerModules?: string[] }).analyzerModules?.includes('vertical_resonance'))
+    : undefined;
+  const resonanceBandNoteHtml = resBandForNote
+    ? `<p class="mlab-resonance-band-note">Test record band: <strong>${renderText(resBandForNote.index)}</strong> — ${renderText(resBandForNote.label)} (${resBandForNote.fromHz !== null && resBandForNote.toHz !== null ? `${resBandForNote.fromHz} Hz→${resBandForNote.toHz} Hz` : 'see test record'}). Analyzer detection window: ${fromHz}–${toHz} Hz — this is the frequency range searched for the resonance peak, not the sweep range on disc.</p>`
+    : '';
   body.innerHTML = `
     ${toolGuidanceMarkup('vertical_resonance')}
     ${trackBandHintMarkup('vertical_resonance')}
+    ${resonanceBandNoteHtml}
     <p class="ea-muted">Play the low-frequency sweep band on your test record. The tool detects the resonance frequency from the amplitude envelope of the captured signal.</p>
     <table class="ea-form-table" aria-label="Resonance sweep setup">
       <tbody>
@@ -5266,7 +5294,7 @@ function renderResonancePanel(els: Elements): void {
         </tr>
         <tr>
           <td class="ea-col-status">${statusDot('planned')}</td>
-          <td class="ea-col-label">Sweep range</td>
+          <td class="ea-col-label">Analyzer window</td>
           <td class="ea-col-value mlab-requested">${fromHz}&ndash;${toHz}&nbsp;Hz</td>
           <td class="ea-col-meta"><span class="ea-badge">Hz</span></td>
         </tr>
@@ -7465,7 +7493,7 @@ function buildSummarySection(): WebReportSection {
       badge: state.noiseFloor.runs.length > 0 ? 'ok' : 'info',
     },
     {
-      name: 'Channel Identity',
+      name: 'Channel / Crosstalk Geometry',
       detail: state.channel.leftCapture && state.channel.rightCapture
         ? `Captured · source: ${state.channel.source ?? 'live_capture'}`
         : 'Not captured in this session',
@@ -7883,7 +7911,7 @@ function buildChannelSection(): WebReportSection {
   if (!leftCapture && !rightCapture) {
     return {
       id: 'channel',
-      title: 'Channel Identity / Crosstalk',
+      title: 'Channel / Crosstalk Geometry',
       html: wrEmpty() + buildAzimuthStepsSection(),
     };
   }
@@ -7909,7 +7937,7 @@ function buildChannelSection(): WebReportSection {
     );
     return {
       id: 'channel',
-      title: 'Channel Identity / Crosstalk',
+      title: 'Channel / Crosstalk Geometry',
       html: wrKVs(pairs) + wrWarnings(identityResult.warnings) + buildAzimuthStepsSection(),
     };
   }
@@ -8251,6 +8279,7 @@ function buildTrackRecognitionSection(): WebReportSection {
   const workflowLabels: Record<string, string> = {
     wow_flutter: 'Speed &amp; Wow/Flutter',
     reference_level: 'Reference Level',
+    channel_crosstalk_geometry: 'Channel / Crosstalk Geometry',
     channel_identity: 'Channel Identity',
     azimuth_crosstalk: 'Azimuth / Crosstalk',
     frequency_response: 'Frequency Response',
@@ -8459,6 +8488,7 @@ function updateToolLocalAutostart(toolId: string, workflowId: string | null): vo
     const armedToolLabel =
       recog.armedFromToolId === 'wow_flutter' ? 'Speed & Wow/Flutter'
       : recog.armedFromToolId === 'reference_level' ? 'Reference Level'
+      : recog.armedFromToolId === 'channel_crosstalk_geometry' ? 'Channel / Crosstalk Geometry'
       : recog.armedFromToolId === 'channel_identity' ? 'Channel Identity'
       : recog.armedFromToolId ?? 'another tool';
     if (recog.phase === 'locked') {
@@ -8753,7 +8783,7 @@ function activateTool(toolId: string, els: Elements): void {
   }
   updateActiveRailItem(els, toolId);
   renderSessionRibbon(els);
-  if (toolId === 'channel_identity' || toolId === 'azimuth_crosstalk') {
+  if (toolId === 'channel_crosstalk_geometry') {
     renderChannelPanel(els);
   }
 }
