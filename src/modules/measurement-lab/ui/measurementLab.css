@@ -2,7 +2,6 @@
   height: 100dvh;
   grid-template-rows:
     minmax(var(--ea-shell-topbar-height), auto)
-    minmax(var(--ea-shell-context-height), auto)
     minmax(0, 1fr);
 }
 
@@ -24,11 +23,12 @@
   flex-wrap: nowrap;
   padding: 0 var(--ea-space-3);
   background: var(--ea-surface-elevated, rgba(255,255,255,0.04));
-  border-bottom: 1px solid var(--ea-border-subtle, rgba(255,255,255,0.07));
+  border-bottom: 1px solid rgba(255,255,255,0.1);
   font-size: var(--ea-text-sm);
   flex-shrink: 0;
   min-height: 44px;
   overflow: hidden;
+  user-select: none;
 }
 
 .mlab-ribbon-group {
@@ -90,7 +90,7 @@
   display: grid;
   grid-template-columns: 268px minmax(0, 1fr);
   gap: var(--ea-space-3);
-  padding: var(--ea-space-2) var(--ea-space-4) 0;
+  padding: var(--ea-space-2) var(--ea-space-3) 0;
   overflow: hidden;
   align-items: stretch;
   flex: 1 1 0;
@@ -107,11 +107,12 @@
   scrollbar-width: thin;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   padding: var(--ea-space-2);
   background: var(--ea-surface-raised, rgba(255,255,255,0.02));
   border: 1px solid var(--ea-border-subtle, rgba(255,255,255,0.07));
   border-radius: 6px;
+  user-select: none;
 }
 
 .mlab-rail-head {
@@ -131,6 +132,7 @@
 }
 
 .mlab-rail-item {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 1px;
@@ -141,23 +143,38 @@
   transition: background 0.1s;
 }
 
+button.mlab-rail-item {
+  -webkit-appearance: none;
+  appearance: none;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
 a.mlab-rail-item {
   cursor: pointer;
 }
 
 a.mlab-rail-item:hover,
-a.mlab-rail-item:focus-visible {
+a.mlab-rail-item:focus-visible,
+button.mlab-rail-item:hover,
+button.mlab-rail-item:focus-visible {
   background: var(--ea-surface-hover, rgba(255,255,255,0.06));
   outline: none;
 }
 
-a.mlab-rail-item:focus-visible {
+a.mlab-rail-item:focus-visible,
+button.mlab-rail-item:focus-visible {
   outline: 2px solid var(--ea-color-accent, #5a9fd4);
   outline-offset: 1px;
 }
 
 .mlab-rail-item--active {
-  background: var(--ea-surface-active, rgba(90,159,212,0.12));
+  background: rgba(242,184,55,0.08);
   box-shadow: inset 3px 0 0 var(--ea-interactive-accent, #f2b837);
 }
 
@@ -177,48 +194,41 @@ a.mlab-rail-item:focus-visible {
   margin-top: 0;
 }
 
-/* Make rail items position:relative for tooltip */
-.mlab-rail-item {
-  position: relative;
-}
+/* ── S7A.2: Tooltip portal (fixed-position, escapes overflow clipping) ─────── */
 
 .mlab-rail-item-tooltip {
   display: none;
-  position: absolute;
-  left: calc(100% + 10px);
-  top: 50%;
-  transform: translateY(-50%);
+}
+
+.mlab-rail-tooltip-portal {
+  position: fixed;
+  z-index: 9999;
   width: 260px;
   padding: 10px 12px;
   background: var(--ea-bg-panel, #14161d);
   border: 1px solid var(--ea-border-primary, rgba(255,255,255,0.15));
   border-radius: 6px;
   box-shadow: 0 16px 40px rgba(0,0,0,0.6);
-  z-index: 50;
   pointer-events: none;
   color: var(--ea-text-medium);
   font-size: var(--ea-text-xs, 0.75rem);
   line-height: 1.4;
+  opacity: 0;
+  transition: opacity 0.1s ease;
 }
-
-.mlab-rail-item:hover .mlab-rail-item-tooltip {
-  display: block;
-  animation: mlab-tooltip-in 0.15s ease 0.7s both;
+.mlab-rail-tooltip-portal--visible {
+  opacity: 1;
 }
-
-@keyframes mlab-tooltip-in {
-  from { opacity: 0; transform: translateY(-50%) translateX(-4px); }
-  to   { opacity: 1; transform: translateY(-50%) translateX(0); }
-}
-
-.mlab-rail-item-tooltip-name {
+.mlab-rail-tooltip-portal-name {
   display: block;
   font-weight: 700;
   color: var(--ea-text-high);
   margin-bottom: 4px;
 }
-
-.mlab-rail-item-tooltip-status {
+.mlab-rail-tooltip-portal-desc {
+  display: block;
+}
+.mlab-rail-tooltip-portal-status {
   display: block;
   margin-top: 6px;
   font-weight: 700;
@@ -259,7 +269,7 @@ a.mlab-rail-item:focus-visible {
   min-height: 0;
   display: grid;
   grid-template-rows: 58px minmax(0, 1fr);
-  border: 1px solid var(--ea-border-subtle, rgba(255,255,255,0.07));
+  border: 1px solid rgba(255,255,255,0.1);
   border-radius: 8px;
   overflow: hidden;
   background: var(--ea-surface-raised, rgba(255,255,255,0.01));
@@ -275,6 +285,7 @@ a.mlab-rail-item:focus-visible {
   background: var(--ea-surface-elevated, rgba(255,255,255,0.03));
   flex-shrink: 0;
   overflow: hidden;
+  user-select: none;
 }
 
 .mlab-center-title {
@@ -356,6 +367,7 @@ a.mlab-rail-item:focus-visible {
   border-bottom: 1px solid var(--ea-border-subtle, rgba(255,255,255,0.07));
   font-weight: 700;
   flex-shrink: 0;
+  user-select: none;
 }
 
 .mlab-context-body {
@@ -376,6 +388,7 @@ a.mlab-rail-item:focus-visible {
   border-top: 1px solid var(--ea-border-subtle, rgba(255,255,255,0.07));
   flex-shrink: 0;
   gap: var(--ea-space-2);
+  user-select: none;
 }
 
 /* ── S7A.1: Log modal ───────────────────────────────────────────────────────*/
@@ -414,6 +427,7 @@ a.mlab-rail-item:focus-visible {
   border-bottom: 1px solid var(--ea-border-subtle, rgba(255,255,255,0.07));
   font-weight: 700;
   flex-shrink: 0;
+  user-select: none;
 }
 
 .mlab-log-modal-body {
@@ -430,6 +444,7 @@ a.mlab-rail-item:focus-visible {
   padding: var(--ea-space-2) var(--ea-space-4);
   border-top: 1px solid var(--ea-border-subtle, rgba(255,255,255,0.07));
   flex-shrink: 0;
+  user-select: none;
 }
 
 /* ── S7A.1: Workbench footer ────────────────────────────────────────────────*/
@@ -444,6 +459,7 @@ a.mlab-rail-item:focus-visible {
   border-top: 1px solid var(--ea-border-subtle, rgba(255,255,255,0.07));
   background: var(--ea-bg-action-bar);
   flex-shrink: 0;
+  user-select: none;
 }
 
 .mlab-footer-status {
@@ -669,6 +685,7 @@ a.mlab-rail-item:focus-visible {
   border-radius: var(--ea-radius-sm);
   background: var(--ea-bg-panel-alt);
   overflow: hidden;
+  user-select: none;
 }
 
 .mlab-segmented-option {

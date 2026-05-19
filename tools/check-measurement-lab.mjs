@@ -4044,3 +4044,148 @@ function checkS7A1WorkbenchLayout() {
 }
 
 checkS7A1WorkbenchLayout();
+
+function checkS7A2VisualPolish() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const cssSrcPath    = join(repoRoot, 'src/modules/measurement-lab/ui/measurementLab.css');
+
+  for (const p of [renderSrcPath, cssSrcPath]) {
+    if (!existsSync(p)) {
+      console.error(`S7A.2 static check FAIL: required file not found: ${p}`);
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const uiSrc  = readFileSync(renderSrcPath, 'utf8');
+  const cssSrc = readFileSync(cssSrcPath, 'utf8');
+
+  const tokenStart = uiSrc.indexOf('tokenLayoutGeneratedClassNames');
+  const tokenEnd = uiSrc.indexOf('void tokenLayoutGeneratedClassNames', tokenStart);
+  const tokenBlock = tokenStart >= 0 ? uiSrc.slice(tokenStart, tokenEnd > tokenStart ? tokenEnd + 40 : tokenStart + 8000) : '';
+
+  const checks = [
+    // 1. CSS: mlab-shell is 2-row grid (no context bar row)
+    ['CSS: mlab-shell has 2-row grid (no context bar row)',
+      /\.mlab-shell[\s\S]{0,300}grid-template-rows[\s\S]{0,200}minmax\(0,\s*1fr\)/.test(cssSrc) &&
+      !/\.mlab-shell[\s\S]{0,300}ea-shell-context-height/.test(cssSrc)],
+    // 2. TS: renderContextBar() not called inside renderMeasurementLabPage()
+    ['TS: renderContextBar() call removed from renderMeasurementLabPage()',
+      !/renderMeasurementLabPage[\s\S]{0,2000}renderContextBar\(\)/.test(uiSrc)],
+    // 3. CSS: button.mlab-rail-item has appearance reset
+    ['CSS: button.mlab-rail-item has -webkit-appearance reset',
+      /button\.mlab-rail-item[\s\S]{0,300}-webkit-appearance\s*:\s*none/.test(cssSrc)],
+    // 4. CSS: button.mlab-rail-item has border:none reset
+    ['CSS: button.mlab-rail-item has border:none reset',
+      /button\.mlab-rail-item[\s\S]{0,300}border\s*:\s*none/.test(cssSrc)],
+    // 5. CSS: button.mlab-rail-item has background:transparent reset
+    ['CSS: button.mlab-rail-item has background:transparent',
+      /button\.mlab-rail-item[\s\S]{0,300}background\s*:\s*transparent/.test(cssSrc)],
+    // 6. CSS: mlab-rail-item--active uses amber color
+    ['CSS: mlab-rail-item--active uses amber background',
+      /\.mlab-rail-item--active[\s\S]{0,200}rgba\(242,\s*184,\s*55/.test(cssSrc)],
+    // 7. CSS: mlab-rail-item--active still has amber inset box-shadow
+    ['CSS: mlab-rail-item--active retains amber inset left border',
+      /\.mlab-rail-item--active[\s\S]{0,200}inset\s+3px\s+0\s+0/.test(cssSrc)],
+    // 8. CSS: user-select:none on session ribbon
+    ['CSS: mlab-session-ribbon has user-select:none',
+      /\.mlab-session-ribbon[\s\S]{0,500}user-select\s*:\s*none/.test(cssSrc)],
+    // 9. CSS: user-select:none on workflow rail
+    ['CSS: mlab-workflow-rail has user-select:none',
+      /\.mlab-workflow-rail[\s\S]{0,500}user-select\s*:\s*none/.test(cssSrc)],
+    // 10. CSS: user-select:none on center head
+    ['CSS: mlab-center-head has user-select:none',
+      /\.mlab-center-head[\s\S]{0,500}user-select\s*:\s*none/.test(cssSrc)],
+    // 11. CSS: user-select:none on workbench footer
+    ['CSS: mlab-workbench-footer has user-select:none',
+      /\.mlab-workbench-footer[\s\S]{0,300}user-select\s*:\s*none/.test(cssSrc)],
+    // 12. CSS: user-select:none on log modal head
+    ['CSS: mlab-log-modal-head has user-select:none',
+      /\.mlab-log-modal-head[\s\S]{0,300}user-select\s*:\s*none/.test(cssSrc)],
+    // 13. CSS: user-select:none on log modal foot
+    ['CSS: mlab-log-modal-foot has user-select:none',
+      /\.mlab-log-modal-foot[\s\S]{0,300}user-select\s*:\s*none/.test(cssSrc)],
+    // 14. CSS: tooltip portal uses position:fixed
+    ['CSS: mlab-rail-tooltip-portal uses position:fixed',
+      /\.mlab-rail-tooltip-portal[\s\S]{0,200}position\s*:\s*fixed/.test(cssSrc)],
+    // 15. CSS: tooltip portal has z-index:9999
+    ['CSS: mlab-rail-tooltip-portal has z-index:9999',
+      /\.mlab-rail-tooltip-portal[\s\S]{0,200}z-index\s*:\s*9999/.test(cssSrc)],
+    // 16. CSS: tooltip portal uses opacity transition (not display:block)
+    ['CSS: mlab-rail-tooltip-portal uses opacity:0 default',
+      /\.mlab-rail-tooltip-portal[\s\S]{0,500}opacity\s*:\s*0/.test(cssSrc)],
+    // 17. CSS: mlab-rail-tooltip-portal--visible sets opacity:1
+    ['CSS: mlab-rail-tooltip-portal--visible sets opacity:1',
+      /\.mlab-rail-tooltip-portal--visible[\s\S]{0,100}opacity\s*:\s*1/.test(cssSrc)],
+    // 18. CSS: old CSS-only tooltip animation keyframes removed
+    ['CSS: old mlab-tooltip-in keyframes removed',
+      !/@keyframes\s+mlab-tooltip-in/.test(cssSrc)],
+    // 19. CSS: old :hover .mlab-rail-item-tooltip rule removed
+    ['CSS: old :hover .mlab-rail-item-tooltip display:block removed',
+      !/\.mlab-rail-item:hover\s+\.mlab-rail-item-tooltip/.test(cssSrc)],
+    // 20. TS: railTooltipTimer module-level variable declared
+    ['TS: railTooltipTimer module-level variable declared',
+      /let railTooltipTimer\s*:/.test(uiSrc)],
+    // 21. TS: hideRailTooltip() function defined
+    ['TS: hideRailTooltip() function defined',
+      /function hideRailTooltip\(\)/.test(uiSrc)],
+    // 22. TS: showRailTooltip() function defined
+    ['TS: showRailTooltip() function defined',
+      /function showRailTooltip\(/.test(uiSrc)],
+    // 23. TS: railTooltipPortalMarkup() function defined
+    ['TS: railTooltipPortalMarkup() function defined',
+      /function railTooltipPortalMarkup\(\)/.test(uiSrc)],
+    // 24. TS: portal added to renderMeasurementLabPage()
+    ['TS: railTooltipPortalMarkup() called in renderMeasurementLabPage()',
+      /renderMeasurementLabPage[\s\S]{0,3000}railTooltipPortalMarkup\(\)/.test(uiSrc)],
+    // 25. TS: showRailTooltip uses getBoundingClientRect for positioning
+    ['TS: showRailTooltip uses getBoundingClientRect for positioning',
+      /showRailTooltip[\s\S]{0,800}getBoundingClientRect/.test(uiSrc)],
+    // 26. TS: renderWorkflowRail wires mouseenter with 700ms delay
+    ['TS: renderWorkflowRail wires mouseenter with 700ms delay',
+      /renderWorkflowRail[\s\S]{0,3000}mouseenter[\s\S]{0,500}700/.test(uiSrc)],
+    // 27. TS: renderWorkflowRail wires mouseleave to hideRailTooltip
+    ['TS: renderWorkflowRail wires mouseleave to hideRailTooltip',
+      /renderWorkflowRail[\s\S]{0,3000}mouseleave[\s\S]{0,200}hideRailTooltip/.test(uiSrc)],
+    // 28. TS: renderWorkflowRail uses data-tooltip-name attribute
+    ['TS: renderWorkflowRail uses data-tooltip-name attribute',
+      /renderWorkflowRail[\s\S]{0,3000}data-tooltip-name/.test(uiSrc)],
+    // 29. TS: rail items no longer embed inline tooltip spans in markup
+    ['TS: renderWorkflowRail does not embed mlab-rail-item-tooltip-name spans',
+      !/renderWorkflowRail[\s\S]{0,3000}mlab-rail-item-tooltip-name/.test(uiSrc)],
+    // 30. tokenLayoutGeneratedClassNames includes mlab-rail-tooltip-portal--visible
+    ['tokenLayoutGeneratedClassNames includes mlab-rail-tooltip-portal--visible',
+      tokenBlock.includes('mlab-rail-tooltip-portal--visible')],
+    // Regression guards
+    // 31. S7A.1 regression: activateTool still present
+    ['S7A regression: activateTool() still defined',
+      /function activateTool\(/.test(uiSrc)],
+    // 32. S7A.1 regression: mlab-workbench-grid still defined
+    ['S7A.1 regression: mlab-workbench-grid still defined in CSS',
+      /\.mlab-workbench-grid/.test(cssSrc)],
+    // 33. S7A.1 regression: mlab-session-ribbon still defined
+    ['S7A.1 regression: mlab-session-ribbon still defined in CSS',
+      /\.mlab-session-ribbon/.test(cssSrc)],
+    // 34. S7A.1 regression: context overlay still present
+    ['S7A.1 regression: mlab-context-overlay still defined',
+      /\.mlab-context-overlay/.test(cssSrc)],
+    // 35. S7A.1 regression: log modal still present
+    ['S7A.1 regression: mlab-log-modal still defined',
+      /\.mlab-log-modal/.test(cssSrc)],
+  ];
+
+  let allPass = true;
+  for (const [label, ok] of checks) {
+    if (!ok) {
+      console.error(`S7A.2 static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S7A.2 static source check (Visual Polish & Shell De-duplication): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS7A2VisualPolish();

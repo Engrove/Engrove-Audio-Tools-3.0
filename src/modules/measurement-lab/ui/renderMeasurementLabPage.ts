@@ -440,7 +440,7 @@ type LabState = {
  * site below; it has no runtime effect.
  */
 const tokenLayoutGeneratedClassNames =
-  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured mlab-vta-candidate-badge mlab-vta-comparison mlab-vta-comparison-candidate mlab-vta-comparison-meta mlab-vta-comparison-warning mlab-vta-comparison-status mlab-vta-comparison-confidence mlab-vta-confidence-level mlab-vta-confidence-level--insufficient mlab-vta-confidence-level--low mlab-vta-confidence-level--medium mlab-vta-confidence-level--high mlab-vta-confidence-reason mlab-vta-gate mlab-vta-gate-head mlab-vta-gate-summary mlab-vta-gate-status mlab-vta-gate-status--not-ready mlab-vta-gate-status--candidate mlab-vta-gate-status--review mlab-vta-gate-msg mlab-vta-gate-table mlab-vta-gate-row mlab-vta-gate-pass mlab-vta-gate-pass--ok mlab-vta-gate-pass--fail mlab-vta-gate-label mlab-vta-gate-detail mlab-vta-policy mlab-vta-policy-head mlab-vta-policy-status-row mlab-vta-policy-status mlab-vta-policy-status--experimental mlab-vta-policy-status--review-not-supported mlab-vta-policy-reason mlab-vta-policy-req-head mlab-vta-policy-req-list mlab-vta-policy-req mlab-guided-order-panel mlab-guided-order-body mlab-guided-order-intro mlab-guided-order-list mlab-guided-order-item mlab-guided-order-item--first mlab-guided-order-step-head mlab-guided-order-track mlab-guided-order-name mlab-guided-order-first-badge mlab-guided-order-detail mlab-guided-order-workflow mlab-speed-ctx-row mlab-speed-ctx-label mlab-speed-ctx-btn mlab-speed-ctx-btn--active mlab-speed-ctx-note mlab-speed-ctx-badge mlab-speed-history mlab-speed-history-head mlab-speed-history-clear mlab-speed-history-empty mlab-speed-history-scroll mlab-speed-history-table mlab-speed-history-row mlab-speed-history-cell mlab-speed-settings mlab-speed-settings--result mlab-speed-settings-head mlab-speed-settings-hint mlab-speed-settings-row mlab-speed-settings-label mlab-speed-settings-value mlab-speed-settings-input-group mlab-speed-settings-input mlab-speed-settings-unit mlab-speed-settings-src mlab-speed-settings-reset mlab-nf-intro mlab-nf-guidance mlab-nf-settings mlab-nf-settings-row mlab-nf-settings-label mlab-nf-settings-select mlab-nf-settings-input mlab-nf-settings-input--wide mlab-nf-settings-input-group mlab-nf-settings-unit mlab-nf-settings-src mlab-nf-result mlab-nf-history mlab-nf-history-head mlab-nf-history-clear mlab-nf-history-scroll mlab-nf-history-table mlab-nf-history-row mlab-nf-history-cell mlab-chain-readiness mlab-chain-readiness--ready mlab-chain-readiness--warning mlab-chain-readiness--blocked mlab-chain-readiness--not-checked mlab-chain-readiness-row mlab-chain-readiness-key mlab-chain-readiness-val mlab-chain-readiness-warning mlab-chain-readiness-note mlab-run-quality mlab-run-quality--ok mlab-run-quality--warning mlab-run-quality--invalid mlab-run-quality-label mlab-run-quality-warnings mlab-session-ribbon mlab-ribbon-group mlab-ribbon-group--active mlab-ribbon-label mlab-ribbon-value mlab-ribbon-sep mlab-ribbon-sep--flex mlab-ribbon-active-tool mlab-workflow-rail mlab-rail-head mlab-rail-items mlab-rail-loading mlab-rail-item mlab-rail-item--available mlab-rail-item--planned mlab-rail-item--partial mlab-rail-item--unavailable mlab-rail-item--active mlab-rail-item-label mlab-rail-item-status mlab-diag-rail mlab-diag-signal-panel mlab-diag-signal-body mlab-diag-signal-status mlab-diag-signal-status--ready mlab-diag-signal-status--blocked mlab-diag-signal-status--warning mlab-diag-signal-status--not_checked mlab-diag-signal-row mlab-diag-signal-key mlab-diag-signal-val mlab-diag-signal-clip mlab-workbench-center mlab-center-head mlab-center-title mlab-center-title-pre mlab-center-title-h mlab-center-actions mlab-center-body mlab-center-status-pill mlab-tool-panel--active mlab-context-overlay mlab-context-overlay--open mlab-context-head mlab-context-body mlab-context-foot mlab-log-modal mlab-log-modal--open mlab-log-modal-dialog mlab-log-modal-head mlab-log-modal-body mlab-log-modal-foot mlab-workbench-footer mlab-footer-status mlab-footer-actions mlab-ribbon-meters mlab-ribbon-mini-meter mlab-ribbon-mini-label mlab-ribbon-mini-bar-wrap mlab-ribbon-mini-fill mlab-ribbon-mini-db mlab-rail-group-head mlab-rail-item-tooltip mlab-rail-item-tooltip-name mlab-rail-item-tooltip-status mlab-home-panel mlab-home-prereqs';
+  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured mlab-vta-candidate-badge mlab-vta-comparison mlab-vta-comparison-candidate mlab-vta-comparison-meta mlab-vta-comparison-warning mlab-vta-comparison-status mlab-vta-comparison-confidence mlab-vta-confidence-level mlab-vta-confidence-level--insufficient mlab-vta-confidence-level--low mlab-vta-confidence-level--medium mlab-vta-confidence-level--high mlab-vta-confidence-reason mlab-vta-gate mlab-vta-gate-head mlab-vta-gate-summary mlab-vta-gate-status mlab-vta-gate-status--not-ready mlab-vta-gate-status--candidate mlab-vta-gate-status--review mlab-vta-gate-msg mlab-vta-gate-table mlab-vta-gate-row mlab-vta-gate-pass mlab-vta-gate-pass--ok mlab-vta-gate-pass--fail mlab-vta-gate-label mlab-vta-gate-detail mlab-vta-policy mlab-vta-policy-head mlab-vta-policy-status-row mlab-vta-policy-status mlab-vta-policy-status--experimental mlab-vta-policy-status--review-not-supported mlab-vta-policy-reason mlab-vta-policy-req-head mlab-vta-policy-req-list mlab-vta-policy-req mlab-guided-order-panel mlab-guided-order-body mlab-guided-order-intro mlab-guided-order-list mlab-guided-order-item mlab-guided-order-item--first mlab-guided-order-step-head mlab-guided-order-track mlab-guided-order-name mlab-guided-order-first-badge mlab-guided-order-detail mlab-guided-order-workflow mlab-speed-ctx-row mlab-speed-ctx-label mlab-speed-ctx-btn mlab-speed-ctx-btn--active mlab-speed-ctx-note mlab-speed-ctx-badge mlab-speed-history mlab-speed-history-head mlab-speed-history-clear mlab-speed-history-empty mlab-speed-history-scroll mlab-speed-history-table mlab-speed-history-row mlab-speed-history-cell mlab-speed-settings mlab-speed-settings--result mlab-speed-settings-head mlab-speed-settings-hint mlab-speed-settings-row mlab-speed-settings-label mlab-speed-settings-value mlab-speed-settings-input-group mlab-speed-settings-input mlab-speed-settings-unit mlab-speed-settings-src mlab-speed-settings-reset mlab-nf-intro mlab-nf-guidance mlab-nf-settings mlab-nf-settings-row mlab-nf-settings-label mlab-nf-settings-select mlab-nf-settings-input mlab-nf-settings-input--wide mlab-nf-settings-input-group mlab-nf-settings-unit mlab-nf-settings-src mlab-nf-result mlab-nf-history mlab-nf-history-head mlab-nf-history-clear mlab-nf-history-scroll mlab-nf-history-table mlab-nf-history-row mlab-nf-history-cell mlab-chain-readiness mlab-chain-readiness--ready mlab-chain-readiness--warning mlab-chain-readiness--blocked mlab-chain-readiness--not-checked mlab-chain-readiness-row mlab-chain-readiness-key mlab-chain-readiness-val mlab-chain-readiness-warning mlab-chain-readiness-note mlab-run-quality mlab-run-quality--ok mlab-run-quality--warning mlab-run-quality--invalid mlab-run-quality-label mlab-run-quality-warnings mlab-session-ribbon mlab-ribbon-group mlab-ribbon-group--active mlab-ribbon-label mlab-ribbon-value mlab-ribbon-sep mlab-ribbon-sep--flex mlab-ribbon-active-tool mlab-workflow-rail mlab-rail-head mlab-rail-items mlab-rail-loading mlab-rail-item mlab-rail-item--available mlab-rail-item--planned mlab-rail-item--partial mlab-rail-item--unavailable mlab-rail-item--active mlab-rail-item-label mlab-rail-item-status mlab-diag-rail mlab-diag-signal-panel mlab-diag-signal-body mlab-diag-signal-status mlab-diag-signal-status--ready mlab-diag-signal-status--blocked mlab-diag-signal-status--warning mlab-diag-signal-status--not_checked mlab-diag-signal-row mlab-diag-signal-key mlab-diag-signal-val mlab-diag-signal-clip mlab-workbench-center mlab-center-head mlab-center-title mlab-center-title-pre mlab-center-title-h mlab-center-actions mlab-center-body mlab-center-status-pill mlab-tool-panel--active mlab-context-overlay mlab-context-overlay--open mlab-context-head mlab-context-body mlab-context-foot mlab-log-modal mlab-log-modal--open mlab-log-modal-dialog mlab-log-modal-head mlab-log-modal-body mlab-log-modal-foot mlab-workbench-footer mlab-footer-status mlab-footer-actions mlab-ribbon-meters mlab-ribbon-mini-meter mlab-ribbon-mini-label mlab-ribbon-mini-bar-wrap mlab-ribbon-mini-fill mlab-ribbon-mini-db mlab-rail-group-head mlab-rail-item-tooltip mlab-rail-item-tooltip-name mlab-rail-item-tooltip-status mlab-home-panel mlab-home-prereqs mlab-rail-tooltip-portal--visible';
 void tokenLayoutGeneratedClassNames;
 
 const speedMeasurementDurationSeconds = 30;
@@ -653,6 +653,53 @@ const state: LabState = {
   },
 };
 
+// ── S7A.2: Tooltip portal state ───────────────────────────────────────────────
+let railTooltipTimer: ReturnType<typeof setTimeout> | null = null;
+
+function hideRailTooltip(): void {
+  if (railTooltipTimer !== null) {
+    clearTimeout(railTooltipTimer);
+    railTooltipTimer = null;
+  }
+  const portal = document.querySelector<HTMLElement>('[data-mlab-rail-tooltip]');
+  if (portal) {
+    portal.classList.remove('mlab-rail-tooltip-portal--visible');
+    portal.style.display = '';
+  }
+}
+
+function showRailTooltip(item: HTMLElement): void {
+  const portal = document.querySelector<HTMLElement>('[data-mlab-rail-tooltip]');
+  if (!portal) return;
+
+  const name = item.dataset.tooltipName ?? '';
+  const desc = item.dataset.tooltipDesc ?? '';
+  const avail = item.dataset.tooltipAvail ?? '';
+
+  const nameEl = portal.querySelector<HTMLElement>('[data-mlab-tooltip-name]');
+  const descEl = portal.querySelector<HTMLElement>('[data-mlab-tooltip-desc]');
+  const statusEl = portal.querySelector<HTMLElement>('[data-mlab-tooltip-status]');
+  if (nameEl) nameEl.textContent = name;
+  if (descEl) descEl.textContent = desc;
+  if (statusEl) statusEl.textContent = avail;
+
+  const rect = item.getBoundingClientRect();
+  const portalWidth = 260;
+  const margin = 10;
+  let left = rect.right + margin;
+  if (left + portalWidth > window.innerWidth) {
+    left = rect.left - portalWidth - margin;
+  }
+  const portalHeight = 80; // approximate
+  let top = rect.top + rect.height / 2 - portalHeight / 2;
+  top = Math.max(margin, Math.min(top, window.innerHeight - portalHeight - margin));
+
+  portal.style.left = `${left}px`;
+  portal.style.top = `${top}px`;
+  portal.style.display = '';
+  portal.classList.add('mlab-rail-tooltip-portal--visible');
+}
+
 function readStoredDeviceId(): string | null {
   try {
     const value = window.localStorage.getItem(browserStorageKey);
@@ -824,6 +871,16 @@ function contextOverlayMarkup(): string {
         <button class="ea-button ea-button--ghost" type="button" data-mlab-open-log>Open activity log</button>
         <button class="ea-button ea-button--ghost" type="button" data-mlab-context-close>Back to active tool</button>
       </div>
+    </div>
+  `;
+}
+
+function railTooltipPortalMarkup(): string {
+  return `
+    <div class="mlab-rail-tooltip-portal" data-mlab-rail-tooltip aria-hidden="true">
+      <span class="mlab-rail-tooltip-portal-name" data-mlab-tooltip-name></span>
+      <span class="mlab-rail-tooltip-portal-desc" data-mlab-tooltip-desc></span>
+      <span class="mlab-rail-tooltip-portal-status" data-mlab-tooltip-status></span>
     </div>
   `;
 }
@@ -2374,7 +2431,6 @@ export function renderMeasurementLabPage(): string {
   return `
     <main class="ea-tool-shell mlab-shell">
       ${renderToolTopbar('measurement')}
-      ${renderContextBar()}
       <section class="mlab-workbench" aria-label="Measurement lab workbench">
         ${sessionRibbonMarkup()}
         <div class="mlab-workbench-grid">
@@ -2421,6 +2477,7 @@ export function renderMeasurementLabPage(): string {
           </div>
         </footer>
       </section>
+      ${railTooltipPortalMarkup()}
       ${logModalMarkup()}
     </main>
   `;
@@ -7580,25 +7637,16 @@ function renderWorkflowRail(els: Elements): void {
       parts.push(`<div class="mlab-rail-group-head">${renderText(tool.group)}</div>`);
     }
 
+    const tooltipAttrs = `data-tooltip-name="${renderText(tool.label)}" data-tooltip-desc="${renderText(tool.description)}" data-tooltip-avail="${renderText(availLabel)}"`;
     if (tool.panelId) {
-      parts.push(`<button class="${itemClass}" type="button" data-mlab-rail-item="${renderText(tool.id)}">
+      parts.push(`<button class="${itemClass}" type="button" data-mlab-rail-item="${renderText(tool.id)}" ${tooltipAttrs}>
         <span class="mlab-rail-item-label">${renderText(tool.label)}</span>
         <span class="mlab-rail-item-status">${renderText(availLabel)}</span>
-        <span class="mlab-rail-item-tooltip" aria-hidden="true">
-          <span class="mlab-rail-item-tooltip-name">${renderText(tool.label)}</span>
-          <span>${renderText(tool.description)}</span>
-          <span class="mlab-rail-item-tooltip-status mlab-rail-item--${avail}">${renderText(availLabel)}</span>
-        </span>
       </button>`);
     } else {
-      parts.push(`<div class="${itemClass}">
+      parts.push(`<div class="${itemClass}" ${tooltipAttrs}>
         <span class="mlab-rail-item-label">${renderText(tool.label)}</span>
         <span class="mlab-rail-item-status">${renderText(availLabel)}</span>
-        <span class="mlab-rail-item-tooltip" aria-hidden="true">
-          <span class="mlab-rail-item-tooltip-name">${renderText(tool.label)}</span>
-          <span>${renderText(tool.description)}</span>
-          <span class="mlab-rail-item-tooltip-status mlab-rail-item--${avail}">${renderText(availLabel)}</span>
-        </span>
       </div>`);
     }
   }
@@ -7610,6 +7658,14 @@ function renderWorkflowRail(els: Elements): void {
       const toolId = btn.dataset.mlabRailItem ?? '';
       activateTool(toolId, els);
     });
+  });
+
+  els.railItems.querySelectorAll<HTMLElement>('.mlab-rail-item').forEach(item => {
+    item.addEventListener('mouseenter', () => {
+      if (railTooltipTimer !== null) clearTimeout(railTooltipTimer);
+      railTooltipTimer = setTimeout(() => showRailTooltip(item), 700);
+    });
+    item.addEventListener('mouseleave', () => hideRailTooltip());
   });
 }
 
