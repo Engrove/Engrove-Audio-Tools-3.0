@@ -538,21 +538,6 @@
           "side": "2",
           "bands": [
             {
-              "index": "2-1",
-              "label": "Low-frequency resonance sweep 5 Hz to 30 Hz",
-              "type": "sweep",
-              "channel": "both",
-              "from_hz": 5,
-              "to_hz": 30,
-              "duration_seconds": 30,
-              "purpose": "resonance",
-              "signal_type": "sweep",
-              "analyzer_module": "lf_resonance",
-              "sweep_direction": "ascending",
-              "sweep_scale": "log",
-              "notes": "Slow sweep through the cartridge-tonearm fundamental resonance region. Compare detected peak with calculated resonance from Tonearm Match Lab."
-            },
-            {
               "index": "2-2",
               "label": "Anti-skating 315 Hz amplitude sweep to +12 dB",
               "type": "sine",

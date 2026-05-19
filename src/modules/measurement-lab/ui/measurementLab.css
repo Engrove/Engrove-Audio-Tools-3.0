@@ -2987,11 +2987,6 @@ button.mlab-coverage-badge--available:focus-visible {
   flex-shrink: 0;
 }
 
-.mlab-ribbon-demo-btn {
-  color: var(--ea-text-low, #888);
-  border-color: var(--ea-border-soft, rgba(255,255,255,0.07));
-}
-
 .mlab-demo-mode-warn {
   color: var(--ea-warning, #b45309);
 }

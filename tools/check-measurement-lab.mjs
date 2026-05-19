@@ -3920,9 +3920,9 @@ function checkS7A1WorkbenchLayout() {
     // 13. logModalMarkup function declared
     ['logModalMarkup function declared',
       /function logModalMarkup\s*\(/.test(uiSrc)],
-    // 14. logModalMarkup emits data-mlab-log-body inside modal
-    ['logModalMarkup contains data-mlab-log-body',
-      /logModalMarkup[\s\S]{0,500}data-mlab-log-body/.test(uiSrc)],
+    // 14. logModalMarkup emits data-mlab-log-modal-content inside modal (distinct from sidebar data-mlab-log-body)
+    ['logModalMarkup contains data-mlab-log-modal-content',
+      /logModalMarkup[\s\S]{0,500}data-mlab-log-modal-content/.test(uiSrc)],
     // 15. contextSessionOverviewMarkup function declared (S7A.2.1: moved to context overlay)
     ['contextSessionOverviewMarkup function declared',
       /function contextSessionOverviewMarkup\s*\(/.test(uiSrc)],
@@ -4015,9 +4015,9 @@ function checkS7A1WorkbenchLayout() {
     // 44. webReportBtn still wired (S5J regression)
     ['S5J regression: webReportBtn still referenced',
       /webReportBtn/.test(uiSrc)],
-    // 45. logBody still accessible (S7A.1 moved to modal)
-    ['S7A.1: data-mlab-log-body present in logModalMarkup',
-      /logModalMarkup[\s\S]{0,800}data-mlab-log-body/.test(uiSrc)],
+    // 45. Modal log uses distinct selector (S7C.2: data-mlab-log-modal-content, not shared log-body)
+    ['S7A.1: data-mlab-log-modal-content present in logModalMarkup (S7C.2)',
+      /logModalMarkup[\s\S]{0,800}data-mlab-log-modal-content/.test(uiSrc)],
     // 46. Meter grid still present in contextOverlayMarkup
     ['S7A.1: data-mlab-meter-grid present in contextOverlayMarkup',
       /contextOverlayMarkup[\s\S]{0,1500}data-mlab-meter-grid/.test(uiSrc)],
@@ -4469,9 +4469,9 @@ function checkS7B1() {
     // 14. TS: local autostart block in refLevel panel
     ['TS: local autostart block in refLevel panel',
       /renderRefLevelPanel[\s\S]{0,8600}toolLocalAutostartMarkup\('reference_level'\)/.test(uiSrc)],
-    // 15. TS: local autostart block in channel panel
-    ['TS: local autostart block in channel panel',
-      /renderChannelPanel[\s\S]{0,8000}toolLocalAutostartMarkup\('channel_identity'\)/.test(uiSrc)],
+    // 15. TS: local autostart block in channel panel uses activeToolForPanel (S7C.2 fix)
+    ['TS: local autostart block in channel panel uses activeToolForPanel',
+      /renderChannelPanel[\s\S]{0,8000}toolLocalAutostartMarkup\(activeToolForPanel\)/.test(uiSrc)],
 
     // ── TS: global arm button removed ─────────────────────────────────────
     // 16. TS: global arm button removed from audioSourcePanelMarkup (no data-mlab-recog-arm button)
@@ -4728,9 +4728,9 @@ function checkS7C() {
     // 15. classifyResonanceBasis function defined
     ['TS: classifyResonanceBasis function defined',
       /function classifyResonanceBasis\(/.test(uiSrc)],
-    // 16. classifyResonanceBasis uses toHz <= 25 threshold for measured sweep
-    ['TS: classifyResonanceBasis uses toHz <= 25 for measured_sweep classification',
-      /classifyResonanceBasis[\s\S]{0,400}toHz\s*<=\s*25/.test(uiSrc)],
+    // 16. classifyResonanceBasis accepts bandMeta parameter (S7C.2 metadata-based classification)
+    ['TS: classifyResonanceBasis accepts bandMeta parameter',
+      /function classifyResonanceBasis\([^)]*bandMeta/.test(uiSrc)],
     // 17. resonanceBasisHtml function defined
     ['TS: resonanceBasisHtml function defined',
       /function resonanceBasisHtml\(/.test(uiSrc)],
@@ -4854,12 +4854,12 @@ function checkS7C1() {
     // 6. SELF TEST or self-test user-facing label not present in primary UI buttons
     ['Safety: "SELF TEST" user-facing label not in Measurement Lab UI',
       !/>\s*SELF TEST\s*</.test(uiSrc)],
-    // 7. Demo Mode ribbon button exists
-    ['TS: Demo Mode ribbon button (data-mlab-ribbon-demo) exists',
-      /data-mlab-ribbon-demo/.test(uiSrc)],
-    // 8. Demo Mode has warning-style class (ribbon-demo-btn)
-    ['CSS: mlab-ribbon-demo-btn defined',
-      /\.mlab-ribbon-demo-btn\s*\{/.test(cssSrc)],
+    // 7. Demo Mode ribbon button NOT in top ribbon (S7C.2: moved to Audio Source only)
+    ['TS: Demo Mode ribbon button (data-mlab-ribbon-demo) NOT in top ribbon',
+      !/data-mlab-ribbon-demo/.test(uiSrc)],
+    // 8. Audio Source still contains Demo Mode as secondary control
+    ['TS: Demo Mode still available in Audio Source (data-mlab-source-mode="self-test")',
+      /data-mlab-source-mode="self-test"/.test(uiSrc)],
 
     // ── Audio Source guidance ─────────────────────────────────────────────────
     // 9. toolGuidanceMarkup covers audio_source

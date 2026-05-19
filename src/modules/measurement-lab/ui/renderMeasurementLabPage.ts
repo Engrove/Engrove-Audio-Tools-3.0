@@ -3362,9 +3362,10 @@ function renderChannelPanel(els: Elements): void {
 
   // Idle (no captures yet)
   const isAzimuth = state.activeWorkflowId === 'azimuth_crosstalk';
+  const activeToolForPanel = isAzimuth ? 'azimuth_crosstalk' : 'channel_identity';
   const panelGuidance = isAzimuth ? toolGuidanceMarkup('azimuth_crosstalk') : toolGuidanceMarkup('channel_identity');
   const panelContextHead = isAzimuth
-    ? `<p class="mlab-azimuth-head ea-muted"><strong>Azimuth &amp; Crosstalk</strong> — measure crosstalk evidence across azimuth steps. No best or recommended azimuth setting is declared; use evidence alongside listening tests.</p>`
+    ? `<p class="mlab-azimuth-head ea-muted"><strong>Azimuth &amp; Crosstalk</strong> — step comparison and crosstalk symmetry evidence. No best or recommended azimuth setting is declared; use evidence alongside listening tests.</p>`
     : `<p class="mlab-channel-identity-head ea-muted"><strong>Channel Identity</strong> — verifies L/R wiring, detects reversed connections, confirms channel routing sanity. Result is wiring/routing sanity, not an azimuth recommendation.</p>`;
   const trackHint = isAzimuth ? trackBandHintMarkup('azimuth_crosstalk') : trackBandHintMarkup('channel_identity');
   const leftBandInfo = leftBand
@@ -3390,7 +3391,7 @@ function renderChannelPanel(els: Elements): void {
     </div>
     ${azimuthStepHistoryMarkup(ch.runs)}
     ${azimuthStepComparisonMarkup(ch.runs)}
-    ${toolLocalAutostartMarkup('channel_identity')}
+    ${toolLocalAutostartMarkup(activeToolForPanel)}
   `;
   body.querySelector<HTMLInputElement>('#mlab-step-label')?.addEventListener('input', (e) => {
     state.channel.stepLabelInput = (e.target as HTMLInputElement).value;
@@ -3398,13 +3399,13 @@ function renderChannelPanel(els: Elements): void {
   body.querySelector<HTMLButtonElement>('[data-mlab-channel-start-l]')?.addEventListener('click', () => {
     startChannelCapture(els, 'left');
   });
-  // Wire local arm/disarm buttons for channel_identity autostart (manual start only in S7B.1)
-  updateToolLocalAutostart('channel_identity', 'channel_identity');
-  body.querySelector<HTMLButtonElement>('[data-mlab-local-arm="channel_identity"]')?.addEventListener('click', () => {
-    armToolLocalAutostart('channel_identity', 'channel_identity', els);
+  // Wire local arm/disarm buttons for the active tool autostart (manual start only in S7B.1)
+  updateToolLocalAutostart(activeToolForPanel, activeToolForPanel);
+  body.querySelector<HTMLButtonElement>(`[data-mlab-local-arm="${activeToolForPanel}"]`)?.addEventListener('click', () => {
+    armToolLocalAutostart(activeToolForPanel, activeToolForPanel, els);
   });
-  body.querySelector<HTMLButtonElement>('[data-mlab-local-disarm="channel_identity"]')?.addEventListener('click', () => {
-    disarmFromTool('channel_identity', 'channel_identity', els);
+  body.querySelector<HTMLButtonElement>(`[data-mlab-local-disarm="${activeToolForPanel}"]`)?.addEventListener('click', () => {
+    disarmFromTool(activeToolForPanel, activeToolForPanel, els);
   });
 }
 
@@ -4624,17 +4625,54 @@ type ResonanceBasis =
   | 'unavailable'
   | 'exploratory_low_confidence';
 
-function classifyResonanceBasis(fromHz: number, toHz: number): ResonanceBasis {
-  // Controlled low-frequency sweep: descends into the tonearm–cartridge resonance range.
-  // Any sweep reaching toHz at or below 25 Hz qualifies as a direct low-frequency resonance
-  // measurement. No minimum starting frequency is required (S7C.1 update).
+type ResonanceBandMeta = {
+  readonly purpose?: string;
+  readonly analyzerModule?: string;
+  readonly signalType?: string;
+  readonly sweepDirection?: string;
+  readonly modulation?: string;
+  readonly fromHz?: number | null;
+  readonly toHz?: number | null;
+  readonly label?: string;
+};
+
+function classifyResonanceBasis(fromHz: number, toHz: number, bandMeta?: ResonanceBandMeta): ResonanceBasis {
+  // If band metadata is available, derive classification from it.
+  if (bandMeta) {
+    const mFromHz = bandMeta.fromHz ?? fromHz;
+    const mToHz = bandMeta.toHz ?? toHz;
+    void mFromHz;
+    const isLowFreqSweep = mToHz <= 25;
+    const modulation = (bandMeta.modulation ?? '').toLowerCase();
+    const signalType = (bandMeta.signalType ?? '').toLowerCase();
+    const label = (bandMeta.label ?? '').toLowerCase();
+    const purpose = (bandMeta.purpose ?? '').toLowerCase();
+    const analyzer = (bandMeta.analyzerModule ?? '').toLowerCase();
+
+    if (!isLowFreqSweep) return 'exploratory_low_confidence';
+
+    // Vertical modulation indicators
+    const isVertical = modulation.includes('vertical') || modulation.includes('out_of_phase')
+      || signalType.includes('vertical') || label.includes('vertical')
+      || purpose.includes('vertical') || analyzer.includes('vertical');
+    // Lateral modulation indicators
+    const isLateral = modulation.includes('lateral') || modulation.includes('in_phase') || modulation.includes('both')
+      || signalType.includes('lateral') || label.includes('lateral');
+
+    if (isVertical) return 'measured_vertical_sweep';
+    if (isLateral) return 'measured_lateral_sweep';
+    return 'measured_low_frequency_sweep';
+  }
+
+  // Fallback: fromHz/toHz only — any sweep reaching ≤25 Hz qualifies.
+  // No minimum starting frequency is required (S7C.1 update).
   void fromHz; // fromHz retained in signature for future sub-classification support.
   if (toHz <= 25) return 'measured_low_frequency_sweep';
   return 'exploratory_low_confidence';
 }
 
-function resonanceBasisHtml(fromHz: number, toHz: number): string {
-  const basis = classifyResonanceBasis(fromHz, toHz);
+function resonanceBasisHtml(fromHz: number, toHz: number, bandMeta?: ResonanceBandMeta): string {
+  const basis = classifyResonanceBasis(fromHz, toHz, bandMeta);
   if (basis === 'measured_low_frequency_sweep') {
     return `<div class="mlab-resonance-basis">
       <span class="mlab-resonance-basis-label">Measurement basis</span>
@@ -5141,6 +5179,19 @@ function renderResonancePanel(els: Elements): void {
           <span class="mlab-wf-result-value">${renderText(rq.status)}${rq.warnings.length ? ' — ' + Array.from(rq.warnings).map(renderText).join('; ') : ''}</span>
         </div>` : '';
     const diagMeta = buildResonanceDiagnosticMeta();
+    // Derive band metadata for basis classification from the selected record's vertical_resonance band.
+    const resBands = selectedRecord()
+      ? selectedRecord()!.sides.flatMap(s => s.bands).filter(b =>
+          b.analyzerModule === 'vertical_resonance' || (b as { analyzerModules?: string[] }).analyzerModules?.includes('vertical_resonance'))
+      : [];
+    const resBand = resBands[0];
+    const resMeta: ResonanceBandMeta | undefined = resBand ? {
+      purpose: resBand.purpose,
+      analyzerModule: resBand.analyzerModule,
+      fromHz: resBand.fromHz,
+      toHz: resBand.toHz,
+      label: resBand.label,
+    } : undefined;
     body.innerHTML = `
       <div class="mlab-wf-result">
         <div class="mlab-wf-result-row">
@@ -5162,7 +5213,7 @@ function renderResonancePanel(els: Elements): void {
         ${rqHtml}
         <p class="mlab-wf-note">Sweep ${state.resonance.fromHz}&ndash;${state.resonance.toHz}&nbsp;Hz (${state.resonance.sweepType}) &middot; ${state.resonance.durationSeconds}&nbsp;s</p>
       </div>
-      ${resonanceBasisHtml(state.resonance.fromHz, state.resonance.toHz)}
+      ${resonanceBasisHtml(state.resonance.fromHz, state.resonance.toHz, resMeta)}
       <div class="mlab-resonance-diagnostic">
         <div class="mlab-resonance-diagnostic-head">Diagnostic notes</div>
         <p class="mlab-resonance-diagnostic-note">${renderText(diagMeta.typicalRangeNote)}</p>
@@ -5212,7 +5263,6 @@ function renderResonancePanel(els: Elements): void {
         </tr>
       </tbody>
     </table>
-    ${recordHint('resonance')}
     <div class="mlab-session-controls">
       <button class="ea-button ea-button--primary" type="button" data-mlab-res-start>Start capture</button>
     </div>
@@ -8688,6 +8738,9 @@ function activateTool(toolId: string, els: Elements): void {
   }
   updateActiveRailItem(els, toolId);
   renderSessionRibbon(els);
+  if (toolId === 'channel_identity' || toolId === 'azimuth_crosstalk') {
+    renderChannelPanel(els);
+  }
 }
 
 function renderWorkflowRail(els: Elements): void {
