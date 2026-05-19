@@ -4468,7 +4468,7 @@ function checkS7B1() {
       /renderSpeedPanel[\s\S]{0,6000}toolLocalAutostartMarkup\('wow_flutter'\)/.test(uiSrc)],
     // 14. TS: local autostart block in refLevel panel
     ['TS: local autostart block in refLevel panel',
-      /renderRefLevelPanel[\s\S]{0,6000}toolLocalAutostartMarkup\('reference_level'\)/.test(uiSrc)],
+      /renderRefLevelPanel[\s\S]{0,8600}toolLocalAutostartMarkup\('reference_level'\)/.test(uiSrc)],
     // 15. TS: local autostart block in channel panel
     ['TS: local autostart block in channel panel',
       /renderChannelPanel[\s\S]{0,8000}toolLocalAutostartMarkup\('channel_identity'\)/.test(uiSrc)],
@@ -4659,3 +4659,160 @@ function checkS7B2() {
 }
 
 checkS7B2();
+
+function checkS7C() {
+  const renderSrcPath = join(repoRoot, 'src/modules/measurement-lab/ui/renderMeasurementLabPage.ts');
+  const cssSrcPath    = join(repoRoot, 'src/modules/measurement-lab/ui/measurementLab.css');
+  const engineSrcPath = join(repoRoot, 'src/modules/measurement-lab/engine/trackRecognition.ts');
+
+  for (const p of [renderSrcPath, cssSrcPath, engineSrcPath]) {
+    if (!existsSync(p)) {
+      console.error(`S7C static check FAIL: required file not found: ${p}`);
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  const uiSrc     = readFileSync(renderSrcPath, 'utf8');
+  const cssSrc    = readFileSync(cssSrcPath, 'utf8');
+  const engineSrc = readFileSync(engineSrcPath, 'utf8');
+
+  const checks = [
+    // ── Guidance card helper ───────────────────────────────────────────────
+    // 1. toolGuidanceMarkup function defined
+    ['TS: toolGuidanceMarkup function defined',
+      /function toolGuidanceMarkup\(/.test(uiSrc)],
+    // 2. toolGuidanceMarkup uses <details> collapsible pattern
+    ['TS: toolGuidanceMarkup uses <details> collapsible pattern',
+      /toolGuidanceMarkup[\s\S]{0,5200}<details\s+class="mlab-guidance-card"/.test(uiSrc)],
+    // 3. toolGuidanceMarkup covers wow_flutter
+    ['TS: toolGuidanceMarkup covers wow_flutter tool',
+      /toolGuidanceMarkup[\s\S]{0,3000}wow_flutter/.test(uiSrc)],
+    // 4. toolGuidanceMarkup covers reference_level
+    ['TS: toolGuidanceMarkup covers reference_level tool',
+      /toolGuidanceMarkup[\s\S]{0,3000}reference_level/.test(uiSrc)],
+    // 5. toolGuidanceMarkup covers channel_identity
+    ['TS: toolGuidanceMarkup covers channel_identity tool',
+      /toolGuidanceMarkup[\s\S]{0,3000}channel_identity/.test(uiSrc)],
+    // 6. toolGuidanceMarkup covers vertical_resonance with limitation about controlled sweep
+    ['TS: toolGuidanceMarkup covers vertical_resonance with silent-groove limitation',
+      /toolGuidanceMarkup[\s\S]{0,5000}vertical_resonance[\s\S]{0,800}NOT suitable/.test(uiSrc)],
+    // 7. toolGuidanceMarkup covers noise_floor with no-test-record note
+    ['TS: toolGuidanceMarkup covers noise_floor with no-test-record note',
+      /toolGuidanceMarkup[\s\S]{0,5000}noise_floor[\s\S]{0,400}No test record/.test(uiSrc)],
+
+    // ── Guidance injected per tool ─────────────────────────────────────────
+    // 8. Guidance injected in renderSpeedPanel
+    ['TS: toolGuidanceMarkup injected in renderSpeedPanel',
+      /renderSpeedPanel[\s\S]{0,11500}toolGuidanceMarkup\('wow_flutter'\)/.test(uiSrc)],
+    // 9. Guidance injected in renderChannelPanel
+    ['TS: toolGuidanceMarkup injected in renderChannelPanel',
+      /renderChannelPanel[\s\S]{0,8600}toolGuidanceMarkup\('channel_identity'\)/.test(uiSrc)],
+    // 10. Guidance injected in renderFreqPanel
+    ['TS: toolGuidanceMarkup injected in renderFreqPanel',
+      /renderFreqPanel[\s\S]{0,8200}toolGuidanceMarkup\('frequency_response'\)/.test(uiSrc)],
+    // 11. Guidance injected in renderThdPanel
+    ['TS: toolGuidanceMarkup injected in renderThdPanel',
+      /renderThdPanel[\s\S]{0,10300}toolGuidanceMarkup\('thd_imd'\)/.test(uiSrc)],
+    // 12. Guidance injected in renderResonancePanel
+    ['TS: toolGuidanceMarkup injected in renderResonancePanel',
+      /renderResonancePanel[\s\S]{0,4300}toolGuidanceMarkup\('vertical_resonance'\)/.test(uiSrc)],
+    // 13. Guidance injected in renderNoiseFloorPanel
+    ['TS: toolGuidanceMarkup injected in renderNoiseFloorPanel',
+      /renderNoiseFloorPanel[\s\S]{0,6300}toolGuidanceMarkup\('noise_floor'\)/.test(uiSrc)],
+    // 14. Guidance injected in renderRefLevelPanel
+    ['TS: toolGuidanceMarkup injected in renderRefLevelPanel',
+      /renderRefLevelPanel[\s\S]{0,7100}toolGuidanceMarkup\('reference_level'\)/.test(uiSrc)],
+
+    // ── Resonance measurement basis ────────────────────────────────────────
+    // 15. classifyResonanceBasis function defined
+    ['TS: classifyResonanceBasis function defined',
+      /function classifyResonanceBasis\(/.test(uiSrc)],
+    // 16. classifyResonanceBasis uses toHz <= 25 threshold for measured sweep
+    ['TS: classifyResonanceBasis uses toHz <= 25 for measured_sweep classification',
+      /classifyResonanceBasis[\s\S]{0,400}toHz\s*<=\s*25/.test(uiSrc)],
+    // 17. resonanceBasisHtml function defined
+    ['TS: resonanceBasisHtml function defined',
+      /function resonanceBasisHtml\(/.test(uiSrc)],
+    // 18. resonanceBasisHtml distinguishes measured sweep from exploratory
+    ['TS: resonanceBasisHtml distinguishes measured vs exploratory basis',
+      /resonanceBasisHtml[\s\S]{0,800}Measured sweep[\s\S]{0,400}Exploratory/.test(uiSrc)],
+    // 19. resonanceBasisHtml injected in renderResonancePanel result state
+    ['TS: resonanceBasisHtml injected in renderResonancePanel result state',
+      /renderResonancePanel[\s\S]{0,3300}resonanceBasisHtml/.test(uiSrc)],
+    // 20. resonanceBasisHtml mentions vertical/lateral distinction
+    ['TS: resonanceBasisHtml mentions vertical or lateral sweep distinction',
+      /resonanceBasisHtml[\s\S]{0,600}vertical or lateral/.test(uiSrc)],
+
+    // ── CSS ────────────────────────────────────────────────────────────────
+    // 21. CSS: mlab-guidance-card defined
+    ['CSS: mlab-guidance-card defined',
+      /\.mlab-guidance-card\s*\{/.test(cssSrc)],
+    // 22. CSS: mlab-guidance-body defined
+    ['CSS: mlab-guidance-body defined',
+      /\.mlab-guidance-body\s*\{/.test(cssSrc)],
+    // 23. CSS: mlab-guidance-label defined
+    ['CSS: mlab-guidance-label defined',
+      /\.mlab-guidance-label\s*\{/.test(cssSrc)],
+    // 24. CSS: mlab-resonance-basis defined
+    ['CSS: mlab-resonance-basis defined',
+      /\.mlab-resonance-basis\s*\{/.test(cssSrc)],
+    // 25. CSS: mlab-evidence-note defined
+    ['CSS: mlab-evidence-note defined',
+      /\.mlab-evidence-note\s*\{/.test(cssSrc)],
+    // 26. CSS: mlab-evidence-note--limitation defined
+    ['CSS: mlab-evidence-note--limitation defined',
+      /\.mlab-evidence-note--limitation\s*\{/.test(cssSrc)],
+
+    // ── tokenLayoutGeneratedClassNames ─────────────────────────────────────
+    // 27. tokenLayoutGeneratedClassNames includes mlab-guidance-card
+    ['tokenLayoutGeneratedClassNames includes mlab-guidance-card',
+      /tokenLayoutGeneratedClassNames[\s\S]{0,10000}mlab-guidance-card/.test(uiSrc)],
+    // 28. tokenLayoutGeneratedClassNames includes mlab-resonance-basis
+    ['tokenLayoutGeneratedClassNames includes mlab-resonance-basis',
+      /tokenLayoutGeneratedClassNames[\s\S]{0,10000}mlab-resonance-basis/.test(uiSrc)],
+
+    // ── No fake visualizations ─────────────────────────────────────────────
+    // 29. No fake chart or fake data path for resonance
+    ['Safety: no fake resonance confidence or fake chart',
+      !/fakeResonance|fake_resonance|simulatedResonance/.test(uiSrc)],
+    // 30. No standalone HTML export introduced
+    ['Safety: no standalone HTML export introduced',
+      !/exportStandaloneHtml|standalone.*export|export.*standalone/i.test(uiSrc)],
+
+    // ── Autostart suspended message updated ────────────────────────────────
+    // 31. Guard 2 suspension message matches S7C advisory phrasing
+    ['TS: Guard 2 suspension message uses S7C phrasing',
+      /Autostart suspended\. Disarm and re-arm from the target tool/.test(uiSrc)],
+
+    // ── Regressions ────────────────────────────────────────────────────────
+    // 32. S7B.2 autostart safety guards still present
+    ['Regression: S7B.2 chain readiness recompute still in tickTrackRecognition',
+      /tickTrackRecognition[\s\S]{0,3500}deriveMeasurementChainReadiness/.test(uiSrc)],
+    // 33. VTA still planned
+    ['Regression: VTA still planned in toolGuidanceMarkup default case',
+      /toolGuidanceMarkup[\s\S]{0,5500}vta_imd_optimizer/.test(uiSrc) === false],
+    // 34. noise_floor: no test record required note exists in guidance
+    ['TS: noise_floor guidance notes no test record required',
+      /toolGuidanceMarkup[\s\S]{0,5000}noise_floor[\s\S]{0,600}No test record required/.test(uiSrc)],
+    // 35. resonance: silent groove limitation mentioned in guidance
+    ['TS: resonance guidance mentions silent groove not suitable for direct measurement',
+      /toolGuidanceMarkup[\s\S]{0,5000}vertical_resonance[\s\S]{0,700}silent groove/.test(uiSrc) ||
+      /toolGuidanceMarkup[\s\S]{0,5000}vertical_resonance[\s\S]{0,700}NOT suitable/.test(uiSrc)],
+  ];
+
+  let allPass = true;
+  for (const [label, ok] of checks) {
+    if (!ok) {
+      console.error(`S7C static check FAIL: "${label}"`);
+      allPass = false;
+    }
+  }
+  if (allPass) {
+    console.log('- S7C static source check (Per-Tool Guidance & Resonance Basis): PASS');
+  } else {
+    process.exitCode = 1;
+  }
+}
+
+checkS7C();

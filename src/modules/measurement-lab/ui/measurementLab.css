@@ -2887,3 +2887,92 @@ button.mlab-coverage-badge--available:focus-visible {
   gap: var(--ea-space-2, 0.5rem);
   flex-wrap: wrap;
 }
+
+/* ── S7C: Per-tool guidance cards ─────────────────────────────────────────── */
+
+.mlab-guidance-card {
+  margin: var(--ea-space-2, 0.5rem) 0;
+  border: 1px solid var(--ea-border-soft, rgba(255,255,255,0.07));
+  border-radius: var(--ea-radius-sm, 3px);
+  background: var(--ea-bg-panel-alt, rgba(0,0,0,0.18));
+}
+
+.mlab-guidance-summary {
+  padding: var(--ea-space-2, 0.5rem) var(--ea-space-3, 0.75rem);
+  cursor: pointer;
+  font-size: var(--ea-font-size-small, 0.75rem);
+  color: var(--ea-text-low, #888);
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ea-space-2, 0.5rem);
+}
+
+.mlab-guidance-card > summary { list-style: none; }
+.mlab-guidance-card > summary::-webkit-details-marker { display: none; }
+
+.mlab-guidance-card[open] > .mlab-guidance-summary {
+  border-bottom: 1px solid var(--ea-border-soft, rgba(255,255,255,0.07));
+}
+
+.mlab-guidance-body {
+  padding: var(--ea-space-2, 0.5rem) var(--ea-space-3, 0.75rem);
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  gap: var(--ea-space-1, 0.25rem) var(--ea-space-2, 0.5rem);
+}
+
+.mlab-guidance-row {
+  display: contents;
+}
+
+.mlab-guidance-label {
+  font-size: var(--ea-font-size-small, 0.75rem);
+  color: var(--ea-text-low, #888);
+  align-self: start;
+  padding-top: 1px;
+}
+
+.mlab-guidance-text {
+  font-size: var(--ea-font-size-small, 0.75rem);
+  color: var(--ea-text-primary, #e2e2e2);
+  line-height: 1.4;
+}
+
+/* ── S7C: Resonance measurement basis ─────────────────────────────────────── */
+
+.mlab-resonance-basis {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--ea-space-2, 0.5rem);
+  margin: var(--ea-space-2, 0.5rem) 0;
+  font-size: var(--ea-font-size-small, 0.75rem);
+}
+
+.mlab-resonance-basis-label {
+  color: var(--ea-text-low, #888);
+  flex-shrink: 0;
+}
+
+.mlab-resonance-basis-note {
+  font-size: var(--ea-font-size-small, 0.75rem);
+  color: var(--ea-text-low, #888);
+  width: 100%;
+  line-height: 1.4;
+}
+
+/* ── S7C: Evidence and limitation notes ───────────────────────────────────── */
+
+.mlab-evidence-note {
+  font-size: var(--ea-font-size-small, 0.75rem);
+  color: var(--ea-text-low, #888);
+  margin-top: var(--ea-space-2, 0.5rem);
+  line-height: 1.4;
+}
+
+.mlab-evidence-note--limitation {
+  color: rgba(245, 158, 11, 0.80);
+}

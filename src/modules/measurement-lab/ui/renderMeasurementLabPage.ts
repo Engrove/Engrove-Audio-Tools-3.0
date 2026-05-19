@@ -453,7 +453,7 @@ type LabState = {
  * site below; it has no runtime effect.
  */
 const tokenLayoutGeneratedClassNames =
-  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured mlab-vta-candidate-badge mlab-vta-comparison mlab-vta-comparison-candidate mlab-vta-comparison-meta mlab-vta-comparison-warning mlab-vta-comparison-status mlab-vta-comparison-confidence mlab-vta-confidence-level mlab-vta-confidence-level--insufficient mlab-vta-confidence-level--low mlab-vta-confidence-level--medium mlab-vta-confidence-level--high mlab-vta-confidence-reason mlab-vta-gate mlab-vta-gate-head mlab-vta-gate-summary mlab-vta-gate-status mlab-vta-gate-status--not-ready mlab-vta-gate-status--candidate mlab-vta-gate-status--review mlab-vta-gate-msg mlab-vta-gate-table mlab-vta-gate-row mlab-vta-gate-pass mlab-vta-gate-pass--ok mlab-vta-gate-pass--fail mlab-vta-gate-label mlab-vta-gate-detail mlab-vta-policy mlab-vta-policy-head mlab-vta-policy-status-row mlab-vta-policy-status mlab-vta-policy-status--experimental mlab-vta-policy-status--review-not-supported mlab-vta-policy-reason mlab-vta-policy-req-head mlab-vta-policy-req-list mlab-vta-policy-req mlab-guided-order-panel mlab-guided-order-body mlab-guided-order-intro mlab-guided-order-list mlab-guided-order-item mlab-guided-order-item--first mlab-guided-order-step-head mlab-guided-order-track mlab-guided-order-name mlab-guided-order-first-badge mlab-guided-order-detail mlab-guided-order-workflow mlab-speed-ctx-row mlab-speed-ctx-label mlab-speed-ctx-btn mlab-speed-ctx-btn--active mlab-speed-ctx-note mlab-speed-ctx-badge mlab-speed-history mlab-speed-history-head mlab-speed-history-clear mlab-speed-history-empty mlab-speed-history-scroll mlab-speed-history-table mlab-speed-history-row mlab-speed-history-cell mlab-speed-settings mlab-speed-settings--result mlab-speed-settings-head mlab-speed-settings-hint mlab-speed-settings-row mlab-speed-settings-label mlab-speed-settings-value mlab-speed-settings-input-group mlab-speed-settings-input mlab-speed-settings-unit mlab-speed-settings-src mlab-speed-settings-reset mlab-nf-intro mlab-nf-guidance mlab-nf-settings mlab-nf-settings-row mlab-nf-settings-label mlab-nf-settings-select mlab-nf-settings-input mlab-nf-settings-input--wide mlab-nf-settings-input-group mlab-nf-settings-unit mlab-nf-settings-src mlab-nf-result mlab-nf-history mlab-nf-history-head mlab-nf-history-clear mlab-nf-history-scroll mlab-nf-history-table mlab-nf-history-row mlab-nf-history-cell mlab-chain-readiness mlab-chain-readiness--ready mlab-chain-readiness--warning mlab-chain-readiness--blocked mlab-chain-readiness--not-checked mlab-chain-readiness-row mlab-chain-readiness-key mlab-chain-readiness-val mlab-chain-readiness-warning mlab-chain-readiness-note mlab-run-quality mlab-run-quality--ok mlab-run-quality--warning mlab-run-quality--invalid mlab-run-quality-label mlab-run-quality-warnings mlab-session-ribbon mlab-ribbon-group mlab-ribbon-group--active mlab-ribbon-label mlab-ribbon-value mlab-ribbon-sep mlab-ribbon-sep--flex mlab-ribbon-active-tool mlab-workflow-rail mlab-rail-head mlab-rail-items mlab-rail-loading mlab-rail-item mlab-rail-item--available mlab-rail-item--planned mlab-rail-item--partial mlab-rail-item--unavailable mlab-rail-item--active mlab-rail-item-label mlab-rail-item-status mlab-diag-rail mlab-diag-signal-panel mlab-diag-signal-body mlab-diag-signal-status mlab-diag-signal-status--ready mlab-diag-signal-status--blocked mlab-diag-signal-status--warning mlab-diag-signal-status--not_checked mlab-diag-signal-row mlab-diag-signal-key mlab-diag-signal-val mlab-diag-signal-clip mlab-workbench-center mlab-center-head mlab-center-title mlab-center-title-pre mlab-center-title-h mlab-center-actions mlab-center-body mlab-center-status-pill mlab-tool-panel--active mlab-context-overlay mlab-context-overlay--open mlab-context-head mlab-context-body mlab-context-foot mlab-log-modal mlab-log-modal--open mlab-log-modal-dialog mlab-log-modal-head mlab-log-modal-body mlab-log-modal-foot mlab-workbench-footer mlab-footer-status mlab-footer-actions mlab-ribbon-meters mlab-ribbon-mini-meter mlab-ribbon-mini-label mlab-ribbon-mini-bar-wrap mlab-ribbon-mini-fill mlab-ribbon-mini-db mlab-rail-group-head mlab-rail-item-tooltip mlab-rail-item-tooltip-name mlab-rail-item-tooltip-status mlab-home-prereqs mlab-context-home-section mlab-rail-tooltip-portal--visible mlab-rail-item--source-inactive mlab-source-controls-head mlab-source-viz mlab-source-meter-grid mlab-source-freq-canvas mlab-ribbon-group--wide mlab-source-meter-channel mlab-recog-badge mlab-recog-badge--disabled mlab-recog-badge--armed mlab-recog-badge--waiting mlab-recog-badge--detecting mlab-recog-badge--locked mlab-recog-badge--recording mlab-recog-badge--rejected mlab-recog-badge--timeout mlab-recog-badge--ambiguous mlab-recog-badge--manual mlab-recog-arm-section mlab-recog-arm-row mlab-recog-arm-status mlab-recog-arm-actions mlab-recog-arm-reason mlab-local-autostart mlab-local-autostart-head mlab-local-autostart-reason mlab-local-autostart-actions';
+  'mlab-segmented-option--active mlab-meter-clip--active mlab-wf-grade--excellent mlab-wf-grade--good mlab-wf-grade--marginal mlab-wf-grade--poor mlab-coverage-card--available mlab-coverage-card--planned mlab-coverage-card--partial mlab-coverage-card--unavailable mlab-coverage-badge--available mlab-coverage-badge--planned mlab-coverage-badge--partial mlab-coverage-badge--unavailable mlab-coverage-panel--collapsed ea-dot--error mlab-panel--target-highlight mlab-reflevel-clip--active mlab-advanced-vta-band-row mlab-advanced-item--vta mlab-advanced-item--planned mlab-advanced-divider mlab-advanced-planned-intro mlab-vta-run-remove mlab-vta-measure-btn mlab-vta-capture-progress mlab-vta-run-measured mlab-vta-confidence mlab-vta-confidence--experimental mlab-vta-confidence--not-measured mlab-vta-candidate-badge mlab-vta-comparison mlab-vta-comparison-candidate mlab-vta-comparison-meta mlab-vta-comparison-warning mlab-vta-comparison-status mlab-vta-comparison-confidence mlab-vta-confidence-level mlab-vta-confidence-level--insufficient mlab-vta-confidence-level--low mlab-vta-confidence-level--medium mlab-vta-confidence-level--high mlab-vta-confidence-reason mlab-vta-gate mlab-vta-gate-head mlab-vta-gate-summary mlab-vta-gate-status mlab-vta-gate-status--not-ready mlab-vta-gate-status--candidate mlab-vta-gate-status--review mlab-vta-gate-msg mlab-vta-gate-table mlab-vta-gate-row mlab-vta-gate-pass mlab-vta-gate-pass--ok mlab-vta-gate-pass--fail mlab-vta-gate-label mlab-vta-gate-detail mlab-vta-policy mlab-vta-policy-head mlab-vta-policy-status-row mlab-vta-policy-status mlab-vta-policy-status--experimental mlab-vta-policy-status--review-not-supported mlab-vta-policy-reason mlab-vta-policy-req-head mlab-vta-policy-req-list mlab-vta-policy-req mlab-guided-order-panel mlab-guided-order-body mlab-guided-order-intro mlab-guided-order-list mlab-guided-order-item mlab-guided-order-item--first mlab-guided-order-step-head mlab-guided-order-track mlab-guided-order-name mlab-guided-order-first-badge mlab-guided-order-detail mlab-guided-order-workflow mlab-speed-ctx-row mlab-speed-ctx-label mlab-speed-ctx-btn mlab-speed-ctx-btn--active mlab-speed-ctx-note mlab-speed-ctx-badge mlab-speed-history mlab-speed-history-head mlab-speed-history-clear mlab-speed-history-empty mlab-speed-history-scroll mlab-speed-history-table mlab-speed-history-row mlab-speed-history-cell mlab-speed-settings mlab-speed-settings--result mlab-speed-settings-head mlab-speed-settings-hint mlab-speed-settings-row mlab-speed-settings-label mlab-speed-settings-value mlab-speed-settings-input-group mlab-speed-settings-input mlab-speed-settings-unit mlab-speed-settings-src mlab-speed-settings-reset mlab-nf-intro mlab-nf-guidance mlab-nf-settings mlab-nf-settings-row mlab-nf-settings-label mlab-nf-settings-select mlab-nf-settings-input mlab-nf-settings-input--wide mlab-nf-settings-input-group mlab-nf-settings-unit mlab-nf-settings-src mlab-nf-result mlab-nf-history mlab-nf-history-head mlab-nf-history-clear mlab-nf-history-scroll mlab-nf-history-table mlab-nf-history-row mlab-nf-history-cell mlab-chain-readiness mlab-chain-readiness--ready mlab-chain-readiness--warning mlab-chain-readiness--blocked mlab-chain-readiness--not-checked mlab-chain-readiness-row mlab-chain-readiness-key mlab-chain-readiness-val mlab-chain-readiness-warning mlab-chain-readiness-note mlab-run-quality mlab-run-quality--ok mlab-run-quality--warning mlab-run-quality--invalid mlab-run-quality-label mlab-run-quality-warnings mlab-session-ribbon mlab-ribbon-group mlab-ribbon-group--active mlab-ribbon-label mlab-ribbon-value mlab-ribbon-sep mlab-ribbon-sep--flex mlab-ribbon-active-tool mlab-workflow-rail mlab-rail-head mlab-rail-items mlab-rail-loading mlab-rail-item mlab-rail-item--available mlab-rail-item--planned mlab-rail-item--partial mlab-rail-item--unavailable mlab-rail-item--active mlab-rail-item-label mlab-rail-item-status mlab-diag-rail mlab-diag-signal-panel mlab-diag-signal-body mlab-diag-signal-status mlab-diag-signal-status--ready mlab-diag-signal-status--blocked mlab-diag-signal-status--warning mlab-diag-signal-status--not_checked mlab-diag-signal-row mlab-diag-signal-key mlab-diag-signal-val mlab-diag-signal-clip mlab-workbench-center mlab-center-head mlab-center-title mlab-center-title-pre mlab-center-title-h mlab-center-actions mlab-center-body mlab-center-status-pill mlab-tool-panel--active mlab-context-overlay mlab-context-overlay--open mlab-context-head mlab-context-body mlab-context-foot mlab-log-modal mlab-log-modal--open mlab-log-modal-dialog mlab-log-modal-head mlab-log-modal-body mlab-log-modal-foot mlab-workbench-footer mlab-footer-status mlab-footer-actions mlab-ribbon-meters mlab-ribbon-mini-meter mlab-ribbon-mini-label mlab-ribbon-mini-bar-wrap mlab-ribbon-mini-fill mlab-ribbon-mini-db mlab-rail-group-head mlab-rail-item-tooltip mlab-rail-item-tooltip-name mlab-rail-item-tooltip-status mlab-home-prereqs mlab-context-home-section mlab-rail-tooltip-portal--visible mlab-rail-item--source-inactive mlab-source-controls-head mlab-source-viz mlab-source-meter-grid mlab-source-freq-canvas mlab-ribbon-group--wide mlab-source-meter-channel mlab-recog-badge mlab-recog-badge--disabled mlab-recog-badge--armed mlab-recog-badge--waiting mlab-recog-badge--detecting mlab-recog-badge--locked mlab-recog-badge--recording mlab-recog-badge--rejected mlab-recog-badge--timeout mlab-recog-badge--ambiguous mlab-recog-badge--manual mlab-recog-arm-section mlab-recog-arm-row mlab-recog-arm-status mlab-recog-arm-actions mlab-recog-arm-reason mlab-local-autostart mlab-local-autostart-head mlab-local-autostart-reason mlab-local-autostart-actions mlab-guidance-card mlab-guidance-summary mlab-guidance-body mlab-guidance-row mlab-guidance-label mlab-guidance-text mlab-resonance-basis mlab-resonance-basis-label mlab-resonance-basis-note mlab-evidence-note mlab-evidence-note--limitation';
 void tokenLayoutGeneratedClassNames;
 
 const speedMeasurementDurationSeconds = 30;
@@ -2927,6 +2927,7 @@ function renderSpeedPanel(els: Elements): void {
         </div>
       </div>
       <p class="mlab-chain-note">These readings measure playback/capture speed stability and are affected by the test record, turntable and capture chain.</p>
+      <p class="mlab-evidence-note mlab-evidence-note--limitation">Limitation: W&amp;F floor ~0.5&thinsp;Hz. Rumble and very slow drift are not measured here. Self-test results are simulated and do not reflect real-world performance.</p>
       ${renderRunQualityHtml(state.speed.runs[state.speed.runs.length - 1]?.runQuality)}
       ${speedRunComparisonMarkup(state.speed.runs)}
       <div class="mlab-session-controls">
@@ -2985,6 +2986,7 @@ function renderSpeedPanel(els: Elements): void {
     : '';
 
   body.innerHTML = `
+    ${toolGuidanceMarkup('wow_flutter')}
     ${selfTestNote}
     ${ctxToggleHtml}
     <div class="mlab-speed-settings">
@@ -3280,6 +3282,7 @@ function renderChannelPanel(els: Elements): void {
     ? `<p class="mlab-channel-selftest-note">Self-test mode uses a mono oscillator — channel identity result will be indicative only.</p>`
     : '';
   body.innerHTML = `
+    ${toolGuidanceMarkup('channel_identity')}
     ${leftBandInfo}
     ${selfTestNotice}
     <div class="mlab-azimuth-label-row">
@@ -3623,6 +3626,7 @@ function renderFreqPanel(els: Elements): void {
         </tr>`;
 
   body.innerHTML = `
+    ${toolGuidanceMarkup('frequency_response')}
     ${selfTestNote}
     <p class="mlab-reflevel-info">These readings measure the full playback/capture chain: test record, cartridge, tonearm, phono stage and audio interface. They are not cartridge-only response.${overlayNote}</p>
     ${calSetNote}
@@ -4211,6 +4215,7 @@ function renderRefLevelPanel(els: Elements): void {
     : '';
 
   body.innerHTML = `
+    ${toolGuidanceMarkup('reference_level')}
     ${selfTestNote}
     <p class="mlab-reflevel-info">Reference level calibration measures the signal chain: test record &rarr; cartridge &rarr; tonearm &rarr; phono stage &rarr; audio interface. This is <em>not</em> a full cartridge frequency response measurement. Works best with a line-in or audio interface.</p>
     <table class="ea-form-table" aria-label="Reference level setup">
@@ -4313,6 +4318,117 @@ function recordHint(purpose: TestBandPurpose): string {
     return `<p class="ea-muted">Selected record — cue <strong>${labels.join(' or ')}</strong>.</p>`;
   }
   return `<p class="ea-muted">Selected record has no ${renderText(purpose.replace(/_/g, ' '))} band; supply a suitable signal manually.</p>`;
+}
+
+// ── S7C: Per-tool guidance cards ─────────────────────────────────────────────
+
+function toolGuidanceMarkup(toolId: string): string {
+  type GItem = { label: string; text: string };
+  let items: GItem[] = [];
+  switch (toolId) {
+    case 'wow_flutter':
+      items = [
+        { label: 'Measures', text: 'Turntable speed accuracy and wow &amp; flutter (pitch instability).' },
+        { label: 'Signal', text: '3150&thinsp;Hz speed reference tone. For 45&thinsp;RPM, the same band reads ~4253&thinsp;Hz.' },
+        { label: 'Prerequisite', text: 'Test record with 3150&thinsp;Hz speed band. Source connected.' },
+        { label: 'Interpret', text: 'Speed deviation near 0% is accurate. W&amp;F below 0.1% (AES6) is excellent.' },
+        { label: 'Limitation', text: 'W&amp;F floor ~0.5&thinsp;Hz. Rumble and very slow drift are not measured here.' },
+      ];
+      break;
+    case 'reference_level':
+      items = [
+        { label: 'Measures', text: 'Absolute signal level against the test record calibration tone.' },
+        { label: 'Signal', text: '1&thinsp;kHz (or record-specific) calibration band at the stated reference level.' },
+        { label: 'Prerequisite', text: 'Test record playing reference band. Source connected.' },
+        { label: 'Interpret', text: 'L/R RMS should match the record\'s stated level. Balance near 0&thinsp;dB.' },
+        { label: 'Limitation', text: 'Level at reference frequency only; does not characterise EQ or spectrum.' },
+      ];
+      break;
+    case 'channel_identity':
+      items = [
+        { label: 'Measures', text: 'Channel polarity, level balance, and crosstalk between L and R.' },
+        { label: 'Signal', text: 'Separate L-only and R-only single-tone bands on the test record.' },
+        { label: 'Prerequisite', text: 'Test record with dedicated per-channel bands. Source connected.' },
+        { label: 'Interpret', text: 'Near-equal levels = good balance. High dB separation = good channel isolation.' },
+        { label: 'Limitation', text: 'Valid only with a test record that provides dedicated per-channel isolation bands.' },
+      ];
+      break;
+    case 'frequency_response':
+      items = [
+        { label: 'Measures', text: 'System frequency response deviation from flat across the audio band.' },
+        { label: 'Signal', text: 'Wide-band sweep or stepped tone (typically 20&thinsp;Hz–20&thinsp;kHz) on test record.' },
+        { label: 'Prerequisite', text: 'Test record with response sweep band. Reference level set. Source connected.' },
+        { label: 'Interpret', text: 'Deviation ±1&thinsp;dB is excellent; compare against manufacturer specifications.' },
+        { label: 'Limitation', text: 'Measures the full chain (cartridge, tonearm, phono stage, ADC). Cannot isolate individual components.' },
+      ];
+      break;
+    case 'thd_imd':
+      items = [
+        { label: 'Measures', text: 'Harmonic distortion (THD) or intermodulation distortion (SMPTE IMD).' },
+        { label: 'Signal', text: 'Single tone for THD, or dual tone for IMD, on test record.' },
+        { label: 'Prerequisite', text: 'Test record with distortion test bands. Reference level set. Source connected.' },
+        { label: 'Interpret', text: 'THD below 1% indicates clean reproduction. IMD below 0.5% is excellent.' },
+        { label: 'Limitation', text: 'At test frequency only; does not characterise distortion across the full spectrum.' },
+      ];
+      break;
+    case 'vertical_resonance':
+      items = [
+        { label: 'Measures', text: 'Tonearm–cartridge resonance frequency from a controlled low-frequency sweep.' },
+        { label: 'Signal', text: 'Low-frequency sweep (e.g. 1&thinsp;kHz&rarr;10&thinsp;Hz vertical, or 1&thinsp;kHz&rarr;20&thinsp;Hz lateral) on test record.' },
+        { label: 'Prerequisite', text: 'Test record with suitable descending low-frequency sweep band. Source connected.' },
+        { label: 'Interpret', text: 'Resonance in the 8–12&thinsp;Hz range is typical. Outside this may cause tracking issues.' },
+        { label: 'Limitation', text: 'Requires a controlled sweep. Silent groove and tapping are NOT suitable for direct resonance measurement. Compliance/mass estimates are reference only.' },
+      ];
+      break;
+    case 'noise_floor':
+      items = [
+        { label: 'Measures', text: 'System noise floor and rig baseline of the connected phono capture chain.' },
+        { label: 'Signal', text: 'No test record required — capture the chain in silence or with platter spinning.' },
+        { label: 'Prerequisite', text: 'Phono stage and ADC connected. No test record needed.' },
+        { label: 'Interpret', text: 'Lower dBFS is better. Compare scenarios: equipment off, platter still, platter spinning.' },
+        { label: 'Limitation', text: 'Noise floor varies with environment, cables, and grounding. Not a pass/fail test.' },
+      ];
+      break;
+    default:
+      return '';
+  }
+  const rows = items.map(i =>
+    `<div class="mlab-guidance-row">
+      <span class="mlab-guidance-label">${i.label}</span>
+      <span class="mlab-guidance-text">${i.text}</span>
+    </div>`,
+  ).join('');
+  return `<details class="mlab-guidance-card">
+    <summary class="mlab-guidance-summary">What this measures</summary>
+    <div class="mlab-guidance-body">${rows}</div>
+  </details>`;
+}
+
+// ── S7C: Resonance measurement basis ─────────────────────────────────────────
+
+type ResonanceBasis = 'measured_sweep' | 'exploratory_low_confidence';
+
+function classifyResonanceBasis(fromHz: number, toHz: number): ResonanceBasis {
+  // Valid direct measurement: sweep descends into the resonance range (toHz ≤ 25 Hz)
+  // and starts well above it (fromHz ≥ 50 Hz), indicating a dedicated descending sweep.
+  if (toHz <= 25 && fromHz >= 50) return 'measured_sweep';
+  return 'exploratory_low_confidence';
+}
+
+function resonanceBasisHtml(fromHz: number, toHz: number): string {
+  const basis = classifyResonanceBasis(fromHz, toHz);
+  if (basis === 'measured_sweep') {
+    return `<div class="mlab-resonance-basis">
+      <span class="mlab-resonance-basis-label">Measurement basis</span>
+      <span class="ea-badge ea-badge--manufacturer">Measured sweep</span>
+      <span class="mlab-resonance-basis-note">Verify whether the test band is a vertical or lateral modulation sweep. The analysis does not distinguish between them.</span>
+    </div>`;
+  }
+  return `<div class="mlab-resonance-basis">
+    <span class="mlab-resonance-basis-label">Measurement basis</span>
+    <span class="ea-badge ea-badge--setup">Exploratory / low confidence</span>
+    <span class="mlab-resonance-basis-note">Sweep range (${renderText(String(fromHz))}–${renderText(String(toHz))}&thinsp;Hz) may not fully cover the tonearm–cartridge resonance region. Use a dedicated low-frequency descending sweep (e.g. 1&thinsp;kHz&rarr;10&thinsp;Hz) for a reliable result.</span>
+  </div>`;
 }
 
 function renderRecordSelector(els: Elements): void {
@@ -4658,6 +4774,7 @@ function renderThdPanel(els: Elements): void {
     : '';
 
   body.innerHTML = `
+    ${toolGuidanceMarkup('thd_imd')}
     ${selfTestNote}
     <p class="mlab-reflevel-info">These readings measure distortion in the full playback/capture chain: test record, cartridge, tonearm, phono stage and audio interface. They are not cartridge-only distortion.</p>
     <table class="ea-form-table" aria-label="THD and IMD setup">
@@ -4812,6 +4929,7 @@ function renderResonancePanel(els: Elements): void {
         ${rqHtml}
         <p class="mlab-wf-note">Sweep ${state.resonance.fromHz}&ndash;${state.resonance.toHz}&nbsp;Hz (${state.resonance.sweepType}) &middot; ${state.resonance.durationSeconds}&nbsp;s</p>
       </div>
+      ${resonanceBasisHtml(state.resonance.fromHz, state.resonance.toHz)}
       <div class="mlab-resonance-diagnostic">
         <div class="mlab-resonance-diagnostic-head">Diagnostic notes</div>
         <p class="mlab-resonance-diagnostic-note">${renderText(diagMeta.typicalRangeNote)}</p>
@@ -4831,6 +4949,7 @@ function renderResonancePanel(els: Elements): void {
   // Idle
   const { sweepType, fromHz, toHz, durationSeconds } = state.resonance;
   body.innerHTML = `
+    ${toolGuidanceMarkup('vertical_resonance')}
     <p class="ea-muted">Play the low-frequency sweep band on your test record. The tool detects the resonance frequency from the amplitude envelope of the captured signal.</p>
     <table class="ea-form-table" aria-label="Resonance sweep setup">
       <tbody>
@@ -6821,6 +6940,7 @@ function renderNoiseFloorPanel(els: Elements): void {
   const durSrc = durParsed !== null ? 'User override' : `Default (${durDefault} s)`;
 
   body.innerHTML = `
+    ${toolGuidanceMarkup('noise_floor')}
     <p class="ea-muted mlab-nf-intro">Noise floor measurements do not use a test record. They capture the connected playback / capture chain in a selected physical state.</p>
     ${selfTestNote}
     <div class="mlab-nf-settings">
@@ -8137,7 +8257,7 @@ function tickTrackRecognition(els: Elements): void {
       const armedFromTool = next.armedFromToolId;
       const activeToolId = state.activeWorkflowId;
       if (armedFromTool !== null && activeToolId !== armedFromTool) {
-        const toolMismatchReason = `Autostart suspended: active tool changed to "${activeToolId ?? 'none'}". Return to "${armedFromTool}" or disarm and re-arm.`;
+        const toolMismatchReason = `Autostart suspended. Disarm and re-arm from the target tool ("${armedFromTool}").`;
         state.trackRecognition = { ...state.trackRecognition, reason: toolMismatchReason };
         renderTrackRecognition(els);
         updateToolLocalAutostart(armedFromTool, workflowId);
